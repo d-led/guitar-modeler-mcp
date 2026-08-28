@@ -24,9 +24,9 @@ type RigFile struct {
 
 // Content is the decoded value of RigFile.Content.
 type Content struct {
-	FootSwitch json.RawMessage `json:"FootSwitch"`
-	Pedal1     json.RawMessage `json:"Pedal1"`
-	Pedal2     json.RawMessage `json:"Pedal2"`
+	FootSwitch any `json:"FootSwitch"`
+	Pedal1     any `json:"Pedal1"`
+	Pedal2     any `json:"Pedal2"`
 	Data       struct {
 		Patch Patch `json:"Patch"`
 	} `json:"data"`
@@ -58,9 +58,9 @@ type Builder struct {
 }
 
 type tmpl struct {
-	footSwitch json.RawMessage
-	pedal1     json.RawMessage
-	pedal2     json.RawMessage
+	footSwitch []byte
+	pedal1     []byte
+	pedal2     []byte
 	version    string
 }
 
@@ -146,10 +146,23 @@ func (b *Builder) Build(spec Spec) (*RigFile, error) {
 	patch.Children["Output"] = outputNode()
 	patch.Children["Mix"] = mixNode()
 
+	footSwitch, err := footSwitchFor(b.footSwitch, moduleNames)
+	if err != nil {
+		return nil, err
+	}
+	pedal1, err := pedalFor(b.pedal1)
+	if err != nil {
+		return nil, err
+	}
+	pedal2, err := pedalFor(b.pedal2)
+	if err != nil {
+		return nil, err
+	}
+
 	content := Content{
-		FootSwitch: b.footSwitch,
-		Pedal1:     b.pedal1,
-		Pedal2:     b.pedal2,
+		FootSwitch: footSwitch,
+		Pedal1:     pedal1,
+		Pedal2:     pedal2,
 	}
 	content.Data.Patch = patch
 	content.Info.Version = b.version
