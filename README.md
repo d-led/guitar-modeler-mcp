@@ -127,6 +127,14 @@ Amp/cab/mic model lists come from the device backup and the community-maintained
 Where the emulated amplifier is not publicly documented, the brand is left empty
 rather than guessed.
 
+## Trademarks & disclaimer
+
+All trademarks, logos and brand names are the property of their respective
+owners. All company, product and service names used in this project are for
+identification purposes only; use of these names, trademarks and brands does not
+imply endorsement. This project is not affiliated with, endorsed by, or
+sponsored by HeadRush or any of the referenced brands.
+
 ## Testing
 
 ```sh
