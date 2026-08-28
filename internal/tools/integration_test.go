@@ -184,3 +184,38 @@ func TestIntegrationToolErrorReturnsIsError(t *testing.T) {
 		t.Fatalf("expected empty result for non-matching query")
 	}
 }
+
+func TestIntegrationDesignDualAmpParallel(t *testing.T) {
+	s := newIntegrationServer(t)
+	dir := t.TempDir()
+
+	out := resultText(t, rpc(t, s, 1, "tools/call", map[string]any{
+		"name": "design_rig",
+		"arguments": map[string]any{
+			"name":       "Two Heads",
+			"amp":        "65 Black SR",
+			"amp2":       "67 Black Duo",
+			"routing":    "SPS-1",
+			"output_dir": dir,
+		},
+	}))
+	if !strings.Contains(out, "Rig file:") {
+		t.Fatalf("design_rig output missing rig path: %s", out)
+	}
+
+	rigs, err := filepath.Glob(filepath.Join(dir, "*.rig"))
+	if err != nil || len(rigs) != 1 {
+		t.Fatalf("expected one .rig, got %v (%v)", rigs, err)
+	}
+
+	decoded := resultText(t, rpc(t, s, 2, "tools/call", map[string]any{
+		"name":      "rig_decode",
+		"arguments": map[string]any{"rig_file": rigs[0]},
+	}))
+	if !strings.Contains(decoded, `"routing": "SPS-1"`) {
+		t.Fatalf("rig_decode missing SPS-1 routing: %s", decoded)
+	}
+	if !strings.Contains(decoded, `"Amp 2"`) {
+		t.Fatalf("rig_decode missing Amp 2 module: %s", decoded)
+	}
+}

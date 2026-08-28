@@ -11,6 +11,7 @@ type Summary struct {
 	CreatedAt int64           `json:"created_at"`
 	Version   string          `json:"version"`
 	Tempo     float64         `json:"tempo"`
+	Routing   string          `json:"routing"`
 	Slots     []string        `json:"slots"`
 	Modules   []SummaryModule `json:"modules"`
 }
@@ -37,6 +38,12 @@ func Describe(file *RigFile) (Summary, error) {
 		CreatedAt: file.CreatedAt,
 		Version:   content.Info.Version,
 		Slots:     chainSlots(patch),
+	}
+
+	if chain, ok := patch.Children["Chain"]; ok {
+		if item, ok := chain.Children["Routing"]; ok && item.Str != nil {
+			s.Routing = *item.Str
+		}
 	}
 
 	if rigNode, ok := patch.Children["Rig"]; ok {

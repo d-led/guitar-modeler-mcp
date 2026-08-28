@@ -34,18 +34,57 @@ func outputNode() *Node {
 	return n
 }
 
-func mixNode() *Node {
+// pathMix is the parallel-path mixer: per-path level (dB), pan and the delay
+// of path B relative to path A. It is mirrored onto both the Chain node and
+// the Mix node, as the device stores it in both places.
+type pathMix struct {
+	para1Level float64
+	para2Level float64
+	para1Pan   float64
+	para2Pan   float64
+	paraDelay  float64
+}
+
+// pathMixFor resolves the spec's path mix controls to concrete values, falling
+// back to the device defaults (levels -6 dB, centre pan, no delay).
+func pathMixFor(spec Spec) pathMix {
+	m := pathMix{para1Level: -6, para2Level: -6}
+	if spec.Para1Level != nil {
+		m.para1Level = *spec.Para1Level
+	}
+	if spec.Para2Level != nil {
+		m.para2Level = *spec.Para2Level
+	}
+	if spec.Para1Pan != nil {
+		m.para1Pan = *spec.Para1Pan
+	}
+	if spec.Para2Pan != nil {
+		m.para2Pan = *spec.Para2Pan
+	}
+	if spec.ParaDelay != nil {
+		m.paraDelay = *spec.ParaDelay
+	}
+	return m
+}
+
+func (m pathMix) apply(n *Node) {
+	n.set("Para1Level", num(m.para1Level))
+	n.set("Para2Level", num(m.para2Level))
+	n.set("Para1Pan", num(m.para1Pan))
+	n.set("Para2Pan", num(m.para2Pan))
+	n.set("ParaDelay", num(m.paraDelay))
+}
+
+func mixNode(m pathMix) *Node {
 	n := newNode("Para1Level", "Para2Level", "Para1Pan", "Para2Pan", "ParaDelay", "PresetName")
-	n.set("Para1Level", num(-6))
-	n.set("Para2Level", num(-6))
-	n.set("Para1Pan", num(0))
-	n.set("Para2Pan", num(0))
-	n.set("ParaDelay", num(0))
+	m.apply(n)
 	n.set("PresetName", label(""))
 	return n
 }
 
-func chainNode(moduleNames []string) *Node {
+// chainNode builds the Chain node: the routing topology, the 11 module slots
+// and the parallel-path mixer values.
+func chainNode(routing Routing, slots []string, m pathMix) *Node {
 	order := []string{"Routing", "Tails"}
 	for i := 1; i <= 11; i++ {
 		order = append(order, "ModuleType"+strconv.Itoa(i))
@@ -53,20 +92,16 @@ func chainNode(moduleNames []string) *Node {
 	order = append(order, "Para1Level", "Para2Level", "Para1Pan", "Para2Pan", "ParaDelay")
 
 	n := newNode(order...)
-	n.set("Routing", str("S"))
+	n.set("Routing", str(string(routing)))
 	n.set("Tails", boolean(true))
 	for i := 1; i <= 11; i++ {
 		name := "Empty Slot"
-		if i <= len(moduleNames) {
-			name = moduleNames[i-1]
+		if i <= len(slots) {
+			name = slots[i-1]
 		}
 		n.set("ModuleType"+strconv.Itoa(i), str(name))
 	}
-	n.set("Para1Level", num(-6))
-	n.set("Para2Level", num(-6))
-	n.set("Para1Pan", num(0))
-	n.set("Para2Pan", num(0))
-	n.set("ParaDelay", num(0))
+	m.apply(n)
 	return n
 }
 

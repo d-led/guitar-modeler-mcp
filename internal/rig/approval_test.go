@@ -36,6 +36,5 @@ func TestRigSnapshot(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Marshal: %v", err)
 	}
-	out = append(out, '\n')
 	golden.Assert(t, "rig", out)
 }

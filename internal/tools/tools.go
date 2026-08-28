@@ -38,7 +38,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 		InputSchema: objectSchema(map[string]any{"query": stringSchema("Optional case-insensitive filter over brand/model/style.")}),
 		Handler: func(_ context.Context, args map[string]any) (string, error) {
 			query := argString(args, "query")
-			return marshal(r.cat.AmpsMatching(query))
+			return marshal(params.AmpListings(r.cat, query))
 		},
 	})
 	s.Register(mcp.Tool{
@@ -64,7 +64,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 		Description: "List every effect module that can be placed in a rig chain, grouped by category.",
 		InputSchema: objectSchema(map[string]any{}),
 		Handler: func(_ context.Context, _ map[string]any) (string, error) {
-			return marshal(r.cat.FX())
+			return marshal(params.FXListings(r.cat))
 		},
 	})
 	s.Register(mcp.Tool{
@@ -131,17 +131,23 @@ func (r *Registrar) Register(s *mcp.Server) {
 
 	s.Register(mcp.Tool{
 		Name:        "design_rig",
-		Description: "Dial in a tone: translate hardware into device models, order the effects into a signal chain, write a .rig file and a human-readable HTML report.",
+		Description: "Dial in a tone: translate hardware into device models, order the effects into a signal chain, write a .rig file and a human-readable HTML report. The chain can be serial (default) or parallel: pass routing=\"SPS-1\" (serial → two parallel paths → serial) with amp2 for a dual-amp rig, or routing=\"PS-1\" (parallel from the input).",
 		InputSchema: objectSchema(map[string]any{
 			"name":       stringSchema("Rig/patch name."),
 			"song":       stringSchema("Optional song the tone is for."),
 			"amp":        stringSchema("Amp: device model or real-hardware description."),
 			"cab":        stringSchema("Optional cab: device model or description."),
 			"mic":        stringSchema("Optional mic: device model or description."),
+			"routing":    stringSchema("Signal-chain topology: \"S\" (serial, default), \"SPS-1\" (serial → parallel → serial) or \"PS-1\" (parallel from the input)."),
+			"amp2":       stringSchema("Optional second amp for a dual-amp parallel rig (device model or description). Same model as amp = same amp on both channels."),
+			"cab2":       stringSchema("Optional cab for the second amp path."),
+			"mic2":       stringSchema("Optional mic for the second amp path."),
 			"tempo":      numberSchema("Optional tempo in BPM."),
 			"input_gain": numberSchema("Optional input gain in dB."),
 			"output_dir": stringSchema("Directory to write the files into (default: current directory)."),
 			"fx":         arraySchema("Optional effects, in any order; they will be placed sensibly.", fxItemSchema()),
+			"path_a_fx":  arraySchema("Optional effects for parallel path A (shared-amp SPS-1).", fxItemSchema()),
+			"path_b_fx":  arraySchema("Optional effects for parallel path B (shared-amp SPS-1).", fxItemSchema()),
 		}),
 		Handler: func(_ context.Context, args map[string]any) (string, error) {
 			return r.designRig(args)
@@ -180,9 +186,15 @@ func (r *Registrar) designRig(args map[string]any) (string, error) {
 		Amp:       argString(args, "amp"),
 		Cab:       argString(args, "cab"),
 		Mic:       argString(args, "mic"),
+		Routing:   rig.Routing(argString(args, "routing")),
+		Amp2:      argString(args, "amp2"),
+		Cab2:      argString(args, "cab2"),
+		Mic2:      argString(args, "mic2"),
 		Tempo:     argFloat(args, "tempo"),
 		InputGain: argFloat(args, "input_gain"),
 		FX:        parseFX(args["fx"]),
+		PathAFX:   parseFX(args["path_a_fx"]),
+		PathBFX:   parseFX(args["path_b_fx"]),
 	}
 	res, err := r.design.Design(req)
 	if err != nil {

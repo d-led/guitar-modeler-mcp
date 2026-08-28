@@ -17,15 +17,16 @@ var rawJSON []byte
 
 // Param describes one knob/switch/dropdown of a module.
 type Param struct {
-	Kind   string   `json:"kind"` // "range", "toggle" or "set"
-	Label  string   `json:"label"`
-	Min    *float64 `json:"min,omitempty"`
-	Max    *float64 `json:"max,omitempty"`
-	Step   *float64 `json:"step,omitempty"`
-	Unit   string   `json:"unit,omitempty"`
-	Off    string   `json:"off,omitempty"`
-	On     string   `json:"on,omitempty"`
-	Values []string `json:"values,omitempty"`
+	Kind        string   `json:"kind"` // "range", "toggle", "set" or "sync"
+	Label       string   `json:"label"`
+	Description string   `json:"description,omitempty"`
+	Min         *float64 `json:"min,omitempty"`
+	Max         *float64 `json:"max,omitempty"`
+	Step        *float64 `json:"step,omitempty"`
+	Unit        string   `json:"unit,omitempty"`
+	Off         string   `json:"off,omitempty"`
+	On          string   `json:"on,omitempty"`
+	Values      []string `json:"values,omitempty"`
 }
 
 // Module maps parameter names to their specifications.
@@ -67,7 +68,20 @@ func load() {
 			}
 			modules[name] = m
 		}
+		applyOverlay()
+		enrichDescriptions()
 	})
+}
+
+func enrichDescriptions() {
+	for _, params := range modules {
+		for key, p := range params {
+			if p.Description == "" {
+				p.Description = paramDescription(key)
+				params[key] = p
+			}
+		}
+	}
 }
 
 // Get returns the parameter spec for a module, or false if unknown.
@@ -110,6 +124,25 @@ func (p Param) Validate(value any) error {
 		}
 		if !contains(p.Values, s) {
 			return fmt.Errorf("%s: %q is not a valid option (allowed: %v)", p.Label, s, p.Values)
+		}
+	case "sync":
+		// A tempo-synced parameter: either a number within the range or a note
+		// value such as "1/4".
+		if v, ok := asFloat(value); ok {
+			if p.Min != nil && v < *p.Min {
+				return fmt.Errorf("%s = %v is below the minimum %v%s", p.Label, v, *p.Min, p.Unit)
+			}
+			if p.Max != nil && v > *p.Max {
+				return fmt.Errorf("%s = %v is above the maximum %v%s", p.Label, v, *p.Max, p.Unit)
+			}
+			return nil
+		}
+		s, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("%s expects a number or note value, got %T", p.Label, value)
+		}
+		if !contains(p.Values, s) {
+			return fmt.Errorf("%s: %q is not a valid note value (allowed: %v)", p.Label, s, p.Values)
 		}
 	case "toggle":
 		if _, ok := value.(bool); !ok {

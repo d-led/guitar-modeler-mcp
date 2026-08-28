@@ -196,6 +196,8 @@ const reportHTML = `<!doctype html>
   .param { font-size: .9em; }
   .param .k { color: #888; margin-right: 6px; }
   .param .v { font-weight: 600; }
+  .disclaimer { max-width: 860px; margin: 24px auto 0; padding-top: 16px; border-top: 1px solid #e3e3e8; font-size: .78em; color: #888; }
+  @media (prefers-color-scheme: dark) { .disclaimer { border-color: #2c2c2e; } }
 </style>
 </head>
 <body>
@@ -221,5 +223,12 @@ const reportHTML = `<!doctype html>
   </div>
   {{end}}
 </div>
+<footer class="disclaimer">
+  All trademarks, logos and brand names are the property of their respective owners.
+  All company, product and service names used in this report are for identification
+  purposes only; use of these names, trademarks and brands does not imply endorsement.
+  This project is not affiliated with, endorsed by or sponsored by HeadRush or any of
+  the referenced brands.
+</footer>
 </body>
 </html>`

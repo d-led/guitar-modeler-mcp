@@ -73,8 +73,8 @@ func ampParams(cat *catalog.Catalog) map[string]modspec.Param {
 	for _, a := range cat.Amps() {
 		models = append(models, a.Model)
 	}
-	out["Type"] = modspec.Param{Kind: "set", Label: "Model", Values: models}
-	out["Type2"] = modspec.Param{Kind: "set", Label: "Model", Values: models}
+	out["Type"] = modspec.Param{Kind: "set", Label: "Model", Description: "Emulated amplifier model.", Values: models}
+	out["Type2"] = modspec.Param{Kind: "set", Label: "Model", Description: "Emulated amplifier model (doubled state).", Values: models}
 	return out
 }
 
@@ -88,16 +88,16 @@ func cabParams(cat *catalog.Catalog) map[string]modspec.Param {
 		mics = append(mics, m.Model)
 	}
 	return map[string]modspec.Param{
-		"CabType":     {Kind: "set", Label: "Cabinet", Values: cabs},
-		"CabType2":    {Kind: "set", Label: "Cabinet", Values: cabs},
-		"MicType":     {Kind: "set", Label: "Microphone", Values: mics},
-		"MicType2":    {Kind: "set", Label: "Microphone", Values: mics},
-		"OnAxis":      {Kind: "toggle", Label: "On Axis", Off: "off", On: "on"},
-		"OnAxis2":     {Kind: "toggle", Label: "On Axis", Off: "off", On: "on"},
-		"Breakup":     {Kind: "range", Label: "Breakup"},
-		"Breakup2":    {Kind: "range", Label: "Breakup"},
-		"OutGain":     {Kind: "range", Label: "Out Gain"},
-		"OutGain2":    {Kind: "range", Label: "Out Gain"},
-		"AmpCompGain": {Kind: "range", Label: "Amp Comp Gain"},
+		"CabType":     {Kind: "set", Label: "Cabinet", Description: "Cabinet model.", Values: cabs},
+		"CabType2":    {Kind: "set", Label: "Cabinet", Description: "Cabinet model (doubled state).", Values: cabs},
+		"MicType":     {Kind: "set", Label: "Microphone", Description: "Microphone model.", Values: mics},
+		"MicType2":    {Kind: "set", Label: "Microphone", Description: "Microphone model (doubled state).", Values: mics},
+		"OnAxis":      {Kind: "toggle", Label: "On Axis", Description: "On-axis microphone position.", Off: "off", On: "on"},
+		"OnAxis2":     {Kind: "toggle", Label: "On Axis", Description: "On-axis microphone position (doubled state).", Off: "off", On: "on"},
+		"Breakup":     {Kind: "range", Label: "Breakup", Description: "Speaker breakup amount."},
+		"Breakup2":    {Kind: "range", Label: "Breakup", Description: "Speaker breakup amount (doubled state)."},
+		"OutGain":     {Kind: "range", Label: "Out Gain", Description: "Output gain of the cabinet."},
+		"OutGain2":    {Kind: "range", Label: "Out Gain", Description: "Output gain of the cabinet (doubled state)."},
+		"AmpCompGain": {Kind: "range", Label: "Amp Comp Gain", Description: "Gain compensation applied to the amp."},
 	}
 }

@@ -96,21 +96,22 @@ func NewBuilder(cat *catalog.Catalog) (*Builder, error) {
 
 // Build renders a Spec into a RigFile.
 func (b *Builder) Build(spec Spec) (*RigFile, error) {
-	if err := validateBlocks(b.cat, spec.Blocks); err != nil {
+	c, err := buildChain(b.cat, spec)
+	if err != nil {
 		return nil, err
 	}
 
-	moduleNames := make([]string, 0, len(spec.Blocks))
-	nodes := make(map[string]*Node, len(spec.Blocks)+5)
+	blocks := c.blocks()
+	moduleNames := make([]string, 0, len(blocks))
+	nodes := make(map[string]*Node, len(blocks)+5)
+	seen := make(map[string]int, len(blocks))
 
-	for _, block := range spec.Blocks {
-		canon, _ := normalizeBlockName(b.cat, block.Type)
+	for _, block := range blocks {
+		canon := block.Type
 		if err := b.validateBlockParams(canon, block.Params); err != nil {
 			return nil, err
 		}
 		var node *Node
-		var err error
-
 		switch canon {
 		case "Amp":
 			model := strParam(block.Params, "Type")
@@ -135,21 +136,26 @@ func (b *Builder) Build(spec Spec) (*RigFile, error) {
 			}
 		}
 
-		moduleNames = append(moduleNames, canon)
-		nodes[canon] = node
+		// The device names repeated modules with a " N" suffix ("Amp" and
+		// "Amp 2", "Cab" and "Cab 2", ...), and the chain slots reference
+		// those instance names.
+		name := instanceName(canon, seen)
+		moduleNames = append(moduleNames, name)
+		nodes[name] = node
 	}
 
+	pathMix := pathMixFor(spec)
 	patch := Patch{
 		ChildOrder: append([]string{"Chain", "Rig", "Input", "Output", "Mix"}, moduleNames...),
 		Children:   nodes,
 	}
-	patch.Children["Chain"] = chainNode(moduleNames)
+	patch.Children["Chain"] = chainNode(c.routing, c.slots(), pathMix)
 	patch.Children["Rig"] = rigNode(spec.Name, spec.Tempo)
 	patch.Children["Input"] = inputNode(spec.InputGain)
 	patch.Children["Output"] = outputNode()
-	patch.Children["Mix"] = mixNode()
+	patch.Children["Mix"] = mixNode(pathMix)
 
-	footSwitch, err := footSwitchFor(b.footSwitch, moduleNames)
+	footSwitch, err := footSwitchFor(b.footSwitch, c.slots())
 	if err != nil {
 		return nil, err
 	}
@@ -196,9 +202,10 @@ func (b *Builder) Build(spec Spec) (*RigFile, error) {
 	}, nil
 }
 
-// Marshal renders the rig file to indented JSON bytes.
+// Marshal renders the rig file as compact, single-line JSON, exactly as the
+// device writes it (no indentation and no trailing newline).
 func (f *RigFile) Marshal() ([]byte, error) {
-	return json.MarshalIndent(f, "", "  ")
+	return json.Marshal(f)
 }
 
 func strParam(params map[string]any, key string) string {

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/catalog"
+	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/rig"
 )
 
 func TestDesignOrdersChainAndResolvesHardware(t *testing.T) {
@@ -66,5 +67,75 @@ func TestDesignRejectsUnknownFX(t *testing.T) {
 	_, err := d.Design(Request{Name: "x", Amp: "65 Black SR", FX: []FXBlock{{Type: "Bogus"}}})
 	if err == nil {
 		t.Fatal("expected error for unknown effect")
+	}
+}
+
+func TestDesignDualAmpBuildsParallelPaths(t *testing.T) {
+	d := NewDesigner(catalog.New())
+	res, err := d.Design(Request{
+		Name:    "Two Heads",
+		Amp:     "65 Black SR",
+		Amp2:    "67 Black Duo",
+		Routing: rig.RoutingSPS,
+		FX: []FXBlock{
+			{Type: "Green JRC-OD", Enabled: true},
+			{Type: "Eleven Reverb", Enabled: true},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Design: %v", err)
+	}
+
+	spec := res.Spec
+	if spec.Routing != rig.RoutingSPS {
+		t.Fatalf("routing = %q, want SPS-1", spec.Routing)
+	}
+	if len(spec.Prefix) != 1 || spec.Prefix[0].Type != "Green JRC-OD" {
+		t.Fatalf("prefix = %v, want [Green JRC-OD]", spec.Prefix)
+	}
+	if len(spec.PathA) != 2 || spec.PathA[0].Type != "Amp" || spec.PathA[1].Type != "Cab" {
+		t.Fatalf("path A = %v, want [Amp Cab]", spec.PathA)
+	}
+	if len(spec.PathB) != 2 || spec.PathB[0].Type != "Amp" || spec.PathB[1].Type != "Cab" {
+		t.Fatalf("path B = %v, want [Amp Cab]", spec.PathB)
+	}
+	if len(spec.Suffix) != 1 || spec.Suffix[0].Type != "Eleven Reverb" {
+		t.Fatalf("suffix = %v, want [Eleven Reverb]", spec.Suffix)
+	}
+
+	ampB := spec.PathB[0]
+	if ampB.Params["Type"] != "67 Black Duo" {
+		t.Fatalf("path B amp type = %v, want 67 Black Duo", ampB.Params["Type"])
+	}
+}
+
+func TestDesignSharedAmpUsesSingleAmpNode(t *testing.T) {
+	d := NewDesigner(catalog.New())
+	res, err := d.Design(Request{
+		Name:    "Shared",
+		Amp:     "65 Black SR",
+		Routing: rig.RoutingSPS,
+		PathAFX: []FXBlock{{Type: "Tape Echo", Enabled: true}},
+		PathBFX: []FXBlock{{Type: "Eleven Reverb", Enabled: true}},
+	})
+	if err != nil {
+		t.Fatalf("Design: %v", err)
+	}
+	spec := res.Spec
+	if len(spec.Prefix) != 2 || spec.Prefix[0].Type != "Amp" || spec.Prefix[1].Type != "Cab" {
+		t.Fatalf("prefix = %v, want [Amp Cab]", spec.Prefix)
+	}
+	if len(spec.PathA) != 1 || spec.PathA[0].Type != "Tape Echo" {
+		t.Fatalf("path A = %v, want [Tape Echo]", spec.PathA)
+	}
+	if len(spec.PathB) != 1 || spec.PathB[0].Type != "Eleven Reverb" {
+		t.Fatalf("path B = %v, want [Eleven Reverb]", spec.PathB)
+	}
+}
+
+func TestDesignParallelRequiresSecondAmp(t *testing.T) {
+	d := NewDesigner(catalog.New())
+	if _, err := d.Design(Request{Name: "x", Amp: "65 Black SR", Routing: rig.RoutingPS}); err == nil {
+		t.Fatal("expected error: PS-1 needs a second amp (amp2)")
 	}
 }

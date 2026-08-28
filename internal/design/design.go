@@ -28,6 +28,22 @@ type Request struct {
 	Tempo     float64   `json:"tempo,omitempty"`
 	InputGain float64   `json:"input_gain,omitempty"`
 	FX        []FXBlock `json:"fx,omitempty"`
+
+	// Routing selects the signal-chain topology: "" or "S" (serial, default),
+	// "SPS-1" (serial → parallel → serial) or "PS-1" (parallel from the input).
+	Routing rig.Routing `json:"routing,omitempty"`
+
+	// Amp2, Cab2 and Mic2 add a second, parallel amp path (the dual-amp
+	// configuration). When Amp2 is set the designer splits the chain into two
+	// amp paths; when it is empty the single amp is shared by both paths.
+	Amp2 string `json:"amp2,omitempty"`
+	Cab2 string `json:"cab2,omitempty"`
+	Mic2 string `json:"mic2,omitempty"`
+
+	// PathAFX and PathBFX place effects on the first and second parallel paths
+	// respectively (used for a shared-amp split, e.g. wet/dry/wet).
+	PathAFX []FXBlock `json:"path_a_fx,omitempty"`
+	PathBFX []FXBlock `json:"path_b_fx,omitempty"`
 }
 
 // Result carries the resolved spec plus human-readable decisions.
@@ -59,18 +75,82 @@ func (d *Designer) Design(req Request) (*Result, error) {
 
 	notes := []string{note, fmt.Sprintf("cab %q", cabModel), fmt.Sprintf("mic %q", micModel)}
 
-	var pre, post, last []rig.Block
-	for _, fx := range req.FX {
-		def, ok := d.cat.FXByName(fx.Type)
-		if !ok {
-			return nil, fmt.Errorf("unknown effect type %q", fx.Type)
+	pre, post, last, err := d.classifyFX(req.FX)
+	if err != nil {
+		return nil, err
+	}
+	tempo := req.Tempo
+	if tempo <= 0 {
+		tempo = 100
+	}
+
+	spec := rig.Spec{
+		Name:      req.Name,
+		Tempo:     tempo,
+		InputGain: req.InputGain,
+		Routing:   req.Routing,
+	}
+
+	switch {
+	case req.Routing == rig.RoutingSPS && req.Amp2 == "":
+		// Shared amp: the amp+cab feed two parallel effect paths.
+		spec.Prefix = append(pre, d.ampBlock(ampModel), d.cabBlock(cabModel, micModel))
+		spec.PathA = d.fxBlocks(req.PathAFX)
+		spec.PathB = d.fxBlocks(req.PathBFX)
+		spec.Suffix = append(post, last...)
+		notes = append(notes, "shared amp with two parallel effect paths (SPS-1)")
+	case req.Routing == rig.RoutingSPS:
+		// Dual amp: two full amp paths in parallel.
+		amp2Model, note2, err := d.resolveAmp(req.Amp2)
+		if err != nil {
+			return nil, err
 		}
-		block := rig.Block{Type: def.Name, Enabled: fx.Enabled, Params: fx.Params}
+		cab2Model := d.resolveCab(req.Cab2, amp2Model)
+		mic2Model := d.resolveMic(req.Mic2)
+		spec.Prefix = pre
+		spec.PathA = []rig.Block{d.ampBlock(ampModel), d.cabBlock(cabModel, micModel)}
+		spec.PathB = []rig.Block{d.ampBlock(amp2Model), d.cabBlock(cab2Model, mic2Model)}
+		spec.Suffix = append(post, last...)
+		notes = append(notes, note2, fmt.Sprintf("cab2 %q", cab2Model))
+	case req.Routing == rig.RoutingPS:
+		// Split at the input into two amp paths.
+		amp2Model, note2, err := d.resolveAmp(req.Amp2)
+		if err != nil {
+			return nil, err
+		}
+		cab2Model := d.resolveCab(req.Cab2, amp2Model)
+		mic2Model := d.resolveMic(req.Mic2)
+		spec.PathA = append(pre, d.ampBlock(ampModel), d.cabBlock(cabModel, micModel))
+		spec.PathB = []rig.Block{d.ampBlock(amp2Model), d.cabBlock(cab2Model, mic2Model)}
+		spec.Suffix = append(post, last...)
+		notes = append(notes, note2, fmt.Sprintf("cab2 %q", cab2Model))
+	default:
+		// Serial: pre → amp → cab → post → volume.
+		blocks := make([]rig.Block, 0, len(pre)+len(post)+len(last)+2)
+		blocks = append(blocks, pre...)
+		blocks = append(blocks, d.ampBlock(ampModel))
+		blocks = append(blocks, d.cabBlock(cabModel, micModel))
+		blocks = append(blocks, post...)
+		blocks = append(blocks, last...)
+		spec.Blocks = blocks
+	}
+
+	return &Result{Spec: spec, Notes: notes}, nil
+}
+
+// classifyFX orders effects into pre-amp, post-amp and final (Volume) groups.
+func (d *Designer) classifyFX(fx []FXBlock) (pre, post, last []rig.Block, err error) {
+	for _, f := range fx {
+		def, ok := d.cat.FXByName(f.Type)
+		if !ok {
+			return nil, nil, nil, fmt.Errorf("unknown effect type %q", f.Type)
+		}
+		block := rig.Block{Type: def.Name, Enabled: f.Enabled, Params: f.Params}
 		if block.Params == nil {
 			block.Params = map[string]any{}
 		}
 		if strings.EqualFold(def.Name, "Volume") {
-			last = append(last, block) // Volume pedal always goes at the end of the chain
+			last = append(last, block)
 			continue
 		}
 		switch def.Category {
@@ -80,36 +160,23 @@ func (d *Designer) Design(req Request) (*Result, error) {
 			post = append(post, block)
 		}
 	}
+	return pre, post, last, nil
+}
 
-	blocks := make([]rig.Block, 0, len(pre)+len(post)+len(last)+2)
-	blocks = append(blocks, pre...)
-	blocks = append(blocks, rig.Block{
-		Type:    "Amp",
-		Enabled: true,
-		Params:  map[string]any{"Type": ampModel, "On": true},
-	})
-	blocks = append(blocks, rig.Block{
-		Type:    "Cab",
-		Enabled: true,
-		Params:  map[string]any{"CabType": cabModel, "MicType": micModel, "On": true},
-	})
-	blocks = append(blocks, post...)
-	blocks = append(blocks, last...)
-
-	tempo := req.Tempo
-	if tempo <= 0 {
-		tempo = 100
+func (d *Designer) fxBlocks(fx []FXBlock) []rig.Block {
+	blocks := make([]rig.Block, 0, len(fx))
+	for _, f := range fx {
+		blocks = append(blocks, rig.Block{Type: f.Type, Enabled: f.Enabled, Params: f.Params})
 	}
+	return blocks
+}
 
-	return &Result{
-		Spec: rig.Spec{
-			Name:      req.Name,
-			Tempo:     tempo,
-			InputGain: req.InputGain,
-			Blocks:    blocks,
-		},
-		Notes: notes,
-	}, nil
+func (d *Designer) ampBlock(model string) rig.Block {
+	return rig.Block{Type: "Amp", Enabled: true, Params: map[string]any{"Type": model, "On": true}}
+}
+
+func (d *Designer) cabBlock(cab, mic string) rig.Block {
+	return rig.Block{Type: "Cab", Enabled: true, Params: map[string]any{"CabType": cab, "MicType": mic, "On": true}}
 }
 
 func (d *Designer) resolveAmp(query string) (string, string, error) {

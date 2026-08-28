@@ -26,7 +26,7 @@ func newCatalogCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				return printJSON(a.cat.AmpsMatching(firstArg(args)))
+				return printJSON(params.AmpListings(a.cat, firstArg(args)))
 			},
 		},
 		&cobra.Command{
@@ -61,7 +61,7 @@ func newCatalogCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				return printJSON(a.cat.FX())
+				return printJSON(params.FXListings(a.cat))
 			},
 		},
 		&cobra.Command{

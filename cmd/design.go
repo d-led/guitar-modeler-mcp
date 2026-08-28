@@ -10,6 +10,7 @@ import (
 
 	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/design"
 	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/htmlreport"
+	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/rig"
 )
 
 func newDesignCmd() *cobra.Command {
@@ -19,10 +20,16 @@ func newDesignCmd() *cobra.Command {
 		amp       string
 		cab       string
 		mic       string
+		routing   string
+		amp2      string
+		cab2      string
+		mic2      string
 		tempo     float64
 		inputGain float64
 		out       string
 		fxJSON    string
+		pathAFX   string
+		pathBFX   string
 	)
 	cmd := &cobra.Command{
 		Use:   "design",
@@ -38,15 +45,29 @@ func newDesignCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			pathAFXBlocks, err := parseFXFlags(pathAFX)
+			if err != nil {
+				return err
+			}
+			pathBFXBlocks, err := parseFXFlags(pathBFX)
+			if err != nil {
+				return err
+			}
 			res, err := a.design.Design(design.Request{
 				Name:      name,
 				Song:      song,
 				Amp:       amp,
 				Cab:       cab,
 				Mic:       mic,
+				Routing:   rig.Routing(routing),
+				Amp2:      amp2,
+				Cab2:      cab2,
+				Mic2:      mic2,
 				Tempo:     tempo,
 				InputGain: inputGain,
 				FX:        fx,
+				PathAFX:   pathAFXBlocks,
+				PathBFX:   pathBFXBlocks,
 			})
 			if err != nil {
 				return err
@@ -82,10 +103,16 @@ func newDesignCmd() *cobra.Command {
 	cmd.Flags().StringVar(&amp, "amp", "", "amp: device model or real-hardware description (required)")
 	cmd.Flags().StringVar(&cab, "cab", "", "cab: device model or description")
 	cmd.Flags().StringVar(&mic, "mic", "", "mic: device model or description")
+	cmd.Flags().StringVar(&routing, "routing", "", "signal-chain topology: S (serial, default), SPS-1 (serial→parallel→serial) or PS-1 (parallel from input)")
+	cmd.Flags().StringVar(&amp2, "amp2", "", "second amp for a dual-amp parallel rig (same model = same amp on both channels)")
+	cmd.Flags().StringVar(&cab2, "cab2", "", "cab for the second amp path")
+	cmd.Flags().StringVar(&mic2, "mic2", "", "mic for the second amp path")
 	cmd.Flags().Float64Var(&tempo, "tempo", 0, "tempo in BPM")
 	cmd.Flags().Float64Var(&inputGain, "input-gain", 0, "input gain in dB")
 	cmd.Flags().StringVar(&out, "out", ".", "output directory")
 	cmd.Flags().StringVar(&fxJSON, "fx", "", "effects as a JSON array")
+	cmd.Flags().StringVar(&pathAFX, "path-a-fx", "", "effects for parallel path A as a JSON array")
+	cmd.Flags().StringVar(&pathBFX, "path-b-fx", "", "effects for parallel path B as a JSON array")
 	_ = cmd.MarkFlagRequired("amp")
 	return cmd
 }
