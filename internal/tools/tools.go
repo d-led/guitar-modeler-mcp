@@ -14,6 +14,7 @@ import (
 	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/design"
 	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/htmlreport"
 	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/mcp"
+	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/params"
 	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/rig"
 )
 
@@ -83,6 +84,23 @@ func (r *Registrar) Register(s *mcp.Server) {
 				return "", fmt.Errorf("no presets for module %q: %w", typ, err)
 			}
 			return marshal(presets)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "catalog_list_module_params",
+		Description: "Describe a module's editable parameters: kind (range/toggle/set), label, unit and the allowed values/range, so only valid inputs are produced.",
+		InputSchema: objectSchema(map[string]any{"type": stringSchema("Module display name, e.g. \"Tape Echo\", \"Amp\" or \"Cab\".")}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			typ := argString(args, "type")
+			if typ == "" {
+				return "", fmt.Errorf("a module \"type\" is required")
+			}
+			spec, err := params.Describe(r.cat, typ)
+			if err != nil {
+				return "", err
+			}
+			return marshal(spec)
 		},
 	})
 

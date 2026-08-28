@@ -105,6 +105,9 @@ func (b *Builder) Build(spec Spec) (*RigFile, error) {
 
 	for _, block := range spec.Blocks {
 		canon, _ := normalizeBlockName(b.cat, block.Type)
+		if err := b.validateBlockParams(canon, block.Params); err != nil {
+			return nil, err
+		}
 		var node *Node
 		var err error
 

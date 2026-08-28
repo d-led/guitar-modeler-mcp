@@ -18,7 +18,7 @@ func TestRigSnapshot(t *testing.T) {
 		Name:  "Approval Rig",
 		Tempo: 120,
 		Blocks: []Block{
-			{Type: "Green JRC-OD", Enabled: true, Params: map[string]any{"Gain": 60.0}},
+			{Type: "Green JRC-OD", Enabled: true, Params: map[string]any{"Drive": 60.0}},
 			{Type: "Amp", Params: map[string]any{"Type": "65 Black SR", "GainA": 70.0, "Bass": 40.0}},
 			{Type: "Cab", Params: map[string]any{"CabType": "1x12 Black Panel Lux", "MicType": "Dyn 57"}},
 			{Type: "Tape Echo", Enabled: true, Params: map[string]any{"Feedback": 55.0}},

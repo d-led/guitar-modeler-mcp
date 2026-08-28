@@ -43,6 +43,7 @@ headrush-gigboard-mcp catalog cabs
 headrush-gigboard-mcp catalog mics
 headrush-gigboard-mcp catalog fx
 headrush-gigboard-mcp catalog presets "Tape Echo"
+headrush-gigboard-mcp catalog params "Tape Echo"   # ranges, units, options
 
 # Translate real hardware into device models
 headrush-gigboard-mcp translate amp "Marshall JCM800"
@@ -102,6 +103,7 @@ headrush-gigboard-mcp serve
 | `catalog_list_mics` | List microphone models |
 | `catalog_list_fx` | List effect modules by category |
 | `catalog_list_block_presets` | List factory presets for one effect |
+| `catalog_list_module_params` | Describe a module's parameters (kind, range, unit, options) |
 | `translate_amp` / `translate_cab` / `translate_mic` | Hardware → device model |
 | `design_rig` | Translate, order, write `.rig` + HTML report |
 | `render_report` | HTML report for an existing `.rig` |
@@ -110,6 +112,13 @@ headrush-gigboard-mcp serve
 Example agent workflow: list amps → translate the song's amp → `design_rig` with
 effects → read the report → tweak by re-running `design_rig` with parameter
 overrides or by decoding and fixing an existing file.
+
+The builder **validates every parameter** against the device's specifications
+(extracted from `headrush-desktop/renderer/config/modules/*.ts` plus the
+backup-derived catalog): unknown parameter names, out-of-range numbers and
+invalid enum options are rejected with a clear message, so an invalid `.rig` is
+never written. Regenerate the extracted spec with
+`node scripts/extract-module-config.cjs <headrush-desktop-root> internal/modspec/data/params.json`.
 
 ## Data provenance
 

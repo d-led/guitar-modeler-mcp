@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/assets"
+	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/params"
 )
 
 func newCatalogCmd() *cobra.Command {
@@ -81,6 +82,22 @@ func newCatalogCmd() *cobra.Command {
 					return fmt.Errorf("no presets for module %q: %w", name, err)
 				}
 				return printJSON(presets)
+			},
+		},
+		&cobra.Command{
+			Use:   "params <module>",
+			Short: "Describe a module's parameters: kinds, ranges, units and options",
+			Args:  cobra.ExactArgs(1),
+			RunE: func(_ *cobra.Command, args []string) error {
+				a, err := newApp()
+				if err != nil {
+					return err
+				}
+				spec, err := params.Describe(a.cat, args[0])
+				if err != nil {
+					return err
+				}
+				return printJSON(spec)
 			},
 		},
 	)

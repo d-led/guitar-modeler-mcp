@@ -1,0 +1,4195 @@
+{
+  "White Boost": {
+    "Gain": {
+      "type": "range",
+      "label": "Gain",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Treble": {
+      "type": "range",
+      "label": "Treble",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Bass": {
+      "type": "range",
+      "label": "Bass",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Volume": {
+      "type": "range",
+      "label": "Level",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    }
+  },
+  "Green JRC-OD": {
+    "Drive": {
+      "type": "range",
+      "label": "Drive",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Tone": {
+      "type": "range",
+      "label": "Tone",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Level": {
+      "type": "range",
+      "label": "Level",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    }
+  },
+  "DC Distort": {
+    "Gain": {
+      "type": "range",
+      "label": "Gain",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Treble": {
+      "type": "range",
+      "label": "Treble",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Bass": {
+      "type": "range",
+      "label": "Bass",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Volume": {
+      "type": "range",
+      "label": "Volume",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    }
+  },
+  "Black OP": {
+    "Distortion": {
+      "type": "range",
+      "label": "Distort",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Cutoff": {
+      "type": "range",
+      "label": "Cutoff",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Volume": {
+      "type": "range",
+      "label": "Volume",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    }
+  },
+  "Tri Fuzz": {
+    "Volume": {
+      "type": "range",
+      "label": "Volume",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Sustain": {
+      "type": "range",
+      "label": "Sustain",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Tone": {
+      "type": "range",
+      "label": "Tone",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    }
+  },
+  "8-Bit Crush": {
+    "Bit1": {
+      "type": "set",
+      "label": "Bit1",
+      "values": [
+        "Thru",
+        "Mute",
+        "Inv",
+        "Posi"
+      ],
+      "w": 1,
+      "style": "button"
+    },
+    "Bit2": {
+      "type": "set",
+      "label": "Bit2",
+      "values": [
+        "Thru",
+        "Mute",
+        "Inv",
+        "Posi"
+      ],
+      "w": 1,
+      "style": "button"
+    },
+    "Bit3": {
+      "type": "set",
+      "label": "Bit3",
+      "values": [
+        "Thru",
+        "Mute",
+        "Inv",
+        "Posi"
+      ],
+      "w": 1,
+      "style": "button"
+    },
+    "Bit4": {
+      "type": "set",
+      "label": "Bit4",
+      "values": [
+        "Thru",
+        "Mute",
+        "Inv",
+        "Posi"
+      ],
+      "w": 1,
+      "style": "button"
+    },
+    "Bit5": {
+      "type": "set",
+      "label": "Bit5",
+      "values": [
+        "Thru",
+        "Mute",
+        "Inv",
+        "Posi"
+      ],
+      "w": 1,
+      "style": "button"
+    },
+    "Bit6": {
+      "type": "set",
+      "label": "Bit6",
+      "values": [
+        "Thru",
+        "Mute",
+        "Inv",
+        "Posi"
+      ],
+      "w": 1,
+      "style": "button"
+    },
+    "Bit7": {
+      "type": "set",
+      "label": "Bit7",
+      "values": [
+        "Thru",
+        "Mute",
+        "Inv",
+        "Posi"
+      ],
+      "w": 1,
+      "style": "button"
+    },
+    "Bit8": {
+      "type": "set",
+      "label": "Bit8",
+      "values": [
+        "Thru",
+        "Mute",
+        "Inv",
+        "Posi"
+      ],
+      "w": 1,
+      "style": "button"
+    },
+    "Drive": {
+      "type": "range",
+      "label": "Drive",
+      "min": 0,
+      "max": 12,
+      "step": 0.1,
+      "unit": " dB"
+    },
+    "FXOut": {
+      "type": "range",
+      "label": "Crush Gain",
+      "min": -24,
+      "max": 0,
+      "step": 0.1,
+      "unit": " dB"
+    },
+    "Mix": {
+      "type": "range",
+      "label": "Mix",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Mode": {
+      "type": "set",
+      "label": "Bit Mode",
+      "values": [
+        "OFF",
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H",
+        "I",
+        "RECT",
+        "CUST"
+      ]
+    },
+    "BitGainScale": {
+      "type": "range",
+      "label": "Bit Power",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Resampling": {
+      "type": "range",
+      "label": "Resample",
+      "min": 0.003,
+      "max": 1,
+      "step": 0.001,
+      "unit": ""
+    },
+    "AntiAliasing": {
+      "type": "range",
+      "label": "Res Smooth",
+      "min": 0,
+      "max": 1,
+      "step": 0.001,
+      "unit": " %",
+      "displayMin": 0,
+      "displayMax": 100
+    },
+    "ThresholdExp": {
+      "type": "range",
+      "label": "Threshold",
+      "min": -60,
+      "max": 0,
+      "step": 1,
+      "unit": " dB"
+    },
+    "ThresholdComp": {
+      "type": "range",
+      "label": "Crush Comp",
+      "min": -30,
+      "max": 0,
+      "step": 1,
+      "unit": " dB"
+    },
+    "Freq": {
+      "type": "range",
+      "label": "Frequency",
+      "min": 20,
+      "max": 20000,
+      "step": 1,
+      "unit": " Hz"
+    },
+    "Q": {
+      "type": "range",
+      "label": "Q",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    }
+  },
+  "Anxiety OD": {
+    "Drive": {
+      "type": "range",
+      "label": "Drive",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Tone": {
+      "type": "range",
+      "label": "Tone",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Level": {
+      "type": "range",
+      "label": "Level",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Hi-Lo": {
+      "type": "toggle",
+      "label": "Lo-Hi",
+      "off": "Low",
+      "on": "High"
+    }
+  },
+  "Anxiety OD V2": {
+    "Drive": {
+      "type": "range",
+      "label": "Drive",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Tone": {
+      "type": "range",
+      "label": "Tone",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Level": {
+      "type": "range",
+      "label": "Level",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Hi-Lo": {
+      "type": "toggle",
+      "label": "Lo-Hi",
+      "off": "Low",
+      "on": "High"
+    }
+  },
+  "D1 Dist": {
+    "Dist": {
+      "type": "range",
+      "label": "Dist",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Tone": {
+      "type": "range",
+      "label": "Tone",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Level": {
+      "type": "range",
+      "label": "Level",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    }
+  },
+  "Round Fuzz": {
+    "Fuzz": {
+      "type": "range",
+      "label": "Fuzz",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Volume": {
+      "type": "range",
+      "label": "Volume",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    }
+  },
+  "K Drive": {
+    "Drive": {
+      "type": "range",
+      "label": "Drive",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Tone": {
+      "type": "range",
+      "label": "Tone",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Level": {
+      "type": "range",
+      "label": "Level",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    }
+  },
+  "MX Dist": {
+    "Dist": {
+      "type": "range",
+      "label": "Dist",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Output": {
+      "type": "range",
+      "label": "Output",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    }
+  },
+  "D250 Drive": {
+    "Level": {
+      "type": "range",
+      "label": "Level",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Gain": {
+      "type": "range",
+      "label": "Gain",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    }
+  },
+  "S1 Drive": {
+    "Drive": {
+      "type": "range",
+      "label": "Drive",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Level": {
+      "type": "range",
+      "label": "Level",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Tone": {
+      "type": "range",
+      "label": "Tone",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    }
+  },
+  "Oct Fuzz": {
+    "Volume": {
+      "type": "range",
+      "label": "Volume",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Drive": {
+      "type": "range",
+      "label": "Fuzz",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    }
+  },
+  "B Dist 7000": {
+    "Drive": {
+      "type": "range",
+      "label": "Drive",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "DistLev": {
+      "type": "range",
+      "label": "Dist Level",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Blend": {
+      "type": "range",
+      "label": "Blend",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Master": {
+      "type": "range",
+      "label": "Master",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Bass": {
+      "type": "range",
+      "label": "Bass",
+      "min": -12,
+      "max": 12,
+      "step": 0.1,
+      "unit": " dB"
+    },
+    "LoMids": {
+      "type": "range",
+      "label": "Low Mid",
+      "min": -12,
+      "max": 12,
+      "step": 0.1,
+      "unit": " dB"
+    },
+    "LoMidFreq": {
+      "type": "range",
+      "label": "Low Mid Frequency",
+      "min": 250,
+      "max": 1000,
+      "step": 0.1,
+      "unit": " Hz"
+    },
+    "HiMids": {
+      "type": "range",
+      "label": "High Mid",
+      "min": -12,
+      "max": 12,
+      "step": 0.1,
+      "unit": " dB"
+    },
+    "HiMidFreq": {
+      "type": "range",
+      "label": "High Mid Frequency",
+      "min": 750,
+      "max": 3000,
+      "step": 0.1,
+      "unit": " Hz"
+    },
+    "Treble": {
+      "type": "range",
+      "label": "Treble",
+      "min": -12,
+      "max": 12,
+      "step": 0.1,
+      "unit": " dB"
+    },
+    "Bite": {
+      "type": "set",
+      "label": "Attack",
+      "values": [
+        "Flat",
+        "Emph",
+        "De-Emph"
+      ]
+    },
+    "Growl": {
+      "type": "set",
+      "label": "Grunt",
+      "values": [
+        "Lo-Emph",
+        "Flat",
+        "Hi-Emph"
+      ]
+    }
+  },
+  "B2 Drive": {
+    "Gain": {
+      "type": "range",
+      "label": "Gain",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Level": {
+      "type": "range",
+      "label": "Level",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Tone": {
+      "type": "range",
+      "label": "Tone",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    }
+  },
+  "Gray Comp": {
+    "Sustain": {
+      "type": "range",
+      "label": "Sustain",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Level": {
+      "type": "range",
+      "label": "Level",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    }
+  },
+  "DynIII Comp": {
+    "Threshold": {
+      "type": "range",
+      "label": "Threshold",
+      "min": -60,
+      "max": 0,
+      "step": 0.1,
+      "unit": " dB"
+    },
+    "Attack": {
+      "type": "range",
+      "label": "Attack",
+      "min": 0.01,
+      "max": 300,
+      "step": 0.01,
+      "unit": " ms"
+    },
+    "Gain": {
+      "type": "range",
+      "label": "Gain",
+      "min": 0,
+      "max": 40,
+      "step": 0.1,
+      "unit": " dB"
+    },
+    "Ratio": {
+      "type": "range",
+      "label": "Ratio",
+      "min": 1,
+      "max": 100,
+      "step": 0.1,
+      "unit": " : 1"
+    },
+    "Release": {
+      "type": "range",
+      "label": "Release",
+      "min": 5,
+      "max": 4000,
+      "step": 1,
+      "unit": " ms"
+    },
+    "Knee": {
+      "type": "range",
+      "label": "Knee",
+      "min": 0,
+      "max": 30,
+      "step": 0.1,
+      "unit": " dB"
+    }
+  },
+  "Side Comp": {
+    "Threshold": {
+      "type": "range",
+      "label": "Threshold",
+      "min": -60,
+      "max": 0,
+      "step": 0.1,
+      "unit": " dB"
+    },
+    "Attack": {
+      "type": "range",
+      "label": "Attack",
+      "min": 0.01,
+      "max": 300,
+      "step": 0.01,
+      "unit": " ms"
+    },
+    "Gain": {
+      "type": "range",
+      "label": "Gain",
+      "min": 0,
+      "max": 40,
+      "step": 0.1,
+      "unit": " dB"
+    },
+    "Ratio": {
+      "type": "range",
+      "label": "Ratio",
+      "min": 1,
+      "max": 100,
+      "step": 0.1,
+      "unit": " : 1"
+    },
+    "Release": {
+      "type": "range",
+      "label": "Release",
+      "min": 5,
+      "max": 4000,
+      "step": 1,
+      "unit": " ms"
+    },
+    "Knee": {
+      "type": "range",
+      "label": "Knee",
+      "min": 0,
+      "max": 30,
+      "step": 0.1,
+      "unit": " dB"
+    }
+  },
+  "Gate": {
+    "Threshold": {
+      "type": "range",
+      "label": "Threshold",
+      "min": -120,
+      "max": 0,
+      "step": 1,
+      "unit": " dB"
+    },
+    "Release": {
+      "type": "range",
+      "label": "Release",
+      "min": 1,
+      "max": 3000,
+      "step": 1,
+      "unit": " ms"
+    },
+    "FilterThreshhold": {
+      "type": "range",
+      "label": "Filter Threshold",
+      "min": -120,
+      "max": -60,
+      "step": 1,
+      "unit": " dB"
+    }
+  },
+  "Graphic EQ": {
+    "LoGain": {
+      "type": "range",
+      "label": "Low Gain",
+      "min": -12,
+      "max": 12,
+      "step": 0.1,
+      "unit": " dB"
+    },
+    "LoMidGain": {
+      "type": "range",
+      "label": "Low Mid Gain",
+      "min": -18,
+      "max": 18,
+      "step": 0.1,
+      "unit": " dB"
+    },
+    "MidGain": {
+      "type": "range",
+      "label": "Mid Gain",
+      "min": -18,
+      "max": 18,
+      "step": 0.1,
+      "unit": " dB"
+    },
+    "HiMidGain": {
+      "type": "range",
+      "label": "High Mid Gain",
+      "min": -18,
+      "max": 18,
+      "step": 0.1,
+      "unit": " dB"
+    },
+    "HiGain": {
+      "type": "range",
+      "label": "High Gain",
+      "min": -12,
+      "max": 12,
+      "step": 0.1,
+      "unit": " dB"
+    },
+    "Gain": {
+      "type": "range",
+      "label": "Gain",
+      "min": -20,
+      "max": 6,
+      "step": 0.1,
+      "unit": " dB"
+    }
+  },
+  "Para EQ": {
+    "Gain1": {
+      "type": "range",
+      "label": "Gain 1",
+      "min": -24,
+      "max": 12,
+      "step": 0.1,
+      "unit": " dB"
+    },
+    "Freq1": {
+      "type": "range",
+      "label": "Frequency 1",
+      "min": 20,
+      "max": 2000,
+      "step": 0.1,
+      "unit": " Hz"
+    },
+    "Q1": {
+      "type": "range",
+      "label": "Q 1",
+      "min": 0.2,
+      "max": 10,
+      "step": 0.1,
+      "unit": ""
+    },
+    "Gain2": {
+      "type": "range",
+      "label": "Gain 2",
+      "min": -18,
+      "max": 18,
+      "step": 0.1,
+      "unit": " dB"
+    },
+    "Freq2": {
+      "type": "range",
+      "label": "Frequency 2",
+      "min": 100,
+      "max": 10000,
+      "step": 0.1,
+      "unit": " Hz"
+    },
+    "Q2": {
+      "type": "range",
+      "label": "Q 2",
+      "min": 0.2,
+      "max": 10,
+      "step": 0.1,
+      "unit": ""
+    },
+    "Gain3": {
+      "type": "range",
+      "label": "Gain 3",
+      "min": -18,
+      "max": 18,
+      "step": 0.1,
+      "unit": " dB"
+    },
+    "Freq3": {
+      "type": "range",
+      "label": "Frequency 3",
+      "min": 200,
+      "max": 20000,
+      "step": 0.1,
+      "unit": " Hz"
+    },
+    "Q3": {
+      "type": "range",
+      "label": "Q 3",
+      "min": 0.2,
+      "max": 10,
+      "step": 0.1,
+      "unit": ""
+    },
+    "Gain4": {
+      "type": "range",
+      "label": "Gain 4",
+      "min": -24,
+      "max": 12,
+      "step": 0.1,
+      "unit": " dB"
+    },
+    "Freq4": {
+      "type": "range",
+      "label": "Frequency 4",
+      "min": 200,
+      "max": 20000,
+      "step": 0.1,
+      "unit": " Hz"
+    },
+    "Q4": {
+      "type": "range",
+      "label": "Q 4",
+      "min": 0.2,
+      "max": 10,
+      "step": 0.1,
+      "unit": ""
+    },
+    "Type1": {
+      "type": "set",
+      "label": "Type 1",
+      "values": [
+        "Shelf",
+        "Peak",
+        "6dB",
+        "12dB",
+        "24dB",
+        "Notch"
+      ]
+    },
+    "Type4": {
+      "type": "set",
+      "label": "Type 4",
+      "values": [
+        "Shelf",
+        "Peak",
+        "6dB",
+        "12dB",
+        "24dB",
+        "Notch"
+      ]
+    }
+  },
+  "Bass EQ": {
+    "Level": {
+      "type": "range",
+      "label": "Level",
+      "min": -20,
+      "max": 6,
+      "step": 0.1,
+      "unit": " dB"
+    },
+    "Frequency": {
+      "type": "range",
+      "label": "Frequency",
+      "min": 1,
+      "max": 10,
+      "step": 0.1,
+      "unit": ""
+    },
+    "Q": {
+      "type": "set",
+      "label": "Q",
+      "values": [
+        "Shallow",
+        "Deep"
+      ]
+    }
+  },
+  "Acoustic Pre": {
+    "Low": {
+      "type": "range",
+      "label": "Bass",
+      "min": -12,
+      "max": 12,
+      "step": 0.1,
+      "unit": " dB"
+    },
+    "Mid": {
+      "type": "range",
+      "label": "Mid",
+      "min": -12,
+      "max": 12,
+      "step": 0.1,
+      "unit": " dB"
+    },
+    "High": {
+      "type": "range",
+      "label": "Treble",
+      "min": -12,
+      "max": 12,
+      "step": 0.1,
+      "unit": " dB"
+    },
+    "Phase": {
+      "type": "toggle",
+      "label": "Phase",
+      "off": "Norm",
+      "on": "Inv"
+    }
+  },
+  "Auto Swell": {
+    "Threshold": {
+      "type": "range",
+      "label": "Trigger sensitivity",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Attack": {
+      "type": "range",
+      "label": "Attack",
+      "min": 5,
+      "max": 2000,
+      "step": 1,
+      "unit": " ms"
+    },
+    "Mode": {
+      "type": "set",
+      "label": "Mode",
+      "values": [
+        "Fast",
+        "Slow"
+      ]
+    }
+  },
+  "Noise Filter": {
+    "Hi_Thresh": {
+      "type": "range",
+      "label": "High Threshold",
+      "min": -60,
+      "max": 0,
+      "step": 0.1,
+      "unit": " dB"
+    },
+    "Lo_Thresh": {
+      "type": "range",
+      "label": "Low Threshold",
+      "min": -60,
+      "max": 0,
+      "step": 0.1,
+      "unit": " dB"
+    },
+    "Attack": {
+      "type": "range",
+      "label": "Attack",
+      "min": 0.01,
+      "max": 300,
+      "step": 0.01,
+      "unit": " ms"
+    },
+    "Release": {
+      "type": "range",
+      "label": "Release",
+      "min": 5,
+      "max": 4000,
+      "step": 1,
+      "unit": " ms"
+    }
+  },
+  "Hold": {
+    "Mix": {
+      "type": "range",
+      "label": "Mix",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Level": {
+      "type": "range",
+      "label": "Level",
+      "min": -60,
+      "max": 6,
+      "step": 0.1,
+      "unit": " dB"
+    },
+    "Attack": {
+      "type": "set",
+      "label": "Attack",
+      "values": [
+        "200 mS",
+        "400 mS",
+        "800 mS"
+      ]
+    },
+    "Release": {
+      "type": "set",
+      "label": "Release",
+      "values": [
+        "0 mS",
+        "400 mS",
+        "1.0 S",
+        "3.2 S"
+      ]
+    }
+  },
+  "Multi Chorus": {
+    "Rate": {
+      "type": "range",
+      "label": "Rate",
+      "min": 0.1,
+      "max": 10,
+      "step": 0.1,
+      "unit": " Hz"
+    },
+    "Depth": {
+      "type": "range",
+      "label": "Depth",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Voices": {
+      "type": "set",
+      "label": "Voices",
+      "values": [
+        "3",
+        "4",
+        "6"
+      ]
+    },
+    "Mix": {
+      "type": "range",
+      "label": "Mix",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Width": {
+      "type": "range",
+      "label": "Width",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "PreDelay": {
+      "type": "range",
+      "label": "Pre Delay",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "LoCut": {
+      "type": "range",
+      "label": "Low Cut",
+      "min": 20,
+      "max": 1000,
+      "step": 1,
+      "unit": " Hz"
+    },
+    "LFOShape": {
+      "type": "set",
+      "label": "LFO Shape",
+      "values": [
+        "Tri",
+        "Sine"
+      ]
+    },
+    "Sync": {
+      "type": "toggle",
+      "label": "Sync",
+      "off": "Off",
+      "on": "On"
+    }
+  },
+  "Chorus": {
+    "Rate": {
+      "type": "range",
+      "label": "Rate",
+      "min": 0.1,
+      "max": 10,
+      "step": 0.1,
+      "unit": " Hz"
+    },
+    "Depth": {
+      "type": "range",
+      "label": "Depth",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Feedback": {
+      "type": "range",
+      "label": "Feedback",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Mix": {
+      "type": "range",
+      "label": "Mix/Width",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Sync": {
+      "type": "toggle",
+      "label": "Sync",
+      "off": "Off",
+      "on": "On"
+    }
+  },
+  "Dim Chorus": {
+    "Mode": {
+      "type": "toggle",
+      "label": "Model",
+      "off": "Stomp",
+      "on": "Rack",
+      "w": 8,
+      "style": "dropdown"
+    },
+    "One": {
+      "type": "toggle",
+      "label": "1",
+      "off": "Off",
+      "on": "On"
+    },
+    "Two": {
+      "type": "toggle",
+      "label": "2",
+      "off": "Off",
+      "on": "On"
+    },
+    "Three": {
+      "type": "toggle",
+      "label": "3",
+      "off": "Off",
+      "on": "On"
+    },
+    "Four": {
+      "type": "toggle",
+      "label": "4",
+      "off": "Off",
+      "on": "On"
+    },
+    "Width": {
+      "type": "range",
+      "label": "Width",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Mix": {
+      "type": "range",
+      "label": "Mix",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    }
+  },
+  "Flanger": {
+    "Rate": {
+      "type": "range",
+      "label": "Rate",
+      "min": 0.1,
+      "max": 10,
+      "step": 0.1,
+      "unit": " Hz"
+    },
+    "Depth": {
+      "type": "range",
+      "label": "Depth",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Feedback": {
+      "type": "range",
+      "label": "Feedback",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "PreDelay": {
+      "type": "range",
+      "label": "Pre Delay",
+      "min": 0,
+      "max": 12,
+      "step": 0.1,
+      "unit": " ms"
+    },
+    "Stereo": {
+      "type": "range",
+      "label": "Stereo",
+      "min": 0,
+      "max": 180,
+      "step": 1,
+      "unit": " deg"
+    },
+    "Sync": {
+      "type": "toggle",
+      "label": "Sync",
+      "off": "Off",
+      "on": "On"
+    }
+  },
+  "Vibrato": {
+    "Rate": {
+      "type": "range",
+      "label": "Rate",
+      "min": 3.2,
+      "max": 12,
+      "step": 0.1,
+      "unit": " Hz"
+    },
+    "Depth": {
+      "type": "range",
+      "label": "Depth",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Width": {
+      "type": "range",
+      "label": "Width",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Sync": {
+      "type": "toggle",
+      "label": "Sync",
+      "off": "Off",
+      "on": "On"
+    }
+  },
+  "Rotary": {
+    "Cabinet": {
+      "type": "set",
+      "label": "Model",
+      "values": [
+        "120",
+        "122",
+        "21H",
+        "Foam Drum",
+        "Rover",
+        "Memphis",
+        "Wolf",
+        "Watery"
+      ]
+    },
+    "Move": {
+      "type": "toggle",
+      "label": "Move",
+      "off": "Stop",
+      "on": "Start"
+    },
+    "Speed": {
+      "type": "toggle",
+      "label": "Speed",
+      "off": "Slow",
+      "on": "Fast"
+    },
+    "StopMode": {
+      "type": "toggle",
+      "label": "Stop Mode",
+      "off": "Thru",
+      "on": "Brake"
+    },
+    "Balance": {
+      "type": "range",
+      "label": "Balance",
+      "min": -100,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Mix": {
+      "type": "range",
+      "label": "Mix",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    }
+  },
+  "AIR Filter": {
+    "Freq": {
+      "type": "range",
+      "label": "Frequency",
+      "min": 20,
+      "max": 20000,
+      "step": 1,
+      "unit": " Hz"
+    },
+    "Reso": {
+      "type": "range",
+      "label": "Resonance",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Fat": {
+      "type": "range",
+      "label": "Fatness",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Mix": {
+      "type": "range",
+      "label": "Mix",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Gain": {
+      "type": "range",
+      "label": "Gain",
+      "min": -36,
+      "max": 0,
+      "step": 0.1,
+      "unit": " dB"
+    },
+    "Mode": {
+      "type": "set",
+      "label": "Mode",
+      "values": [
+        "24dB",
+        "18dB",
+        "12dB",
+        "BP",
+        "HP"
+      ]
+    },
+    "LFORate": {
+      "type": "range",
+      "label": "LFO Rate",
+      "min": 0.1,
+      "max": 10,
+      "step": 0.1,
+      "unit": " Hz"
+    },
+    "LFODepth": {
+      "type": "range",
+      "label": "LFO Depth",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "LFOSync": {
+      "type": "toggle",
+      "label": "LFO Sync",
+      "off": "Off",
+      "on": "On"
+    }
+  },
+  "AIR Flanger": {
+    "Rate": {
+      "type": "range",
+      "label": "Rate",
+      "min": 0.1,
+      "max": 10,
+      "step": 0.1,
+      "unit": " Hz"
+    },
+    "Depth": {
+      "type": "range",
+      "label": "Depth",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Feedback": {
+      "type": "range",
+      "label": "Feedback",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Width": {
+      "type": "range",
+      "label": "Width",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Mix": {
+      "type": "range",
+      "label": "Mix",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Sync": {
+      "type": "toggle",
+      "label": "Sync",
+      "off": "Off",
+      "on": "On"
+    }
+  },
+  "Vibe Phaser": {
+    "Rate": {
+      "type": "range",
+      "label": "Rate",
+      "min": 1,
+      "max": 8.6,
+      "step": 0.1,
+      "unit": " Hz"
+    },
+    "Depth": {
+      "type": "range",
+      "label": "Depth",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Volume": {
+      "type": "range",
+      "label": "Volume",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Mode": {
+      "type": "set",
+      "label": "Mode",
+      "values": [
+        "Chorus",
+        "Vibrato"
+      ]
+    },
+    "Sync": {
+      "type": "toggle",
+      "label": "Sync",
+      "off": "Off",
+      "on": "On"
+    }
+  },
+  "Orange Phaser": {
+    "Rate": {
+      "type": "range",
+      "label": "Rate",
+      "min": 0.2,
+      "max": 11,
+      "step": 0.1,
+      "unit": " Hz"
+    },
+    "Stereo": {
+      "type": "toggle",
+      "label": "Stereo",
+      "off": "Off",
+      "on": "On"
+    },
+    "Sync": {
+      "type": "toggle",
+      "label": "Sync",
+      "off": "Off",
+      "on": "On"
+    }
+  },
+  "Tron Phaser": {
+    "Rate": {
+      "type": "range",
+      "label": "Rate",
+      "min": 0.1,
+      "max": 10,
+      "step": 0.1,
+      "unit": " Hz"
+    },
+    "Depth": {
+      "type": "range",
+      "label": "Depth",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Feedback": {
+      "type": "range",
+      "label": "Feedback",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Stereo": {
+      "type": "toggle",
+      "label": "Stereo",
+      "off": "Off",
+      "on": "On"
+    },
+    "Mix": {
+      "type": "range",
+      "label": "Mix",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Sync": {
+      "type": "toggle",
+      "label": "Sync",
+      "off": "Off",
+      "on": "On"
+    }
+  },
+  "Stone Phaser": {
+    "Rate": {
+      "type": "range",
+      "label": "Rate",
+      "min": 0.1,
+      "max": 10,
+      "step": 0.1,
+      "unit": " Hz"
+    },
+    "Depth": {
+      "type": "range",
+      "label": "Depth",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Feedback": {
+      "type": "range",
+      "label": "Feedback",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Stereo": {
+      "type": "toggle",
+      "label": "Stereo",
+      "off": "Off",
+      "on": "On"
+    },
+    "Mix": {
+      "type": "range",
+      "label": "Mix",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Sync": {
+      "type": "toggle",
+      "label": "Sync",
+      "off": "Off",
+      "on": "On"
+    }
+  },
+  "Tremolo": {
+    "Rate": {
+      "type": "set",
+      "label": "Rate",
+      "values": [
+        "Bar",
+        "3/4",
+        "5/8",
+        "1/2",
+        "3/8",
+        "1/2T",
+        "1/4",
+        "3/16",
+        "1/4T",
+        "1/8",
+        "1/8T",
+        "1/16",
+        "1/16T",
+        "1/32",
+        "1/32T",
+        "1/64",
+        "1/128"
+      ]
+    },
+    "Shape": {
+      "type": "range",
+      "label": "Shape",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Depth": {
+      "type": "range",
+      "label": "Depth",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Offset": {
+      "type": "range",
+      "label": "Phase Offset",
+      "min": 0,
+      "max": 360,
+      "step": 1,
+      "unit": " deg"
+    },
+    "Sync": {
+      "type": "toggle",
+      "label": "Sync",
+      "off": "Off",
+      "on": "On"
+    }
+  },
+  "AIR Vibrato": {
+    "Rate": {
+      "type": "range",
+      "label": "Rate",
+      "min": 0.1,
+      "max": 12,
+      "step": 0.1,
+      "unit": " Hz"
+    },
+    "Shape": {
+      "type": "range",
+      "label": "Shape",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Depth": {
+      "type": "range",
+      "label": "Depth",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Offset": {
+      "type": "range",
+      "label": "Phase Offset",
+      "min": 0,
+      "max": 360,
+      "step": 1,
+      "unit": " deg"
+    },
+    "Sync": {
+      "type": "toggle",
+      "label": "Sync",
+      "off": "Off",
+      "on": "On"
+    }
+  },
+  "Octaves": {
+    "OctaveA": {
+      "type": "range",
+      "label": "Octave 1",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "OctaveB": {
+      "type": "range",
+      "label": "Octave 2",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Mix": {
+      "type": "range",
+      "label": "Mix",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    }
+  },
+  "Octaves Up": {
+    "OctaveA": {
+      "type": "range",
+      "label": "Octave 1",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "OctaveB": {
+      "type": "range",
+      "label": "Octave 2",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Mix": {
+      "type": "range",
+      "label": "Mix",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    }
+  },
+  "Drop Tune": {
+    "Mode": {
+      "type": "set",
+      "label": "Interval",
+      "values": [
+        "Down 1",
+        "Down 2",
+        "Down 3",
+        "Down 4",
+        "Down 5",
+        "Down 6",
+        "Down 7",
+        "Down 8"
+      ],
+      "w": 8,
+      "style": "dropdown"
+    },
+    "Mix": {
+      "type": "range",
+      "label": "Mix",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Level": {
+      "type": "range",
+      "label": "Level",
+      "min": -60,
+      "max": 6,
+      "step": 1,
+      "unit": " dB"
+    }
+  },
+  "Tron Filter": {
+    "LFODepth": {
+      "type": "range",
+      "label": "Depth",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Freq": {
+      "type": "range",
+      "label": "Base Frequency",
+      "min": 20,
+      "max": 1000,
+      "step": 1,
+      "unit": " Hz"
+    },
+    "Reso": {
+      "type": "range",
+      "label": "Resonance",
+      "min": 0.1,
+      "max": 10,
+      "step": 0.1,
+      "unit": " Hz"
+    },
+    "Fat": {
+      "type": "range",
+      "label": "Fatness",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Mix": {
+      "type": "range",
+      "label": "Mix",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Gain": {
+      "type": "range",
+      "label": "Gain",
+      "min": -36,
+      "max": 0,
+      "step": 0.1,
+      "unit": " dB"
+    },
+    "Mode": {
+      "type": "set",
+      "label": "Mode",
+      "values": [
+        "24dB",
+        "18dB",
+        "12dB",
+        "BP",
+        "HP"
+      ]
+    }
+  },
+  "Smart Harm": {
+    "Scale": {
+      "type": "set",
+      "label": "Scale",
+      "values": [
+        "Maj",
+        "Min",
+        "Mel Mn",
+        "Dori",
+        "Phryg",
+        "Lydi",
+        "Mixo",
+        "Locri",
+        "Dim",
+        "Whole",
+        "Dom 7",
+        "Dim Whl",
+        "Pent Mj",
+        "Pent Mn"
+      ],
+      "w": 4,
+      "style": "dropdown"
+    },
+    "Key": {
+      "type": "set",
+      "label": "Key",
+      "values": [
+        "E",
+        "F",
+        "F#",
+        "G",
+        "G#",
+        "A",
+        "A#",
+        "B",
+        "C",
+        "C#",
+        "D",
+        "D#"
+      ],
+      "w": 4,
+      "style": "dropdown"
+    },
+    "Mix": {
+      "type": "range",
+      "label": "Mix",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Pitch2Vol": {
+      "type": "range",
+      "label": "VC 2 Vol",
+      "min": -60,
+      "max": 6,
+      "step": 1,
+      "unit": " dB"
+    },
+    "Detune1": {
+      "type": "range",
+      "label": "VC 1 Detune",
+      "min": -50,
+      "max": 50,
+      "step": 1,
+      "unit": ""
+    },
+    "Detune2": {
+      "type": "range",
+      "label": "VC 2 Detune",
+      "min": -50,
+      "max": 50,
+      "step": 1,
+      "unit": ""
+    },
+    "Glide": {
+      "type": "range",
+      "label": "Glide time",
+      "min": 0,
+      "max": 800,
+      "step": 1,
+      "unit": " ms"
+    },
+    "Delay1": {
+      "type": "range",
+      "label": "VC 1 Delay",
+      "min": 0,
+      "max": 2000,
+      "step": 1,
+      "unit": " ms"
+    },
+    "Delay2": {
+      "type": "range",
+      "label": "VC 2 Delay",
+      "min": 0,
+      "max": 2000,
+      "step": 1,
+      "unit": " ms"
+    },
+    "Sync": {
+      "type": "toggle",
+      "label": "Sync",
+      "off": "Off",
+      "on": "On"
+    },
+    "Pitch1": {
+      "type": "set",
+      "label": "VC 1 Harm",
+      "values": [
+        "2nd",
+        "3rd",
+        "4th",
+        "5th",
+        "6th",
+        "7th",
+        "Oct",
+        "7th Low",
+        "6th Low",
+        "5th Low",
+        "4th Low",
+        "3rd Low",
+        "2nd Low",
+        "Oct Down"
+      ]
+    },
+    "Pitch2": {
+      "type": "set",
+      "label": "VC 2 Harm",
+      "values": [
+        "2nd",
+        "3rd",
+        "4th",
+        "5th",
+        "6th",
+        "7th",
+        "Oct",
+        "7th Low",
+        "6th Low",
+        "5th Low",
+        "4th Low",
+        "3rd Low",
+        "2nd Low",
+        "Oct Down"
+      ]
+    }
+  },
+  "Ring Mod": {
+    "Rate": {
+      "type": "range",
+      "label": "Frequency",
+      "min": 200,
+      "max": 2000,
+      "step": 1,
+      "unit": " Hz"
+    },
+    "Mix": {
+      "type": "range",
+      "label": "Mix",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Tone": {
+      "type": "range",
+      "label": "Tone",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    }
+  },
+  "Acoust Sim": {
+    "Mode": {
+      "type": "set",
+      "label": "Model",
+      "values": [
+        "Standard",
+        "Jumbo",
+        "Enhance",
+        "Piezo"
+      ],
+      "w": 8,
+      "style": "dropdown"
+    },
+    "Body": {
+      "type": "range",
+      "label": "Body",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Tone": {
+      "type": "range",
+      "label": "Tone",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Level": {
+      "type": "range",
+      "label": "Level",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    }
+  },
+  "Detune": {
+    "Mix": {
+      "type": "range",
+      "label": "Mix",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Detune1": {
+      "type": "range",
+      "label": "Detune 1",
+      "min": -50,
+      "max": 50,
+      "step": 1,
+      "unit": " %"
+    },
+    "Detune2": {
+      "type": "range",
+      "label": "Detune 2",
+      "min": -50,
+      "max": 50,
+      "step": 1,
+      "unit": " %"
+    },
+    "Voices": {
+      "type": "set",
+      "label": "Voices",
+      "values": [
+        "One",
+        "Two"
+      ]
+    },
+    "Level": {
+      "type": "range",
+      "label": "Level",
+      "min": -60,
+      "max": 6,
+      "step": 1,
+      "unit": " dB"
+    },
+    "Width": {
+      "type": "range",
+      "label": "Width",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Delay1": {
+      "type": "range",
+      "label": "Delay 1",
+      "min": 1,
+      "max": 300,
+      "step": 1,
+      "unit": " ms"
+    },
+    "Delay2": {
+      "type": "range",
+      "label": "Delay 2",
+      "min": 1,
+      "max": 300,
+      "step": 1,
+      "unit": " ms"
+    },
+    "LowCut": {
+      "type": "range",
+      "label": "Low Cut",
+      "min": 20,
+      "max": 500,
+      "step": 1,
+      "unit": " Hz"
+    },
+    "HighCut": {
+      "type": "range",
+      "label": "High Cut",
+      "min": 50,
+      "max": 20000,
+      "step": 1,
+      "unit": " Hz"
+    }
+  },
+  "Env Filter": {
+    "Range": {
+      "type": "range",
+      "label": "Range",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Sensitivity": {
+      "type": "range",
+      "label": "Sensitivity",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    }
+  },
+  "Stereo Doubler": {
+    "Intensity": {
+      "type": "range",
+      "label": "Intensity",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Separation": {
+      "type": "range",
+      "label": "Separation",
+      "min": 0,
+      "max": 200,
+      "step": 1,
+      "unit": " ms"
+    },
+    "Width": {
+      "type": "range",
+      "label": "Width",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    }
+  },
+  "AIR Reverb": {
+    "Mode": {
+      "type": "set",
+      "label": "Mode",
+      "values": [
+        "Room",
+        "Hall",
+        "Chamber",
+        "Studio",
+        "Nonlinear",
+        "Church",
+        "Dense",
+        "Ambient"
+      ],
+      "w": 8,
+      "style": "dropdown"
+    },
+    "Time": {
+      "type": "range",
+      "label": "Time",
+      "min": 0,
+      "max": 144,
+      "step": 0.1,
+      "unit": " sec"
+    },
+    "Size": {
+      "type": "range",
+      "label": "Size",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Color": {
+      "type": "range",
+      "label": "Color",
+      "min": 20,
+      "max": 20000,
+      "step": 1,
+      "unit": " Hz"
+    },
+    "Mix": {
+      "type": "range",
+      "label": "Mix",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Tails": {
+      "type": "toggle",
+      "label": "Tails",
+      "off": "Off",
+      "on": "On"
+    }
+  },
+  "Eleven Reverb": {
+    "Mode": {
+      "type": "set",
+      "label": "Mode",
+      "values": [
+        "Echo Room Short",
+        "Studio",
+        "Small Room",
+        "Jazz Club",
+        "Small Music Club",
+        "Garage",
+        "Medium Room",
+        "Medium Tiled Room",
+        "Medium Wood Room",
+        "Small Theater",
+        "Medium Theater",
+        "Big Theater",
+        "Rich Hall",
+        "Concert Hall",
+        "Bright Hall",
+        "Church",
+        "Cathedral",
+        "Arena",
+        "Small Plate",
+        "Medium Plate",
+        "Long Plate",
+        "Extra Long 1",
+        "Extra Long 2",
+        "Early Reflection 1",
+        "Early Reflection 2"
+      ],
+      "w": 8,
+      "style": "dropdown"
+    },
+    "Decay": {
+      "type": "range",
+      "label": "Decay",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Tone": {
+      "type": "range",
+      "label": "Tone",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Pre-Delay": {
+      "type": "range",
+      "label": "Pre-Delay",
+      "min": 0,
+      "max": 200,
+      "step": 1,
+      "unit": " ms"
+    },
+    "Mix": {
+      "type": "range",
+      "label": "Mix",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Tails": {
+      "type": "toggle",
+      "label": "Tails",
+      "off": "Off",
+      "on": "On"
+    }
+  },
+  "Spring Reverb": {
+    "Decay": {
+      "type": "range",
+      "label": "Decay",
+      "min": 1,
+      "max": 5.4,
+      "step": 0.1,
+      "unit": " sec"
+    },
+    "Tone": {
+      "type": "range",
+      "label": "Tone",
+      "min": 3.2,
+      "max": 17,
+      "step": 0.1,
+      "unit": " kHz"
+    },
+    "Mix": {
+      "type": "range",
+      "label": "Mix",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "DiffusionOn": {
+      "type": "toggle",
+      "label": "Diffusion",
+      "off": "Off",
+      "on": "On"
+    },
+    "Width": {
+      "type": "range",
+      "label": "Width",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Tails": {
+      "type": "toggle",
+      "label": "Tails",
+      "off": "Off",
+      "on": "On"
+    }
+  },
+  "Tape Echo": {
+    "Delay": {
+      "type": "range",
+      "label": "Delay",
+      "min": 20,
+      "max": 2400,
+      "step": 1,
+      "unit": " ms"
+    },
+    "Sync": {
+      "type": "toggle",
+      "label": "Sync",
+      "off": "Off",
+      "on": "On"
+    },
+    "Feedback": {
+      "type": "range",
+      "label": "Feedback",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "RecordLevel": {
+      "type": "range",
+      "label": "Record Level",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Mix": {
+      "type": "range",
+      "label": "Mix",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "HeadTilt": {
+      "type": "range",
+      "label": "Head Tilt",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Wow": {
+      "type": "range",
+      "label": "Wow",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Hiss": {
+      "type": "toggle",
+      "label": "Hiss",
+      "off": "Off",
+      "on": "On"
+    },
+    "Tails": {
+      "type": "toggle",
+      "label": "Tails",
+      "off": "Off",
+      "on": "On"
+    }
+  },
+  "BBD Delay": {
+    "Delay": {
+      "type": "range",
+      "label": "Delay",
+      "min": 32,
+      "max": 1520,
+      "step": 1,
+      "unit": " ms"
+    },
+    "Feedback": {
+      "type": "range",
+      "label": "Feedback",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Mix": {
+      "type": "range",
+      "label": "Mix",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "InputGain": {
+      "type": "range",
+      "label": "Input Gain",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "LFOSpeed": {
+      "type": "range",
+      "label": "LFO Speed",
+      "min": 0.5,
+      "max": 5,
+      "step": 0.01,
+      "unit": " Hz"
+    },
+    "LFODepth": {
+      "type": "range",
+      "label": "LFO Depth",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Sync": {
+      "type": "toggle",
+      "label": "Sync",
+      "off": "Off",
+      "on": "On"
+    },
+    "Hiss": {
+      "type": "toggle",
+      "label": "Hiss",
+      "off": "Off",
+      "on": "On"
+    },
+    "Tails": {
+      "type": "toggle",
+      "label": "Tails",
+      "off": "Off",
+      "on": "On"
+    }
+  },
+  "AIR Delay": {
+    "Delay": {
+      "type": "set",
+      "label": "Delay",
+      "values": [
+        "1/128",
+        "1/64",
+        "1/32T",
+        "1/32",
+        "1/16T",
+        "1/16",
+        "1/8T",
+        "1/8",
+        "1/4T",
+        "3/16",
+        "1/4",
+        "1/2T",
+        "3/8",
+        "1/2",
+        "5/8",
+        "3/4",
+        "Bar"
+      ]
+    },
+    "Ratio": {
+      "type": "range",
+      "label": "Ratio",
+      "min": -100,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Mix": {
+      "type": "range",
+      "label": "Mix",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Width": {
+      "type": "range",
+      "label": "Width",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Feedback": {
+      "type": "range",
+      "label": "Feedback",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "FdbkHighCut": {
+      "type": "range",
+      "label": "Feedback LPF",
+      "min": 1000,
+      "max": 20000,
+      "step": 1,
+      "unit": " Hz"
+    },
+    "FdbkResoFreq": {
+      "type": "range",
+      "label": "Feedback Res F",
+      "min": 100,
+      "max": 10000,
+      "step": 1,
+      "unit": " Hz"
+    },
+    "FdbkReso": {
+      "type": "range",
+      "label": "Feedback Reso",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "LoCut": {
+      "type": "range",
+      "label": "Low Cut",
+      "min": 20,
+      "max": 1000,
+      "step": 1,
+      "unit": " Hz"
+    },
+    "Sync": {
+      "type": "toggle",
+      "label": "Sync",
+      "off": "Off",
+      "on": "On"
+    },
+    "Tails": {
+      "type": "toggle",
+      "label": "Tails",
+      "off": "Off",
+      "on": "On"
+    }
+  },
+  "Dyn Delay": {
+    "Delay": {
+      "type": "set",
+      "label": "Delay",
+      "values": [
+        "1/128",
+        "1/64",
+        "1/32T",
+        "1/32",
+        "1/16T",
+        "1/16",
+        "1/8T",
+        "1/8",
+        "1/4T",
+        "3/16",
+        "1/4",
+        "1/2T",
+        "3/8",
+        "1/2",
+        "5/8",
+        "3/4",
+        "Bar"
+      ]
+    },
+    "Feedback": {
+      "type": "range",
+      "label": "Feedback",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Mix": {
+      "type": "range",
+      "label": "Mix",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Sync": {
+      "type": "toggle",
+      "label": "Sync",
+      "off": "Off",
+      "on": "On"
+    },
+    "Ratio": {
+      "type": "range",
+      "label": "Ratio",
+      "min": -100,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Width": {
+      "type": "range",
+      "label": "Width",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "EnvMix": {
+      "type": "range",
+      "label": "Env 2 Mix",
+      "min": -100,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "EnvFbk": {
+      "type": "range",
+      "label": "Env 2 Feedback",
+      "min": -100,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "EnvRate": {
+      "type": "range",
+      "label": "Env Rate",
+      "min": 0.01,
+      "max": 1,
+      "step": 0.01,
+      "unit": " s"
+    },
+    "LoCut": {
+      "type": "range",
+      "label": "Low Cut",
+      "min": 20,
+      "max": 1000,
+      "step": 1,
+      "unit": " Hz"
+    },
+    "HiCut": {
+      "type": "range",
+      "label": "High Cut",
+      "min": 1000,
+      "max": 20000,
+      "step": 1,
+      "unit": " Hz"
+    },
+    "Stereo": {
+      "type": "toggle",
+      "label": "Stereo",
+      "off": "Off",
+      "on": "On"
+    },
+    "Tails": {
+      "type": "toggle",
+      "label": "Tails",
+      "off": "Off",
+      "on": "On"
+    }
+  },
+  "Shimmer": {
+    "Interval": {
+      "type": "set",
+      "label": "Interval",
+      "values": [
+        "- 2 Oct",
+        "- 1 Oct",
+        "+ 1 Oct",
+        "+ 2 Oct"
+      ]
+    },
+    "Delay": {
+      "type": "range",
+      "label": "Pre Delay",
+      "min": 0,
+      "max": 2000,
+      "step": 1,
+      "unit": " ms"
+    },
+    "ReverbTime": {
+      "type": "range",
+      "label": "Reverb Time",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Tone": {
+      "type": "range",
+      "label": "Tone",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "HighCut": {
+      "type": "range",
+      "label": "High Cut",
+      "min": 500,
+      "max": 2000,
+      "step": 1,
+      "unit": " Hz"
+    },
+    "Width": {
+      "type": "range",
+      "label": "Width",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Mix": {
+      "type": "range",
+      "label": "Mix",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Sync": {
+      "type": "toggle",
+      "label": "Sync",
+      "off": "Off",
+      "on": "On"
+    },
+    "Tails": {
+      "type": "toggle",
+      "label": "Tails",
+      "off": "Off",
+      "on": "On"
+    }
+  },
+  "Reverse Delay": {
+    "Delay": {
+      "type": "range",
+      "label": "Delay",
+      "min": 5,
+      "max": 5000,
+      "step": 1,
+      "unit": " ms"
+    },
+    "Sync": {
+      "type": "toggle",
+      "label": "Sync",
+      "off": "Off",
+      "on": "On"
+    },
+    "Feedback": {
+      "type": "range",
+      "label": "Feedback",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "LowCut": {
+      "type": "range",
+      "label": "Low Cut",
+      "min": 20,
+      "max": 500,
+      "step": 1,
+      "unit": " Hz"
+    },
+    "HighCut": {
+      "type": "range",
+      "label": "High Cut",
+      "min": 500,
+      "max": 20000,
+      "step": 1,
+      "unit": " Hz"
+    },
+    "Mix": {
+      "type": "range",
+      "label": "Mix",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Tails": {
+      "type": "toggle",
+      "label": "Tails",
+      "off": "Off",
+      "on": "On"
+    }
+  },
+  "Pitch Delay": {
+    "Mode": {
+      "type": "set",
+      "label": "Model",
+      "values": [
+        "+13 Semi",
+        "+12 Semi",
+        "+11 Semi",
+        "+10 Semi",
+        "+9 Semi",
+        "+8 Semi",
+        "+7 Semi",
+        "+6 Semi",
+        "+5 Semi",
+        "+4 Semi",
+        "+3 Semi",
+        "+2 Semi",
+        "+1 Semi",
+        "0 Semi",
+        "-1 Semi",
+        "-2 Semi",
+        "-3 Semi",
+        "-4 Semi",
+        "-5 Semi",
+        "-6 Semi",
+        "-7 Semi",
+        "-8 Semi",
+        "-9 Semi",
+        "-10 Semi",
+        "-11 Semi",
+        "-12 Semi",
+        "-13 Semi"
+      ],
+      "w": 8,
+      "style": "dropdown"
+    },
+    "Delay": {
+      "type": "set",
+      "label": "Delay",
+      "values": [
+        "1/128",
+        "1/64",
+        "1/32T",
+        "1/32",
+        "1/16T",
+        "1/16",
+        "1/8T",
+        "1/8",
+        "1/4T",
+        "3/16",
+        "1/4",
+        "1/2T",
+        "3/8",
+        "1/2",
+        "5/8",
+        "3/4",
+        "Bar"
+      ]
+    },
+    "Mix": {
+      "type": "range",
+      "label": "Mix",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Fdbk": {
+      "type": "range",
+      "label": "Feedback",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Level": {
+      "type": "range",
+      "label": "Level",
+      "min": -60,
+      "max": 6,
+      "step": 1,
+      "unit": " dB"
+    },
+    "Detune": {
+      "type": "range",
+      "label": "Detune",
+      "min": -50,
+      "max": 50,
+      "step": 1,
+      "unit": " %"
+    },
+    "LowCut": {
+      "type": "range",
+      "label": "Low Cut",
+      "min": 20,
+      "max": 500,
+      "step": 1,
+      "unit": " Hz"
+    },
+    "HighCut": {
+      "type": "range",
+      "label": "High Cut",
+      "min": 500,
+      "max": 20000,
+      "step": 1,
+      "unit": " Hz"
+    },
+    "Width": {
+      "type": "range",
+      "label": "Width",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Sync": {
+      "type": "toggle",
+      "label": "Sync",
+      "off": "Off",
+      "on": "On"
+    },
+    "Tails": {
+      "type": "toggle",
+      "label": "Tails",
+      "off": "Off",
+      "on": "On"
+    }
+  },
+  "Ambi Verb": {
+    "Attack": {
+      "type": "range",
+      "label": "Attack",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Release": {
+      "type": "range",
+      "label": "Release",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Tone": {
+      "type": "range",
+      "label": "Tone",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Mod": {
+      "type": "range",
+      "label": "Mod",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Mix": {
+      "type": "range",
+      "label": "Mix",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Tails": {
+      "type": "toggle",
+      "label": "Tails",
+      "off": "Off",
+      "on": "On"
+    }
+  },
+  "Reso Delay": {
+    "Scale": {
+      "type": "set",
+      "label": "Scale",
+      "values": [
+        "Maj",
+        "Min",
+        "Mel Mn",
+        "Harm Mn",
+        "Dori",
+        "Phryg",
+        "Lydi",
+        "Mixo",
+        "Locri",
+        "Dim",
+        "Whole",
+        "Dom 7",
+        "Dom Whl",
+        "Pent Mj",
+        "Pent Mn",
+        "Chroma"
+      ],
+      "w": 4,
+      "style": "dropdown"
+    },
+    "Key": {
+      "type": "set",
+      "label": "Key",
+      "values": [
+        "E",
+        "F",
+        "F#",
+        "G",
+        "G#",
+        "A",
+        "A#",
+        "B",
+        "C",
+        "C#",
+        "D",
+        "D#"
+      ],
+      "w": 4,
+      "style": "dropdown"
+    },
+    "Threshold": {
+      "type": "range",
+      "label": "Trigger Sensitivity",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Attack": {
+      "type": "range",
+      "label": "Attack",
+      "min": 5,
+      "max": 2000,
+      "step": 1,
+      "unit": " ms"
+    },
+    "Range": {
+      "type": "set",
+      "label": "Range",
+      "values": [
+        "Bass",
+        "Low",
+        "Mid",
+        "High"
+      ]
+    },
+    "Feedback": {
+      "type": "range",
+      "label": "Feedback",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Mix": {
+      "type": "range",
+      "label": "Mix",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "LPFreq": {
+      "type": "range",
+      "label": "Low Pass",
+      "min": 500,
+      "max": 20000,
+      "step": 1,
+      "unit": " Hz"
+    },
+    "Width": {
+      "type": "range",
+      "label": "Width",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Tails": {
+      "type": "toggle",
+      "label": "Tails",
+      "off": "Off",
+      "on": "On"
+    }
+  },
+  "Party Verb": {
+    "Mode": {
+      "type": "set",
+      "label": "Model",
+      "values": [
+        "Pure Verb",
+        "Minor Third",
+        "Major Third",
+        "Fourth",
+        "Fifth",
+        "Octave Up",
+        "Octave Down",
+        "Triad",
+        "Triad Slow",
+        "Power Chord",
+        "Power Slow",
+        "Warp Engage",
+        "Swirling",
+        "Ominous",
+        "Asgard",
+        "Ascention",
+        "Machine Elves",
+        "Sparkle",
+        "Random 1",
+        "Random 2",
+        "Random 3"
+      ],
+      "w": 8,
+      "style": "dropdown"
+    },
+    "Time": {
+      "type": "range",
+      "label": "Time",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Gain": {
+      "type": "range",
+      "label": "Gain",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Width": {
+      "type": "range",
+      "label": "Width",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Damp": {
+      "type": "range",
+      "label": "Damp",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Mix": {
+      "type": "range",
+      "label": "Mix",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Tails": {
+      "type": "toggle",
+      "label": "Tails",
+      "off": "Off",
+      "on": "On"
+    }
+  },
+  "FX-Loop": {
+    "Mix": {
+      "type": "range",
+      "label": "Mix",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Send": {
+      "type": "range",
+      "label": "Send",
+      "min": -60,
+      "max": 12,
+      "step": 0.1,
+      "unit": " dB"
+    },
+    "Return": {
+      "type": "range",
+      "label": "Return",
+      "min": -60,
+      "max": 12,
+      "step": 0.1,
+      "unit": " dB"
+    },
+    "Delay": {
+      "type": "range",
+      "label": "Delay",
+      "min": 0,
+      "max": 30000,
+      "step": 1,
+      "unit": " µs"
+    }
+  },
+  "Volume": {
+    "Volume": {
+      "type": "range",
+      "label": "Volume",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "%"
+    },
+    "MinVolume": {
+      "type": "range",
+      "label": "Min Volume",
+      "min": 0,
+      "max": 900,
+      "step": 1,
+      "unit": "%"
+    },
+    "Linear": {
+      "type": "toggle",
+      "label": "Linear",
+      "off": "Off",
+      "on": "On"
+    }
+  },
+  "Shine Wah": {
+    "Level": {
+      "type": "range",
+      "label": "Pedal",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "MakeUp": {
+      "type": "range",
+      "label": "Make Up",
+      "min": -3,
+      "max": 6,
+      "step": 0.1,
+      "unit": " dB"
+    }
+  },
+  "Black Wah": {
+    "Level": {
+      "type": "range",
+      "label": "Pedal",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "MakeUp": {
+      "type": "range",
+      "label": "Make Up",
+      "min": -3,
+      "max": 6,
+      "step": 0.1,
+      "unit": " dB"
+    }
+  },
+  "More Wah": {
+    "Level": {
+      "type": "range",
+      "label": "Pedal",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "MakeUp": {
+      "type": "range",
+      "label": "Level",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    }
+  },
+  "Wham": {
+    "Mode": {
+      "type": "set",
+      "label": "Model",
+      "values": [
+        "+ 2 Oct",
+        "+ 1 Oct",
+        "+ 5th",
+        "+ 4th",
+        "- 2nd",
+        "- 4th",
+        "- 5th",
+        "- 1 Oct",
+        "- 2 Oct",
+        "Dive"
+      ],
+      "w": 8,
+      "style": "dropdown"
+    },
+    "Pitch": {
+      "type": "range",
+      "label": "Pitch",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "%"
+    },
+    "Offset": {
+      "type": "range",
+      "label": "Offset",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "%"
+    }
+  },
+  "Harm": {
+    "Mode": {
+      "type": "set",
+      "label": "Mode",
+      "values": [
+        "+/- Oct",
+        "- 5th / 4th",
+        "- 4th / 3rd",
+        "+ 5th / 7th",
+        "+ 5th / 6th",
+        "+ 4th / 5th",
+        "+ 3rd / 4th",
+        "+ 3rd Minor / Major",
+        "+ 2nd / 3rd"
+      ],
+      "w": 8,
+      "style": "dropdown"
+    },
+    "Pitch": {
+      "type": "range",
+      "label": "Pitch",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "%"
+    },
+    "Mix": {
+      "type": "range",
+      "label": "Mix",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "%"
+    },
+    "Offset": {
+      "type": "range",
+      "label": "Offset",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "%"
+    }
+  },
+  "Panner": {
+    "Pan": {
+      "type": "range",
+      "label": "L/R Pan",
+      "min": -100,
+      "max": 100,
+      "step": 1,
+      "unit": "%"
+    },
+    "Rate": {
+      "type": "set",
+      "label": "Rate",
+      "values": [
+        "Bar",
+        "3/4",
+        "5/8",
+        "1/2",
+        "3/8",
+        "1/2T",
+        "1/4",
+        "3/16",
+        "1/4T",
+        "1/8",
+        "1/8T",
+        "1/16",
+        "1/16T",
+        "1/32",
+        "1/32T",
+        "1/64",
+        "1/128"
+      ]
+    },
+    "Delay": {
+      "type": "range",
+      "label": "Delay",
+      "min": -30000,
+      "max": 30000,
+      "step": 1,
+      "unit": " µs"
+    },
+    "Shape": {
+      "type": "range",
+      "label": "Shape",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Depth": {
+      "type": "range",
+      "label": "Depth",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Sync": {
+      "type": "toggle",
+      "label": "Sync",
+      "off": "Off",
+      "on": "On"
+    }
+  },
+  "Chord Wham": {
+    "Mode": {
+      "type": "set",
+      "label": "Model",
+      "values": [
+        "+ 2 Oct",
+        "+ 1 Oct",
+        "+ 5th",
+        "+ 4th",
+        "- 2nd",
+        "- 4th",
+        "- 5th",
+        "- 1 Oct",
+        "- 2 Oct",
+        "Dive"
+      ],
+      "w": 8,
+      "style": "dropdown"
+    },
+    "Pitch": {
+      "type": "range",
+      "label": "Pitch",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Offset": {
+      "type": "range",
+      "label": "Offset",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Mix": {
+      "type": "range",
+      "label": "Mix",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Delay": {
+      "type": "range",
+      "label": "Delay",
+      "min": 0,
+      "max": 2000,
+      "step": 1,
+      "unit": " ms"
+    },
+    "Sync": {
+      "type": "toggle",
+      "label": "Sync",
+      "off": "Off",
+      "on": "On"
+    },
+    "Fdbk": {
+      "type": "range",
+      "label": "Feedback",
+      "min": 0,
+      "max": 65,
+      "step": 1,
+      "unit": " %"
+    },
+    "FdbkHighCut": {
+      "type": "range",
+      "label": "Feedback LPF",
+      "min": 1000,
+      "max": 10000,
+      "step": 1,
+      "unit": " Hz"
+    },
+    "Tails": {
+      "type": "toggle",
+      "label": "Tails",
+      "off": "Off",
+      "on": "On"
+    }
+  },
+  "Time Warp": {
+    "Warp": {
+      "type": "range",
+      "label": "Warp",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Delay": {
+      "type": "range",
+      "label": "Delay",
+      "min": 200,
+      "max": 2400,
+      "step": 1,
+      "unit": " ms"
+    },
+    "Sync": {
+      "type": "toggle",
+      "label": "Sync",
+      "off": "Off",
+      "on": "On"
+    },
+    "Feedback": {
+      "type": "range",
+      "label": "Feedback",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Mix": {
+      "type": "range",
+      "label": "Mix",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Tails": {
+      "type": "toggle",
+      "label": "Tails",
+      "off": "Off",
+      "on": "On"
+    }
+  },
+  "Feedback": {
+    "Mode": {
+      "type": "set",
+      "label": "Model",
+      "values": [
+        "Unity",
+        "4th",
+        "5th",
+        "Octave"
+      ],
+      "w": 8,
+      "style": "dropdown"
+    },
+    "Volume": {
+      "type": "range",
+      "label": "Volume",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Mix": {
+      "type": "range",
+      "label": "Mix",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Range": {
+      "type": "range",
+      "label": "Range",
+      "min": 160,
+      "max": 580,
+      "step": 1,
+      "unit": " Hz"
+    },
+    "Attack": {
+      "type": "range",
+      "label": "Attack",
+      "min": 200,
+      "max": 5000,
+      "step": 1,
+      "unit": " ms"
+    },
+    "Release": {
+      "type": "range",
+      "label": "Release",
+      "min": 200,
+      "max": 10000,
+      "step": 1,
+      "unit": " ms"
+    }
+  },
+  "Amp": {
+    "Bass": {
+      "type": "range",
+      "label": "Low",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Bass2": {
+      "type": "range",
+      "label": "Low",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Bottom": {
+      "type": "toggle",
+      "label": "Bottom",
+      "off": "off",
+      "on": "on"
+    },
+    "Bottom2": {
+      "type": "toggle",
+      "label": "Bottom",
+      "off": "off",
+      "on": "on"
+    },
+    "Bright": {
+      "type": "toggle",
+      "label": "Bright",
+      "off": "off",
+      "on": "on"
+    },
+    "Bright2": {
+      "type": "toggle",
+      "label": "Bright",
+      "off": "off",
+      "on": "on"
+    },
+    "ChorusMode": {
+      "type": "set",
+      "label": "Chorus Mode",
+      "values": [
+        "Fixed",
+        "Off",
+        "Manual"
+      ]
+    },
+    "ChorusMode2": {
+      "type": "set",
+      "label": "Chorus Mode",
+      "values": [
+        "Fixed",
+        "Off",
+        "Manual"
+      ]
+    },
+    "DoubleStates": {
+      "type": "toggle",
+      "label": "Double States",
+      "off": "off",
+      "on": "on"
+    },
+    "Doubling": {
+      "type": "toggle",
+      "label": "Doubling",
+      "off": "off",
+      "on": "on"
+    },
+    "GainA": {
+      "type": "range",
+      "label": "Gain",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "GainA2": {
+      "type": "range",
+      "label": "Gain",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "GainB": {
+      "type": "range",
+      "label": "Gain",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "GainB2": {
+      "type": "range",
+      "label": "Gain",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "GainSwitch": {
+      "type": "toggle",
+      "label": "Gain Switch",
+      "off": "off",
+      "on": "on"
+    },
+    "GainSwitch2": {
+      "type": "toggle",
+      "label": "Gain Switch",
+      "off": "off",
+      "on": "on"
+    },
+    "Intensity": {
+      "type": "range",
+      "label": "Intensity",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Intensity2": {
+      "type": "range",
+      "label": "Intensity",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "JCDistortion": {
+      "type": "range",
+      "label": "Dist",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "JCDistortion2": {
+      "type": "range",
+      "label": "Dist",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Level": {
+      "type": "range",
+      "label": "Level",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Level2": {
+      "type": "range",
+      "label": "Level",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Master": {
+      "type": "range",
+      "label": "Master",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Master2": {
+      "type": "range",
+      "label": "Master",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Mid": {
+      "type": "range",
+      "label": "Mid",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Mid2": {
+      "type": "range",
+      "label": "Mid",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "MidBoost": {
+      "type": "toggle",
+      "label": "Mid Boost",
+      "off": "off",
+      "on": "on"
+    },
+    "MidBoost2": {
+      "type": "toggle",
+      "label": "Mid Boost",
+      "off": "off",
+      "on": "on"
+    },
+    "MidFreq": {
+      "type": "range",
+      "label": "Mid Frequency",
+      "min": 220,
+      "max": 3000,
+      "step": 1,
+      "unit": " Hz"
+    },
+    "MidFreq2": {
+      "type": "range",
+      "label": "Mid Frequency",
+      "min": 220,
+      "max": 3000,
+      "step": 1,
+      "unit": " Hz"
+    },
+    "Presence": {
+      "type": "range",
+      "label": "Presence",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Presence2": {
+      "type": "range",
+      "label": "Presence",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Resonance": {
+      "type": "range",
+      "label": "Resonance",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Resonance2": {
+      "type": "range",
+      "label": "Resonance",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "StereoAmp": {
+      "type": "toggle",
+      "label": "Stereo Amp",
+      "off": "off",
+      "on": "on"
+    },
+    "StereoAmp2": {
+      "type": "toggle",
+      "label": "Stereo Amp",
+      "off": "off",
+      "on": "on"
+    },
+    "Treble": {
+      "type": "range",
+      "label": "Treble",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "Treble2": {
+      "type": "range",
+      "label": "Treble",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "TremDepth": {
+      "type": "range",
+      "label": "Trem Depth",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "TremDepth2": {
+      "type": "range",
+      "label": "Trem Depth",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": " %"
+    },
+    "TremSpeed": {
+      "type": "range",
+      "label": "Trem Speed",
+      "min": 0.25,
+      "max": 20,
+      "step": 0.01,
+      "unit": " Hz"
+    },
+    "TremSync": {
+      "type": "toggle",
+      "label": "Trem Sync",
+      "off": "off",
+      "on": "on"
+    },
+    "Tremolo": {
+      "type": "toggle",
+      "label": "Tremolo",
+      "off": "off",
+      "on": "on"
+    },
+    "Type": {
+      "type": "set",
+      "label": "Model",
+      "values": [
+        "59 Deluxe Gain Mod",
+        "59 Tweed Deluxe",
+        "59 Tweed Prince",
+        "59 Tweed Bass",
+        "64 Black Lux Vib",
+        "64 Black Lux Norm",
+        "64 Black Vib",
+        "65 Black Sr",
+        "65 Black Mini",
+        "65 Black Prince",
+        "65 Black Prince Rev",
+        "65 J45",
+        "66 AC Hi Boost",
+        "66 AC Mid Boost Mod",
+        "66 Flip Bass",
+        "67 Black Duo",
+        "67 Black Shimmer",
+        "67 Plefiglas Vari",
+        "68 Plexi El84 Mod",
+        "68 Plefiglas 50W",
+        "69 Plefiglas 100W",
+        "69 Blue Line Bass",
+        "69 Ble Line Scoop",
+        "82 Lead 800 100W",
+        "82 Lead 800 50W",
+        "82 Lead 800 Bass Mod",
+        "82 Lead 800 Bright",
+        "82 Lead 800 TS Mod",
+        "85 M-2 Lead",
+        "85 M-2 Lead Cap Mod",
+        "89 SL-100 Drive",
+        "89 SL-100 Crunch",
+        "89 SL-100 Clean",
+        "89 SL-100 Ext Range",
+        "92 Treadplate Raw",
+        "92 Treadplate Vintage",
+        "93 MS30",
+        "97 RB-01B Red",
+        "97 RB-01B Blue",
+        "97 RB-01B Green",
+        "99 PV51 II Clean",
+        "99 PV51 II Crunch",
+        "99 PV51 II Lead",
+        "05 Tangerine 30 CH1",
+        "05 Tangerine 30 CH2",
+        "11 EPB II Clean",
+        "11 EPB II Crunch",
+        "11 EPB II Lo-Lead",
+        "11 EPB II Hi-Lead",
+        "83 400R",
+        "84 J-120H",
+        "17 Trace Elliot Elf"
+      ],
+      "w": 6,
+      "style": "dropdown"
+    },
+    "Type2": {
+      "type": "set",
+      "label": "Model",
+      "values": [
+        "59 Deluxe Gain Mod",
+        "59 Tweed Deluxe",
+        "59 Tweed Prince",
+        "59 Tweed Bass",
+        "64 Black Lux Vib",
+        "64 Black Lux Norm",
+        "64 Black Vib",
+        "65 Black Sr",
+        "65 Black Mini",
+        "65 Black Prince",
+        "65 Black Prince Rev",
+        "65 J45",
+        "66 AC Hi Boost",
+        "66 AC Mid Boost Mod",
+        "66 Flip Bass",
+        "67 Black Duo",
+        "67 Black Shimmer",
+        "67 Plefiglas Vari",
+        "68 Plexi El84 Mod",
+        "68 Plefiglas 50W",
+        "69 Plefiglas 100W",
+        "69 Blue Line Bass",
+        "69 Ble Line Scoop",
+        "82 Lead 800 100W",
+        "82 Lead 800 50W",
+        "82 Lead 800 Bass Mod",
+        "82 Lead 800 Bright",
+        "82 Lead 800 TS Mod",
+        "85 M-2 Lead",
+        "85 M-2 Lead Cap Mod",
+        "89 SL-100 Drive",
+        "89 SL-100 Crunch",
+        "89 SL-100 Clean",
+        "89 SL-100 Ext Range",
+        "92 Treadplate Raw",
+        "92 Treadplate Vintage",
+        "93 MS30",
+        "97 RB-01B Red",
+        "97 RB-01B Blue",
+        "97 RB-01B Green",
+        "99 PV51 II Clean",
+        "99 PV51 II Crunch",
+        "99 PV51 II Lead",
+        "05 Tangerine 30 CH1",
+        "05 Tangerine 30 CH2",
+        "11 EPB II Clean",
+        "11 EPB II Crunch",
+        "11 EPB II Lo-Lead",
+        "11 EPB II Hi-Lead",
+        "83 400R",
+        "84 J-120H",
+        "17 Trace Elliot Elf"
+      ],
+      "w": 6,
+      "style": "dropdown"
+    }
+  }
+}

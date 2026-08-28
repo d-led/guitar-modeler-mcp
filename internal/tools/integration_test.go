@@ -84,7 +84,8 @@ func TestIntegrationInitializeAndToolList(t *testing.T) {
 	}
 	for _, want := range []string{
 		"catalog_list_amps", "catalog_list_cabs", "catalog_list_mics", "catalog_list_fx",
-		"catalog_list_block_presets", "translate_amp", "translate_cab", "translate_mic",
+		"catalog_list_block_presets", "catalog_list_module_params",
+		"translate_amp", "translate_cab", "translate_mic",
 		"design_rig", "render_report", "rig_decode",
 	} {
 		if !names[want] {
@@ -113,6 +114,14 @@ func TestIntegrationCatalogAndTranslate(t *testing.T) {
 	}))
 	if !strings.Contains(translated, "Marshall") || !strings.Contains(translated, "JCM800") {
 		t.Fatalf("translate_amp result missing brand/model: %s", translated)
+	}
+
+	params := resultText(t, rpc(t, s, 3, "tools/call", map[string]any{
+		"name":      "catalog_list_module_params",
+		"arguments": map[string]any{"type": "Tape Echo"},
+	}))
+	if !strings.Contains(params, "\"kind\": \"range\"") || !strings.Contains(params, "Feedback") {
+		t.Fatalf("catalog_list_module_params missing range/Feedback: %s", params)
 	}
 }
 
