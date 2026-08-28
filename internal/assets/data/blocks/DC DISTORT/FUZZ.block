@@ -1,0 +1,1 @@
+{"content":"{\"data\":{\"DC Distort\":{\"childorder\":[\"Gain\",\"Treble\",\"Bass\",\"Volume\"],\"children\":{\"Bass\":{\"type\":0,\"value\":40},\"Gain\":{\"type\":0,\"value\":75},\"Treble\":{\"type\":0,\"value\":55},\"Volume\":{\"type\":0,\"value\":45}}}},\"info\":{\"version\":\"1.0.9\"}}","id":"efdd2dde-c335-4bc3-9993-441bbaa7352b","readonly":false,"type":"DC DISTORT"}

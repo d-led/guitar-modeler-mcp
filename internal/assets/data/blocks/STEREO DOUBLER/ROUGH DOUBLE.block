@@ -1,0 +1,1 @@
+{"content":"{\"data\":{\"Stereo Doubler\":{\"childorder\":[\"Intensity\",\"Separation\",\"Width\"],\"children\":{\"Intensity\":{\"type\":0,\"value\":100},\"Separation\":{\"type\":0,\"value\":52},\"Width\":{\"type\":0,\"value\":100}}}},\"info\":{\"version\":\"1.0.9\"}}","id":"d991f23c-72bf-48cc-b780-58a40ec9164f","readonly":false,"type":"STEREO DOUBLER"}

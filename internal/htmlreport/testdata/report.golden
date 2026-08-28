@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Report Rig · HeadRush Gigboard</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+         margin: 0; padding: 24px; line-height: 1.45; }
+  .wrap { max-width: 860px; margin: 0 auto; }
+  h1 { margin: 0 0 4px; font-size: 1.7em; }
+  .sub { color: #888; margin-bottom: 24px; }
+  .meta { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 20px; }
+  .meta div { background: #f2f2f7; border-radius: 8px; padding: 10px 14px; }
+  @media (prefers-color-scheme: dark) { .meta div { background: #1c1c1e; } }
+  .meta .label { font-size: .72em; text-transform: uppercase; letter-spacing: .06em; color: #888; }
+  .chain { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 28px; }
+  .chip { padding: 4px 10px; border-radius: 999px; font-size: .85em; background: #e8e8ed; }
+  @media (prefers-color-scheme: dark) { .chip { background: #2c2c2e; } }
+  .chip.off { opacity: .45; text-decoration: line-through; }
+  .arrow { color: #999; }
+  .module { border: 1px solid #e3e3e8; border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; }
+  @media (prefers-color-scheme: dark) { .module { border-color: #2c2c2e; } }
+  .module h2 { margin: 0 0 2px; font-size: 1.1em; }
+  .module .cat { font-size: .78em; color: #888; text-transform: uppercase; letter-spacing: .05em; }
+  .module .desc { color: #666; margin: 4px 0 10px; }
+  .params { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px 16px; }
+  .param { font-size: .9em; }
+  .param .k { color: #888; margin-right: 6px; }
+  .param .v { font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Report Rig</h1>
+  <div class="sub">Song: <strong>Test Song</strong> · Generated FIXED</div>
+  <div class="meta">
+    <div><div class="label">Tempo</div><div>0 BPM</div></div>
+  </div>
+  <div class="chain">
+    <span class="chip">Amp</span><span class="arrow">→</span><span class="chip">Cab</span><span class="arrow">→</span><span class="chip">Spring Reverb</span><span class="arrow">→</span>
+  </div>
+  
+  <div class="module">
+    <h2>Amp</h2>
+    <div class="cat"></div>
+    <div class="desc">Marshall JCM800 2203 · 100W · rock, hard rock</div>
+    
+    <div class="params">
+      <div class="param"><span class="k">TremSync</span><span class="v">off</span></div><div class="param"><span class="k">Doubling</span><span class="v">off</span></div><div class="param"><span class="k">DoubleStates</span><span class="v">off</span></div><div class="param"><span class="k">On</span><span class="v">on</span></div><div class="param"><span class="k">Colour</span><span class="v">Green</span></div><div class="param"><span class="k">Type</span><span class="v">82 Lead 800 100W</span></div><div class="param"><span class="k">Bright</span><span class="v">off</span></div><div class="param"><span class="k">Treble</span><span class="v">50</span></div><div class="param"><span class="k">Mid</span><span class="v">50</span></div><div class="param"><span class="k">MidFreq</span><span class="v">1610</span></div><div class="param"><span class="k">Bass</span><span class="v">50</span></div><div class="param"><span class="k">Presence</span><span class="v">50</span></div><div class="param"><span class="k">GainA</span><span class="v">50</span></div><div class="param"><span class="k">GainB</span><span class="v">50</span></div><div class="param"><span class="k">TremSpeed</span><span class="v">2</span></div><div class="param"><span class="k">TremDepth</span><span class="v">60</span></div><div class="param"><span class="k">Master</span><span class="v">50</span></div><div class="param"><span class="k">Tremolo</span><span class="v">off</span></div><div class="param"><span class="k">Type2</span><span class="v"></span></div><div class="param"><span class="k">Bright2</span><span class="v">on</span></div><div class="param"><span class="k">Treble2</span><span class="v">50</span></div><div class="param"><span class="k">Mid2</span><span class="v">50</span></div><div class="param"><span class="k">MidFreq2</span><span class="v">1610</span></div><div class="param"><span class="k">Bass2</span><span class="v">50</span></div><div class="param"><span class="k">Presence2</span><span class="v">50</span></div><div class="param"><span class="k">GainA2</span><span class="v">50</span></div><div class="param"><span class="k">GainB2</span><span class="v">50</span></div><div class="param"><span class="k">TremSpeed2</span><span class="v">0.41</span></div><div class="param"><span class="k">TremDepth2</span><span class="v">0</span></div><div class="param"><span class="k">Master2</span><span class="v">50</span></div>
+    </div>
+  </div>
+  
+  <div class="module">
+    <h2>Cab</h2>
+    <div class="cat"></div>
+    <div class="desc">4x12 · Celestion Greenback 25W · mic Shure SM57</div>
+    
+    <div class="params">
+      <div class="param"><span class="k">CabType</span><span class="v">4x12 Green 25W</span></div><div class="param"><span class="k">CabType2</span><span class="v"></span></div><div class="param"><span class="k">Doubling</span><span class="v">off</span></div><div class="param"><span class="k">DoubleStates</span><span class="v">off</span></div><div class="param"><span class="k">On</span><span class="v">on</span></div><div class="param"><span class="k">Colour</span><span class="v">Green</span></div><div class="param"><span class="k">MicType</span><span class="v">Dyn 57</span></div><div class="param"><span class="k">MicType2</span><span class="v">Dyn 7</span></div><div class="param"><span class="k">OnAxis</span><span class="v">on</span></div><div class="param"><span class="k">OnAxis2</span><span class="v">off</span></div><div class="param"><span class="k">Breakup</span><span class="v">0</span></div><div class="param"><span class="k">Breakup2</span><span class="v">0</span></div><div class="param"><span class="k">OutGain</span><span class="v">0</span></div><div class="param"><span class="k">OutGain2</span><span class="v">0</span></div><div class="param"><span class="k">AmpCompGain</span><span class="v">0</span></div>
+    </div>
+  </div>
+  
+  <div class="module">
+    <h2>Spring Reverb</h2>
+    <div class="cat">delay/reverb</div>
+    <div class="desc">Spring tank reverb.</div>
+    <div class="params">
+      <div class="param"><span class="k">Decay</span><span class="v">1.5</span></div><div class="param"><span class="k">Tone</span><span class="v">6</span></div><div class="param"><span class="k">Mix</span><span class="v">40</span></div><div class="param"><span class="k">DiffusionOn</span><span class="v">on</span></div><div class="param"><span class="k">Width</span><span class="v">0</span></div><div class="param"><span class="k">On</span><span class="v">on</span></div><div class="param"><span class="k">Colour</span><span class="v">Green</span></div>
+    </div>
+  </div>
+  
+</div>
+</body>
+</html>

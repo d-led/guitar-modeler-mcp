@@ -1,0 +1,1 @@
+{"content":"{\"data\":{\"Env Filter\":{\"childorder\":[\"Range\",\"Sensitivity\"],\"children\":{\"Range\":{\"type\":0,\"value\":80},\"Sensitivity\":{\"type\":0,\"value\":15}}}},\"info\":{\"version\":\"1.0.9\"}}","id":"f74e48b8-e4ed-4d7b-92f4-76bba5da5e84","readonly":false,"type":"ENV FILTER"}

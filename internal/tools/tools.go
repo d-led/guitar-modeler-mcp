@@ -1,0 +1,360 @@
+// Package tools wires the domain packages into MCP tools.
+package tools
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/assets"
+	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/catalog"
+	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/design"
+	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/htmlreport"
+	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/mcp"
+	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/rig"
+)
+
+// Registrar binds the catalog, rig builder and designer to the MCP server.
+type Registrar struct {
+	cat     *catalog.Catalog
+	builder *rig.Builder
+	design  *design.Designer
+}
+
+// NewRegistrar creates a Registrar.
+func NewRegistrar(cat *catalog.Catalog, b *rig.Builder, d *design.Designer) *Registrar {
+	return &Registrar{cat: cat, builder: b, design: d}
+}
+
+// Register adds all tools to the server.
+func (r *Registrar) Register(s *mcp.Server) {
+	s.Register(mcp.Tool{
+		Name:        "catalog_list_amps",
+		Description: "List every amp model available on the HeadRush Gigboard, with the real hardware each emulates. Use the optional query to filter.",
+		InputSchema: objectSchema(map[string]any{"query": stringSchema("Optional case-insensitive filter over brand/model/style.")}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			query := argString(args, "query")
+			return marshal(r.cat.AmpsMatching(query))
+		},
+	})
+	s.Register(mcp.Tool{
+		Name:        "catalog_list_cabs",
+		Description: "List every cabinet model available on the HeadRush Gigboard.",
+		InputSchema: objectSchema(map[string]any{"query": stringSchema("Optional case-insensitive filter.")}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			query := argString(args, "query")
+			return marshal(r.cat.CabsMatching(query))
+		},
+	})
+	s.Register(mcp.Tool{
+		Name:        "catalog_list_mics",
+		Description: "List every microphone model available for cabinet emulation.",
+		InputSchema: objectSchema(map[string]any{"query": stringSchema("Optional case-insensitive filter.")}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			query := argString(args, "query")
+			return marshal(r.cat.MicsMatching(query))
+		},
+	})
+	s.Register(mcp.Tool{
+		Name:        "catalog_list_fx",
+		Description: "List every effect module that can be placed in a rig chain, grouped by category.",
+		InputSchema: objectSchema(map[string]any{}),
+		Handler: func(_ context.Context, _ map[string]any) (string, error) {
+			return marshal(r.cat.FX())
+		},
+	})
+	s.Register(mcp.Tool{
+		Name:        "catalog_list_block_presets",
+		Description: "List the named factory presets for an effect module (e.g. type=\"Tape Echo\").",
+		InputSchema: objectSchema(map[string]any{"type": stringSchema("The effect module display name.")}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			typ := argString(args, "type")
+			if typ == "" {
+				return "", fmt.Errorf("a module \"type\" is required")
+			}
+			if f, ok := r.cat.FXByName(typ); ok {
+				typ = f.Name
+			}
+			presets, err := assets.Presets(strings.ToUpper(typ))
+			if err != nil {
+				return "", fmt.Errorf("no presets for module %q: %w", typ, err)
+			}
+			return marshal(presets)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "translate_amp",
+		Description: "Translate a real-world amplifier description (e.g. \"Marshall JCM800\" or \"blackface deluxe reverb\") into the closest HeadRush amp models.",
+		InputSchema: objectSchema(map[string]any{"query": stringSchema("Free-form hardware description.")}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return marshal(r.cat.TranslateAmp(argString(args, "query")))
+		},
+	})
+	s.Register(mcp.Tool{
+		Name:        "translate_cab",
+		Description: "Translate a cabinet description into the closest HeadRush cabinet models.",
+		InputSchema: objectSchema(map[string]any{"query": stringSchema("Free-form cabinet description.")}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return marshal(r.cat.TranslateCab(argString(args, "query")))
+		},
+	})
+	s.Register(mcp.Tool{
+		Name:        "translate_mic",
+		Description: "Translate a microphone description into the closest HeadRush microphone models.",
+		InputSchema: objectSchema(map[string]any{"query": stringSchema("Free-form microphone description.")}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return marshal(r.cat.TranslateMic(argString(args, "query")))
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "design_rig",
+		Description: "Dial in a tone: translate hardware into device models, order the effects into a signal chain, write a .rig file and a human-readable HTML report.",
+		InputSchema: objectSchema(map[string]any{
+			"name":       stringSchema("Rig/patch name."),
+			"song":       stringSchema("Optional song the tone is for."),
+			"amp":        stringSchema("Amp: device model or real-hardware description."),
+			"cab":        stringSchema("Optional cab: device model or description."),
+			"mic":        stringSchema("Optional mic: device model or description."),
+			"tempo":      numberSchema("Optional tempo in BPM."),
+			"input_gain": numberSchema("Optional input gain in dB."),
+			"output_dir": stringSchema("Directory to write the files into (default: current directory)."),
+			"fx":         arraySchema("Optional effects, in any order; they will be placed sensibly.", fxItemSchema()),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.designRig(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "render_report",
+		Description: "Render the human-readable HTML report for an existing .rig file.",
+		InputSchema: objectSchema(map[string]any{
+			"rig_file":   stringSchema("Path to the .rig file."),
+			"song":       stringSchema("Optional song annotation."),
+			"output_dir": stringSchema("Directory to write the HTML file into (default: same as rig file)."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.renderReport(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "rig_decode",
+		Description: "Decode an existing .rig file into its signal chain and per-module parameter values, so the agent can analyze or fix a preset.",
+		InputSchema: objectSchema(map[string]any{
+			"rig_file": stringSchema("Path to the .rig file to decode."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.decodeRig(args)
+		},
+	})
+}
+
+func (r *Registrar) designRig(args map[string]any) (string, error) {
+	req := design.Request{
+		Name:      argString(args, "name"),
+		Song:      argString(args, "song"),
+		Amp:       argString(args, "amp"),
+		Cab:       argString(args, "cab"),
+		Mic:       argString(args, "mic"),
+		Tempo:     argFloat(args, "tempo"),
+		InputGain: argFloat(args, "input_gain"),
+		FX:        parseFX(args["fx"]),
+	}
+	res, err := r.design.Design(req)
+	if err != nil {
+		return "", err
+	}
+
+	file, err := r.builder.Build(res.Spec)
+	if err != nil {
+		return "", err
+	}
+
+	outDir := argString(args, "output_dir")
+	if outDir == "" {
+		outDir = "."
+	}
+	rigPath, err := file.Write(outDir)
+	if err != nil {
+		return "", err
+	}
+
+	html, err := htmlreport.Render(file, req.Song, r.cat)
+	if err != nil {
+		return "", err
+	}
+	htmlPath := filepath.Join(outDir, file.Name()+".html")
+	if err := os.WriteFile(htmlPath, []byte(html), 0o644); err != nil {
+		return "", err
+	}
+
+	return summarize(file, res.Notes, req.Song, rigPath, htmlPath), nil
+}
+
+func (r *Registrar) renderReport(args map[string]any) (string, error) {
+	path := argString(args, "rig_file")
+	if path == "" {
+		return "", fmt.Errorf("rig_file is required")
+	}
+	file, err := readRigFile(path)
+	if err != nil {
+		return "", err
+	}
+	html, err := htmlreport.Render(file, argString(args, "song"), r.cat)
+	if err != nil {
+		return "", err
+	}
+	outDir := argString(args, "output_dir")
+	if outDir == "" {
+		outDir = filepath.Dir(path)
+	}
+	htmlPath := filepath.Join(outDir, file.Name()+".html")
+	if err := os.WriteFile(htmlPath, []byte(html), 0o644); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("Wrote report to %s", htmlPath), nil
+}
+
+func (r *Registrar) decodeRig(args map[string]any) (string, error) {
+	path := argString(args, "rig_file")
+	if path == "" {
+		return "", fmt.Errorf("rig_file is required")
+	}
+	file, err := readRigFile(path)
+	if err != nil {
+		return "", err
+	}
+	summary, err := rig.Describe(file)
+	if err != nil {
+		return "", err
+	}
+	return marshal(summary)
+}
+
+func readRigFile(path string) (*rig.RigFile, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var file rig.RigFile
+	if err := json.Unmarshal(data, &file); err != nil {
+		return nil, fmt.Errorf("parse rig file: %w", err)
+	}
+	return &file, nil
+}
+
+func summarize(file *rig.RigFile, notes []string, song, rigPath, htmlPath string) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "Rig %q written.\n", file.Name())
+	if song != "" {
+		fmt.Fprintf(&b, "Song: %s\n", song)
+	}
+	for _, n := range notes {
+		fmt.Fprintf(&b, "- %s\n", n)
+	}
+	fmt.Fprintf(&b, "Rig file: %s\n", rigPath)
+	fmt.Fprintf(&b, "Report:  %s\n", htmlPath)
+	return b.String()
+}
+
+func parseFX(raw any) []design.FXBlock {
+	arr, ok := raw.([]any)
+	if !ok {
+		return nil
+	}
+	out := make([]design.FXBlock, 0, len(arr))
+	for _, item := range arr {
+		m, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		fx := design.FXBlock{
+			Type:    argString(m, "type"),
+			Enabled: argBool(m, "enabled", true),
+		}
+		if p, ok := m["params"].(map[string]any); ok {
+			fx.Params = p
+		}
+		if fx.Type != "" {
+			out = append(out, fx)
+		}
+	}
+	return out
+}
+
+// ---- argument helpers ----
+
+func argString(args map[string]any, key string) string {
+	if v, ok := args[key]; ok {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	return ""
+}
+
+func argFloat(args map[string]any, key string) float64 {
+	if v, ok := args[key]; ok {
+		switch n := v.(type) {
+		case float64:
+			return n
+		case int:
+			return float64(n)
+		case int64:
+			return float64(n)
+		}
+	}
+	return 0
+}
+
+func argBool(args map[string]any, key string, def bool) bool {
+	if v, ok := args[key]; ok {
+		if b, ok := v.(bool); ok {
+			return b
+		}
+	}
+	return def
+}
+
+func marshal(v any) (string, error) {
+	b, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
+}
+
+// ---- JSON schema helpers ----
+
+func objectSchema(props map[string]any) map[string]any {
+	return map[string]any{
+		"type":       "object",
+		"properties": props,
+	}
+}
+
+func stringSchema(desc string) map[string]any {
+	return map[string]any{"type": "string", "description": desc}
+}
+
+func numberSchema(desc string) map[string]any {
+	return map[string]any{"type": "number", "description": desc}
+}
+
+func arraySchema(desc string, items map[string]any) map[string]any {
+	return map[string]any{"type": "array", "description": desc, "items": items}
+}
+
+func fxItemSchema() map[string]any {
+	return objectSchema(map[string]any{
+		"type":    stringSchema("Effect module display name, e.g. \"Tape Echo\"."),
+		"enabled": map[string]any{"type": "boolean", "description": "Whether the effect is on."},
+		"params":  map[string]any{"type": "object", "description": "Parameter overrides; values are numbers, booleans or strings."},
+	})
+}

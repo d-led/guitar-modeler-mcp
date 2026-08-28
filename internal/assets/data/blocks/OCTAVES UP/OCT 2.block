@@ -1,0 +1,1 @@
+{"content":"{\"data\":{\"Octaves Up\":{\"childorder\":[\"OctaveA\",\"OctaveB\",\"Mix\"],\"children\":{\"Mix\":{\"type\":0,\"value\":50},\"OctaveA\":{\"type\":0,\"value\":0},\"OctaveB\":{\"type\":0,\"value\":100}}}},\"info\":{\"version\":\"1.0.9\"}}","id":"3e309044-4328-4b27-ad37-09304fe3709e","readonly":false,"type":"OCTAVES UP"}

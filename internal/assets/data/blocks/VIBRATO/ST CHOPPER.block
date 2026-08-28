@@ -1,0 +1,1 @@
+{"content":"{\"data\":{\"Vibrato\":{\"childorder\":[\"Sync\",\"Rate\",\"Depth\",\"Width\"],\"children\":{\"Depth\":{\"type\":0,\"value\":55},\"Rate\":{\"type\":0,\"value\":12},\"Sync\":{\"state\":false,\"type\":1},\"Width\":{\"type\":0,\"value\":100}}}},\"info\":{\"version\":\"1.0.9\"}}","id":"f2af552f-8439-4bd6-930f-6b24abf6499d","readonly":false,"type":"VIBRATO"}

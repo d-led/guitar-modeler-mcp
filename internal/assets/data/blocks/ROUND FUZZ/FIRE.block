@@ -1,0 +1,1 @@
+{"content":"{\"data\":{\"Round Fuzz\":{\"childorder\":[\"Volume\",\"Fuzz\"],\"children\":{\"Fuzz\":{\"type\":0,\"value\":100},\"Volume\":{\"type\":0,\"value\":50}}}},\"info\":{\"version\":\"1.0.9\"}}","id":"59214f6c-8b2d-401f-8679-8359a1e4535f","readonly":false,"type":"ROUND FUZZ"}

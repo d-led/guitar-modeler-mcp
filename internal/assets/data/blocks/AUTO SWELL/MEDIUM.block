@@ -1,0 +1,1 @@
+{"content":"{\"data\":{\"Auto Swell\":{\"childorder\":[\"Threshold\",\"Attack\",\"Mode\"],\"children\":{\"Attack\":{\"type\":0,\"value\":249},\"Mode\":{\"string\":\"Fast\",\"type\":4},\"Threshold\":{\"type\":0,\"value\":80}}}},\"info\":{\"version\":\"1.0.9\"}}","id":"84beb1e4-2fcf-4459-93e3-0fa54cad686a","readonly":false,"type":"AUTO SWELL"}

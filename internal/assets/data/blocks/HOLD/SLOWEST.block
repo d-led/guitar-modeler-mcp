@@ -1,0 +1,1 @@
+{"content":"{\"data\":{\"Hold\":{\"childorder\":[\"Mix\",\"Level\",\"Attack\",\"Release\"],\"children\":{\"Attack\":{\"string\":\"800 ms\",\"type\":4},\"Level\":{\"type\":0,\"value\":0},\"Mix\":{\"type\":0,\"value\":50},\"Release\":{\"string\":\"3.2 S\",\"type\":4}}}},\"info\":{\"version\":\"1.0.9\"}}","id":"b37dd044-b746-4cd0-9932-1c264c8c8324","readonly":false,"type":"HOLD"}

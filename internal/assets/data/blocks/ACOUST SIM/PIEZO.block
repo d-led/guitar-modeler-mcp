@@ -1,0 +1,1 @@
+{"content":"{\"data\":{\"Acoust Sim\":{\"childorder\":[\"Level\",\"Body\",\"Tone\",\"Mode\"],\"children\":{\"Body\":{\"type\":0,\"value\":50},\"Level\":{\"type\":0,\"value\":50},\"Mode\":{\"string\":\"Piezo\",\"type\":4},\"Tone\":{\"type\":0,\"value\":50}}}},\"info\":{\"version\":\"1.0.9\"}}","id":"64c3fb4e-3d67-43b5-ac8b-5b730d09e48a","readonly":false,"type":"ACOUST SIM"}

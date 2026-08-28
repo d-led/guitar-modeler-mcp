@@ -1,0 +1,1 @@
+{"content":"{\"data\":{\"Acoust Sim\":{\"childorder\":[\"Level\",\"Body\",\"Tone\",\"Mode\"],\"children\":{\"Body\":{\"type\":0,\"value\":50},\"Level\":{\"type\":0,\"value\":50},\"Mode\":{\"string\":\"Enhance\",\"type\":4},\"Tone\":{\"type\":0,\"value\":50}}}},\"info\":{\"version\":\"1.0.9\"}}","id":"4cd7f3cb-ad61-4a67-9551-365281301ff3","readonly":false,"type":"ACOUST SIM"}

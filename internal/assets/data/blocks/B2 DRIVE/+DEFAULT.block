@@ -1,0 +1,1 @@
+{"content":"{\"data\":{\"B2 Drive\":{\"childorder\":[\"Level\",\"Gain\",\"Tone\",\"In-Bus\"],\"children\":{\"Gain\":{\"type\":0,\"value\":63},\"In-Bus\":{\"string\":\"Both\",\"type\":4},\"Level\":{\"type\":0,\"value\":27},\"Tone\":{\"type\":0,\"value\":50}}}},\"info\":{\"version\":\"1.0.9\"}}","id":"c91a478a-dd29-4f08-8df3-425b9e3e495c","readonly":false,"type":"B2 DRIVE"}

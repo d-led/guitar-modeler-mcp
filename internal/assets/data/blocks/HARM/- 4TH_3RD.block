@@ -1,0 +1,1 @@
+{"content":"{\"data\":{\"Harm\":{\"childorder\":[\"Mode\",\"Pitch\",\"Mix\",\"Offset\"],\"children\":{\"Mix\":{\"type\":0,\"value\":100},\"Mode\":{\"string\":\"- 4th / 3rd\",\"type\":4},\"Offset\":{\"type\":0,\"value\":25},\"Pitch\":{\"type\":0,\"value\":100}}}},\"info\":{\"version\":\"1.0.9\"}}","id":"1cb6cb1d-feec-4e58-add7-7f7ecd109b77","readonly":false,"type":"HARM"}

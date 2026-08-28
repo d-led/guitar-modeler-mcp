@@ -1,0 +1,1228 @@
+{
+  "amps": [
+    {
+      "Model": "05 Tangerine 30 Ch1",
+      "Brand": "Orange",
+      "RealModel": "AD30 Twin Channel",
+      "Channel": "Ch1",
+      "Wattage": "30W",
+      "Style": [
+        "rock",
+        "indie",
+        "classic rock"
+      ],
+      "Bass": false,
+      "Description": "Class A British twin-channel 30W head, channel 1."
+    },
+    {
+      "Model": "05 Tangerine 30 Ch2",
+      "Brand": "Orange",
+      "RealModel": "AD30 Twin Channel",
+      "Channel": "Ch2",
+      "Wattage": "30W",
+      "Style": [
+        "rock",
+        "indie",
+        "classic rock"
+      ],
+      "Bass": false,
+      "Description": "Class A British twin-channel 30W head, channel 2."
+    },
+    {
+      "Model": "11 EPB II Clean",
+      "Brand": "Engl",
+      "RealModel": "Powerball II",
+      "Channel": "Clean",
+      "Wattage": "100W",
+      "Style": [
+        "metal",
+        "high-gain"
+      ],
+      "Bass": false,
+      "Description": "Engl Powerball II clean channel."
+    },
+    {
+      "Model": "11 EPB II Crunch",
+      "Brand": "Engl",
+      "RealModel": "Powerball II",
+      "Channel": "Crunch",
+      "Wattage": "100W",
+      "Style": [
+        "metal",
+        "high-gain"
+      ],
+      "Bass": false,
+      "Description": "Engl Powerball II crunch channel."
+    },
+    {
+      "Model": "11 EPB II Hi-Lead",
+      "Brand": "Engl",
+      "RealModel": "Powerball II",
+      "Channel": "Hi-Lead",
+      "Wattage": "100W",
+      "Style": [
+        "metal",
+        "high-gain"
+      ],
+      "Bass": false,
+      "Description": "Engl Powerball II high-gain lead channel."
+    },
+    {
+      "Model": "11 EPB II Lo-Lead",
+      "Brand": "Engl",
+      "RealModel": "Powerball II",
+      "Channel": "Lo-Lead",
+      "Wattage": "100W",
+      "Style": [
+        "metal",
+        "high-gain"
+      ],
+      "Bass": false,
+      "Description": "Engl Powerball II low-gain lead channel."
+    },
+    {
+      "Model": "17 Trace Elliot Elf",
+      "Brand": "Trace Elliot",
+      "RealModel": "ELF",
+      "Channel": "",
+      "Wattage": "200W",
+      "Style": [
+        "bass"
+      ],
+      "Bass": true,
+      "Description": "Trace Elliot ELF micro bass head."
+    },
+    {
+      "Model": "66 Flip Bass",
+      "Brand": "Ampeg",
+      "RealModel": "B-15 Portaflex",
+      "Channel": "",
+      "Wattage": "30W",
+      "Style": [
+        "bass"
+      ],
+      "Bass": true,
+      "Description": "Flip-top portaflex tube bass amp."
+    },
+    {
+      "Model": "69 Blue Line Bass",
+      "Brand": "Ampeg",
+      "RealModel": "SVT",
+      "Channel": "",
+      "Wattage": "300W",
+      "Style": [
+        "bass",
+        "rock"
+      ],
+      "Bass": true,
+      "Description": "Ampeg SVT 300W all-tube bass head."
+    },
+    {
+      "Model": "69 Blue Line Scoop",
+      "Brand": "Ampeg",
+      "RealModel": "SVT (scooped)",
+      "Channel": "",
+      "Wattage": "300W",
+      "Style": [
+        "bass",
+        "rock"
+      ],
+      "Bass": true,
+      "Description": "Ampeg SVT voicing with a scooped midrange."
+    },
+    {
+      "Model": "59 Deluxe Gain Mod",
+      "Brand": "Fender",
+      "RealModel": "Tweed Deluxe (modded)",
+      "Channel": "",
+      "Wattage": "12W",
+      "Style": [
+        "blues",
+        "rock",
+        "country"
+      ],
+      "Bass": false,
+      "Description": "Modded 5E3 Tweed Deluxe with extra gain."
+    },
+    {
+      "Model": "59 Tweed Bass",
+      "Brand": "Fender",
+      "RealModel": "Tweed Bassman",
+      "Channel": "",
+      "Wattage": "50W",
+      "Style": [
+        "blues",
+        "rock",
+        "country"
+      ],
+      "Bass": false,
+      "Description": "Fender 5F6-A Tweed Bassman."
+    },
+    {
+      "Model": "59 Tweed Deluxe",
+      "Brand": "Fender",
+      "RealModel": "Tweed Deluxe",
+      "Channel": "",
+      "Wattage": "12W",
+      "Style": [
+        "blues",
+        "country"
+      ],
+      "Bass": false,
+      "Description": "Fender 5E3 Tweed Deluxe combo."
+    },
+    {
+      "Model": "59 Tweed Prince",
+      "Brand": "Fender",
+      "RealModel": "Tweed Princeton",
+      "Channel": "",
+      "Wattage": "5W",
+      "Style": [
+        "blues",
+        "country"
+      ],
+      "Bass": false,
+      "Description": "Fender 5F2-A Tweed Princeton."
+    },
+    {
+      "Model": "64 Black Lux Norm",
+      "Brand": "Fender",
+      "RealModel": "Deluxe Reverb",
+      "Channel": "Normal",
+      "Wattage": "22W",
+      "Style": [
+        "clean",
+        "blues",
+        "country"
+      ],
+      "Bass": false,
+      "Description": "Blackface Deluxe Reverb, normal channel."
+    },
+    {
+      "Model": "64 Black Lux Vib",
+      "Brand": "Fender",
+      "RealModel": "Deluxe Reverb",
+      "Channel": "Vibrato",
+      "Wattage": "22W",
+      "Style": [
+        "clean",
+        "blues",
+        "country"
+      ],
+      "Bass": false,
+      "Description": "Blackface Deluxe Reverb, vibrato channel."
+    },
+    {
+      "Model": "64 Black Vib",
+      "Brand": "Fender",
+      "RealModel": "Vibroverb",
+      "Channel": "",
+      "Wattage": "40W",
+      "Style": [
+        "blues",
+        "surf"
+      ],
+      "Bass": false,
+      "Description": "Blackface Vibroverb combo."
+    },
+    {
+      "Model": "65 Black Mini",
+      "Brand": "Fender",
+      "RealModel": "Champ",
+      "Channel": "",
+      "Wattage": "6W",
+      "Style": [
+        "blues",
+        "classic rock"
+      ],
+      "Bass": false,
+      "Description": "Blackface Champ practice combo."
+    },
+    {
+      "Model": "65 Black Prince",
+      "Brand": "Fender",
+      "RealModel": "Princeton",
+      "Channel": "",
+      "Wattage": "12W",
+      "Style": [
+        "clean",
+        "country"
+      ],
+      "Bass": false,
+      "Description": "Blackface Princeton combo."
+    },
+    {
+      "Model": "65 Black Prince Rev",
+      "Brand": "Fender",
+      "RealModel": "Princeton Reverb",
+      "Channel": "",
+      "Wattage": "12W",
+      "Style": [
+        "clean",
+        "country",
+        "blues"
+      ],
+      "Bass": false,
+      "Description": "Blackface Princeton Reverb combo."
+    },
+    {
+      "Model": "65 Black SR",
+      "Brand": "Fender",
+      "RealModel": "Super Reverb",
+      "Channel": "",
+      "Wattage": "40W",
+      "Style": [
+        "blues",
+        "clean",
+        "country"
+      ],
+      "Bass": false,
+      "Description": "Blackface Super Reverb 4x10 combo."
+    },
+    {
+      "Model": "67 Black Duo",
+      "Brand": "Fender",
+      "RealModel": "Twin Reverb",
+      "Channel": "",
+      "Wattage": "85W",
+      "Style": [
+        "clean"
+      ],
+      "Bass": false,
+      "Description": "Blackface Twin Reverb combo."
+    },
+    {
+      "Model": "67 Black Shimmer",
+      "Brand": "Fender",
+      "RealModel": "Twin Reverb (shimmer)",
+      "Channel": "",
+      "Wattage": "85W",
+      "Style": [
+        "clean",
+        "ambient"
+      ],
+      "Bass": false,
+      "Description": "Blackface Twin Reverb voicing with added shimmer."
+    },
+    {
+      "Model": "65 J45",
+      "Brand": "Marshall",
+      "RealModel": "JTM45",
+      "Channel": "",
+      "Wattage": "30W",
+      "Style": [
+        "blues",
+        "rock"
+      ],
+      "Bass": false,
+      "Description": "Marshall JTM45 head."
+    },
+    {
+      "Model": "67 Plexiglas Vari",
+      "Brand": "Marshall",
+      "RealModel": "Super Lead Plexi (Variac)",
+      "Channel": "",
+      "Wattage": "100W",
+      "Style": [
+        "blues",
+        "rock"
+      ],
+      "Bass": false,
+      "Description": "Marshall Super Lead Plexi head, variac mod."
+    },
+    {
+      "Model": "68 Plexi EL84 Mod",
+      "Brand": "Marshall",
+      "RealModel": "Super Lead (EL84 mod)",
+      "Channel": "",
+      "Wattage": "50W",
+      "Style": [
+        "rock",
+        "crunch"
+      ],
+      "Bass": false,
+      "Description": "Marshall Plexi voiced for EL84 power tubes."
+    },
+    {
+      "Model": "68 Plexiglas 50W",
+      "Brand": "Marshall",
+      "RealModel": "Super Lead 1987",
+      "Channel": "",
+      "Wattage": "50W",
+      "Style": [
+        "crunch",
+        "rock",
+        "blues"
+      ],
+      "Bass": false,
+      "Description": "Marshall 1987 50W Super Lead Plexi head."
+    },
+    {
+      "Model": "69 Plexiglas 100W",
+      "Brand": "Marshall",
+      "RealModel": "Super Lead 1959",
+      "Channel": "",
+      "Wattage": "100W",
+      "Style": [
+        "rock",
+        "blues"
+      ],
+      "Bass": false,
+      "Description": "Marshall 1959 100W Super Lead Plexi head."
+    },
+    {
+      "Model": "82 Lead 800 50W",
+      "Brand": "Marshall",
+      "RealModel": "JCM800 2204",
+      "Channel": "",
+      "Wattage": "50W",
+      "Style": [
+        "rock",
+        "hard rock"
+      ],
+      "Bass": false,
+      "Description": "Marshall JCM800 2204 50W head."
+    },
+    {
+      "Model": "82 Lead 800 100W",
+      "Brand": "Marshall",
+      "RealModel": "JCM800 2203",
+      "Channel": "",
+      "Wattage": "100W",
+      "Style": [
+        "rock",
+        "hard rock"
+      ],
+      "Bass": false,
+      "Description": "Marshall JCM800 2203 100W head."
+    },
+    {
+      "Model": "82 Lead 800 Bright",
+      "Brand": "Marshall",
+      "RealModel": "JCM800 (bright)",
+      "Channel": "",
+      "Wattage": "100W",
+      "Style": [
+        "rock",
+        "hard rock"
+      ],
+      "Bass": false,
+      "Description": "Marshall JCM800 voicing with a brighter top end."
+    },
+    {
+      "Model": "82 Lead 800 Bass Mod",
+      "Brand": "Marshall",
+      "RealModel": "JCM800 (bass mod)",
+      "Channel": "",
+      "Wattage": "100W",
+      "Style": [
+        "rock"
+      ],
+      "Bass": false,
+      "Description": "Marshall JCM800 voicing with extended low end."
+    },
+    {
+      "Model": "82 Lead 800 TS Mod",
+      "Brand": "Marshall",
+      "RealModel": "JCM800 (TS mod)",
+      "Channel": "",
+      "Wattage": "100W",
+      "Style": [
+        "rock",
+        "metal"
+      ],
+      "Bass": false,
+      "Description": "Marshall JCM800 voicing with a tube-screamer style mid boost."
+    },
+    {
+      "Model": "85 M-2 Lead",
+      "Brand": "Mesa Boogie",
+      "RealModel": "Mark IIC+",
+      "Channel": "Lead",
+      "Wattage": "75W",
+      "Style": [
+        "rock",
+        "metal"
+      ],
+      "Bass": false,
+      "Description": "Mesa Boogie Mark IIC+ drive channel."
+    },
+    {
+      "Model": "85 M-2 Lead Cap Mod",
+      "Brand": "Mesa Boogie",
+      "RealModel": "Mark IIC+ (cap mod)",
+      "Channel": "Lead",
+      "Wattage": "75W",
+      "Style": [
+        "rock",
+        "metal"
+      ],
+      "Bass": false,
+      "Description": "Mesa Boogie Mark IIC+ with the capacitor mod."
+    },
+    {
+      "Model": "92 Treadplate Modern",
+      "Brand": "Mesa Boogie",
+      "RealModel": "Dual Rectifier",
+      "Channel": "Red (Modern)",
+      "Wattage": "100W",
+      "Style": [
+        "metal",
+        "hard rock"
+      ],
+      "Bass": false,
+      "Description": "Mesa Boogie Dual Rectifier, red/modern channel."
+    },
+    {
+      "Model": "92 Treadplate Raw",
+      "Brand": "Mesa Boogie",
+      "RealModel": "Dual Rectifier",
+      "Channel": "Raw",
+      "Wattage": "100W",
+      "Style": [
+        "metal",
+        "hard rock"
+      ],
+      "Bass": false,
+      "Description": "Mesa Boogie Dual Rectifier, raw voicing."
+    },
+    {
+      "Model": "92 Treadplate Vintage",
+      "Brand": "Mesa Boogie",
+      "RealModel": "Dual Rectifier",
+      "Channel": "Orange (Vintage)",
+      "Wattage": "100W",
+      "Style": [
+        "metal",
+        "hard rock"
+      ],
+      "Bass": false,
+      "Description": "Mesa Boogie Dual Rectifier, orange/vintage channel."
+    },
+    {
+      "Model": "89 SL-100 Clean",
+      "Brand": "Soldano",
+      "RealModel": "SLO-100",
+      "Channel": "Clean",
+      "Wattage": "100W",
+      "Style": [
+        "rock",
+        "hard rock"
+      ],
+      "Bass": false,
+      "Description": "Soldano SLO-100 clean channel."
+    },
+    {
+      "Model": "89 SL-100 Crunch",
+      "Brand": "Soldano",
+      "RealModel": "SLO-100",
+      "Channel": "Crunch",
+      "Wattage": "100W",
+      "Style": [
+        "rock",
+        "hard rock"
+      ],
+      "Bass": false,
+      "Description": "Soldano SLO-100 crunch channel."
+    },
+    {
+      "Model": "89 SL-100 Drive",
+      "Brand": "Soldano",
+      "RealModel": "SLO-100",
+      "Channel": "Overdrive",
+      "Wattage": "100W",
+      "Style": [
+        "rock",
+        "hard rock",
+        "metal"
+      ],
+      "Bass": false,
+      "Description": "Soldano SLO-100 super lead overdrive channel."
+    },
+    {
+      "Model": "89 SL-100 Ext Range",
+      "Brand": "Soldano",
+      "RealModel": "SLO-100",
+      "Channel": "Extended range",
+      "Wattage": "100W",
+      "Style": [
+        "rock",
+        "metal"
+      ],
+      "Bass": false,
+      "Description": "Soldano SLO-100 with extended frequency range."
+    },
+    {
+      "Model": "93 MS30",
+      "Brand": "Matchless",
+      "RealModel": "DC30",
+      "Channel": "",
+      "Wattage": "30W",
+      "Style": [
+        "clean",
+        "country",
+        "rock"
+      ],
+      "Bass": false,
+      "Description": "Class A boutique 30W combo voiced after the Matchless DC30."
+    },
+    {
+      "Model": "97 RB-01b Blue",
+      "Brand": "Bogner",
+      "RealModel": "Ecstasy 101B",
+      "Channel": "Blue",
+      "Wattage": "100W",
+      "Style": [
+        "rock",
+        "blues"
+      ],
+      "Bass": false,
+      "Description": "Bogner Ecstasy 101B blue channel."
+    },
+    {
+      "Model": "97 RB-01b Green",
+      "Brand": "Bogner",
+      "RealModel": "Ecstasy 101B",
+      "Channel": "Green",
+      "Wattage": "100W",
+      "Style": [
+        "rock",
+        "hard rock"
+      ],
+      "Bass": false,
+      "Description": "Bogner Ecstasy 101B green channel."
+    },
+    {
+      "Model": "97 RB-01b Red",
+      "Brand": "Bogner",
+      "RealModel": "Ecstasy 101B",
+      "Channel": "Red",
+      "Wattage": "100W",
+      "Style": [
+        "rock",
+        "hard rock",
+        "metal"
+      ],
+      "Bass": false,
+      "Description": "Bogner Ecstasy 101B red channel."
+    },
+    {
+      "Model": "99 PV51 II Clean",
+      "Brand": "Peavey",
+      "RealModel": "5150 II",
+      "Channel": "Clean",
+      "Wattage": "120W",
+      "Style": [
+        "metal",
+        "hard rock"
+      ],
+      "Bass": false,
+      "Description": "Peavey 5150 II clean channel."
+    },
+    {
+      "Model": "99 PV51 II Crunch",
+      "Brand": "Peavey",
+      "RealModel": "5150 II",
+      "Channel": "Crunch",
+      "Wattage": "120W",
+      "Style": [
+        "metal",
+        "hard rock"
+      ],
+      "Bass": false,
+      "Description": "Peavey 5150 II crunch channel."
+    },
+    {
+      "Model": "99 PV51 II Lead",
+      "Brand": "Peavey",
+      "RealModel": "5150 II",
+      "Channel": "Lead",
+      "Wattage": "120W",
+      "Style": [
+        "metal",
+        "hard rock"
+      ],
+      "Bass": false,
+      "Description": "Peavey 5150 II lead channel."
+    },
+    {
+      "Model": "83 400R",
+      "Brand": "",
+      "RealModel": "400R",
+      "Channel": "",
+      "Wattage": "",
+      "Style": [
+        "rock"
+      ],
+      "Bass": false,
+      "Description": "High-gain British-style head."
+    },
+    {
+      "Model": "84 J-120H",
+      "Brand": "",
+      "RealModel": "J-120H",
+      "Channel": "",
+      "Wattage": "",
+      "Style": [
+        "rock"
+      ],
+      "Bass": false,
+      "Description": "120W British-style head."
+    }
+  ],
+  "cabs": [
+    {
+      "Model": "1x8 Custom",
+      "Speakers": "1x8",
+      "SpeakersRef": "custom 8\"",
+      "Description": "Compact 1x8 cabinet, Champ style."
+    },
+    {
+      "Model": "1x12 Black Panel Lux",
+      "Speakers": "1x12",
+      "SpeakersRef": "blackface 1x12",
+      "Description": "1x12 open-back cabinet, Deluxe Reverb style."
+    },
+    {
+      "Model": "1x12 Tweed Lux",
+      "Speakers": "1x12",
+      "SpeakersRef": "tweed 1x12",
+      "Description": "1x12 open-back cabinet, Tweed Deluxe style."
+    },
+    {
+      "Model": "1x15 Open Back",
+      "Speakers": "1x15",
+      "SpeakersRef": "15\" open back",
+      "Description": "1x15 open-back cabinet for round, full cleans."
+    },
+    {
+      "Model": "2x12 AC Blue",
+      "Speakers": "2x12",
+      "SpeakersRef": "Celestion Alnico Blue",
+      "Description": "Vox AC30 style 2x12 loaded with Alnico Blue speakers."
+    },
+    {
+      "Model": "2x12 B30",
+      "Speakers": "2x12",
+      "SpeakersRef": "British 30W",
+      "Description": "British-voiced 2x12 with 30W speakers."
+    },
+    {
+      "Model": "2x12 Black Panel Duo",
+      "Speakers": "2x12",
+      "SpeakersRef": "blackface 2x12",
+      "Description": "Fender Twin style 2x12 cabinet."
+    },
+    {
+      "Model": "2x12 Silver Cone",
+      "Speakers": "2x12",
+      "SpeakersRef": "silver cone",
+      "Description": "2x12 cabinet with bright silver-cone speakers."
+    },
+    {
+      "Model": "4x10 Black SR",
+      "Speakers": "4x10",
+      "SpeakersRef": "blackface 4x10",
+      "Description": "Fender Super Reverb style 4x10 cabinet."
+    },
+    {
+      "Model": "4x10 Tweed Bass",
+      "Speakers": "4x10",
+      "SpeakersRef": "tweed 4x10",
+      "Description": "Fender Bassman style 4x10 cabinet."
+    },
+    {
+      "Model": "4x12 65W",
+      "Speakers": "4x12",
+      "SpeakersRef": "Celestion 65W",
+      "Description": "Marshall style 4x12 with 65W speakers."
+    },
+    {
+      "Model": "4x12 Classic 30W",
+      "Speakers": "4x12",
+      "SpeakersRef": "Celestion G12H30",
+      "Description": "4x12 cabinet with classic 30W speakers."
+    },
+    {
+      "Model": "4x12 Green 20W",
+      "Speakers": "4x12",
+      "SpeakersRef": "Celestion Greenback 20W",
+      "Description": "4x12 cabinet with 20W Greenback speakers."
+    },
+    {
+      "Model": "4x12 Green 25W",
+      "Speakers": "4x12",
+      "SpeakersRef": "Celestion Greenback 25W",
+      "Description": "4x12 cabinet with 25W Greenback speakers."
+    },
+    {
+      "Model": "8x10 Blue Line",
+      "Speakers": "8x10",
+      "SpeakersRef": "Ampeg 8x10",
+      "Description": "Ampeg SVT style 8x10 bass cabinet."
+    }
+  ],
+  "mics": [
+    {
+      "Model": "Dyn 57",
+      "Kind": "dynamic",
+      "RealModel": "Shure SM57",
+      "Description": "The classic close-mic dynamic workhorse."
+    },
+    {
+      "Model": "Dyn 7",
+      "Kind": "dynamic",
+      "RealModel": "Shure SM7B",
+      "Description": "Smooth, fat dynamic broadcast microphone."
+    },
+    {
+      "Model": "Dyn 409",
+      "Kind": "dynamic",
+      "RealModel": "Sennheiser MD409",
+      "Description": "Bright, tight dynamic with a fast transient."
+    },
+    {
+      "Model": "Dyn 421",
+      "Kind": "dynamic",
+      "RealModel": "Sennheiser MD421",
+      "Description": "Full-bodied dynamic with strong low end."
+    },
+    {
+      "Model": "Dyn 20",
+      "Kind": "dynamic",
+      "RealModel": "Electro-Voice RE20",
+      "Description": "Large-diaphragm dynamic with a neutral, even response."
+    },
+    {
+      "Model": "Cond 414",
+      "Kind": "condenser",
+      "RealModel": "AKG C414",
+      "Description": "Detailed large-diaphragm condenser."
+    },
+    {
+      "Model": "Cond 67",
+      "Kind": "condenser",
+      "RealModel": "Neumann U67",
+      "Description": "Vintage tube condenser with a warm top end."
+    },
+    {
+      "Model": "Cond 87",
+      "Kind": "condenser",
+      "RealModel": "Neumann U87",
+      "Description": "Studio-standard large-diaphragm condenser."
+    },
+    {
+      "Model": "Ribbon 121",
+      "Kind": "ribbon",
+      "RealModel": "Royer R-121",
+      "Description": "Smooth ribbon microphone, dark and natural."
+    }
+  ],
+  "fx": [
+    {
+      "Name": "White Boost",
+      "Category": "drive",
+      "Description": "Clean, transparent boost (Xotic RC Booster style)."
+    },
+    {
+      "Name": "Green JRC-OD",
+      "Category": "drive",
+      "Description": "Green overdrive (Ibanez TS808 Tube Screamer style)."
+    },
+    {
+      "Name": "D250 Drive",
+      "Category": "drive",
+      "Description": "Amp-in-a-box drive (DOD 250 style)."
+    },
+    {
+      "Name": "Glorious Drive",
+      "Category": "drive",
+      "Description": "Transparent low-to-medium gain drive."
+    },
+    {
+      "Name": "S1 Drive",
+      "Category": "drive",
+      "Description": "Medium gain, amp-like overdrive."
+    },
+    {
+      "Name": "B2 Drive",
+      "Category": "drive",
+      "Description": "Bright, cutting overdrive."
+    },
+    {
+      "Name": "K Drive",
+      "Category": "drive",
+      "Description": "High gain distortion with a tight low end."
+    },
+    {
+      "Name": "DC Distort",
+      "Category": "drive",
+      "Description": "Classic distortion (BOSS DS-1 style)."
+    },
+    {
+      "Name": "D1 Dist",
+      "Category": "drive",
+      "Description": "Hard-clipping distortion."
+    },
+    {
+      "Name": "MX Dist",
+      "Category": "drive",
+      "Description": "Aggressive modern distortion."
+    },
+    {
+      "Name": "Anxiety OD",
+      "Category": "drive",
+      "Description": "Overdrive voiced for modern metal rhythm."
+    },
+    {
+      "Name": "Anxiety OD V2",
+      "Category": "drive",
+      "Description": "Refined version of Anxiety OD."
+    },
+    {
+      "Name": "B Dist 7000",
+      "Category": "drive",
+      "Description": "Bass distortion."
+    },
+    {
+      "Name": "Black OP",
+      "Category": "drive",
+      "Description": "Dark, gated fuzz-style distortion."
+    },
+    {
+      "Name": "Tri Fuzz",
+      "Category": "drive",
+      "Description": "Three-transistor fuzz."
+    },
+    {
+      "Name": "Round Fuzz",
+      "Category": "drive",
+      "Description": "Smooth, round fuzz (EHX Big Muff style)."
+    },
+    {
+      "Name": "Oct Fuzz",
+      "Category": "drive",
+      "Description": "Octave-up fuzz."
+    },
+    {
+      "Name": "8-Bit Crush",
+      "Category": "drive",
+      "Description": "Lo-fi bitcrusher with drive."
+    },
+    {
+      "Name": "DynIII Comp",
+      "Category": "dynamics/eq",
+      "Description": "Studio-style compressor."
+    },
+    {
+      "Name": "Gray Comp",
+      "Category": "dynamics/eq",
+      "Description": "Ross-style optical compressor."
+    },
+    {
+      "Name": "Side Comp",
+      "Category": "dynamics/eq",
+      "Description": "Compressor with sidechain options."
+    },
+    {
+      "Name": "Gate",
+      "Category": "dynamics/eq",
+      "Description": "Noise gate."
+    },
+    {
+      "Name": "Noise Filter",
+      "Category": "dynamics/eq",
+      "Description": "Adaptive noise reduction."
+    },
+    {
+      "Name": "Hold",
+      "Category": "dynamics/eq",
+      "Description": "Freeze/hold effect."
+    },
+    {
+      "Name": "Auto Swell",
+      "Category": "dynamics/eq",
+      "Description": "Volume swell triggered by picking."
+    },
+    {
+      "Name": "Acoustic Pre",
+      "Category": "dynamics/eq",
+      "Description": "Acoustic guitar preamp/EQ."
+    },
+    {
+      "Name": "Graphic EQ",
+      "Category": "dynamics/eq",
+      "Description": "Graphic equalizer."
+    },
+    {
+      "Name": "Para EQ",
+      "Category": "dynamics/eq",
+      "Description": "Parametric equalizer."
+    },
+    {
+      "Name": "Ten Freq EQ",
+      "Category": "dynamics/eq",
+      "Description": "Ten-band graphic equalizer."
+    },
+    {
+      "Name": "Bass EQ",
+      "Category": "dynamics/eq",
+      "Description": "Bass-specific equalizer."
+    },
+    {
+      "Name": "Black Wah",
+      "Category": "filter/wah",
+      "Description": "Classic wah."
+    },
+    {
+      "Name": "More Wah",
+      "Category": "filter/wah",
+      "Description": "Wah with extended sweep."
+    },
+    {
+      "Name": "Shine Wah",
+      "Category": "filter/wah",
+      "Description": "Bright, vocal wah."
+    },
+    {
+      "Name": "White Bass Wah",
+      "Category": "filter/wah",
+      "Description": "Bass-voiced wah."
+    },
+    {
+      "Name": "Env Filter",
+      "Category": "filter/wah",
+      "Description": "Envelope follower auto-wah."
+    },
+    {
+      "Name": "Tron Filter",
+      "Category": "filter/wah",
+      "Description": "Mu-tron style envelope filter."
+    },
+    {
+      "Name": "AIR Filter",
+      "Category": "filter/wah",
+      "Description": "Sweeping filter with movement."
+    },
+    {
+      "Name": "Volume",
+      "Category": "filter/wah",
+      "Description": "Volume pedal module."
+    },
+    {
+      "Name": "Panner",
+      "Category": "filter/wah",
+      "Description": "Stereo auto-panner."
+    },
+    {
+      "Name": "Feedback",
+      "Category": "filter/wah",
+      "Description": "Controlled feedback generator."
+    },
+    {
+      "Name": "Time Warp",
+      "Category": "filter/wah",
+      "Description": "Expression-controlled time modulation."
+    },
+    {
+      "Name": "Wham",
+      "Category": "filter/wah",
+      "Description": "Expression-controlled pitch (DigiTech Whammy style)."
+    },
+    {
+      "Name": "Chord Wham",
+      "Category": "pitch",
+      "Description": "Expression-controlled chord pitch shifting."
+    },
+    {
+      "Name": "Chorus",
+      "Category": "modulation",
+      "Description": "Classic analog chorus."
+    },
+    {
+      "Name": "Multi Chorus",
+      "Category": "modulation",
+      "Description": "Rich multi-voice chorus."
+    },
+    {
+      "Name": "Dim Chorus",
+      "Category": "modulation",
+      "Description": "Subtle, dimension-style chorus."
+    },
+    {
+      "Name": "Flanger",
+      "Category": "modulation",
+      "Description": "Classic flanger."
+    },
+    {
+      "Name": "AIR Flanger",
+      "Category": "modulation",
+      "Description": "Wide, airy flanger."
+    },
+    {
+      "Name": "Vibrato",
+      "Category": "modulation",
+      "Description": "Pitch vibrato."
+    },
+    {
+      "Name": "AIR Vibrato",
+      "Category": "modulation",
+      "Description": "Airy, soft vibrato."
+    },
+    {
+      "Name": "Tremolo",
+      "Category": "modulation",
+      "Description": "Amplitude tremolo."
+    },
+    {
+      "Name": "Rotary",
+      "Category": "modulation",
+      "Description": "Rotary speaker simulation."
+    },
+    {
+      "Name": "Stone Phaser",
+      "Category": "modulation",
+      "Description": "Phase shifter (EHX Small Stone style)."
+    },
+    {
+      "Name": "Orange Phaser",
+      "Category": "modulation",
+      "Description": "Warm phase shifter (MXR Phase 90 style)."
+    },
+    {
+      "Name": "Vibe Phaser",
+      "Category": "modulation",
+      "Description": "Uni-vibe style phaser."
+    },
+    {
+      "Name": "Tron Phaser",
+      "Category": "modulation",
+      "Description": "Envelope-triggered phaser."
+    },
+    {
+      "Name": "Ring Mod",
+      "Category": "modulation",
+      "Description": "Ring modulator."
+    },
+    {
+      "Name": "Stereo Doubler",
+      "Category": "modulation",
+      "Description": "Stereo width doubler."
+    },
+    {
+      "Name": "Detune",
+      "Category": "pitch",
+      "Description": "Subtle detune chorus for width."
+    },
+    {
+      "Name": "Smart Harm",
+      "Category": "pitch",
+      "Description": "Intelligent harmonizer."
+    },
+    {
+      "Name": "Harm",
+      "Category": "pitch",
+      "Description": "Diatonic harmonizer."
+    },
+    {
+      "Name": "Octaves",
+      "Category": "pitch",
+      "Description": "Octave up/down pitch shifter."
+    },
+    {
+      "Name": "Octaves Up",
+      "Category": "pitch",
+      "Description": "Octave-up pitch shifter."
+    },
+    {
+      "Name": "Drop Tune",
+      "Category": "pitch",
+      "Description": "Drop-tuning pitch shifter."
+    },
+    {
+      "Name": "AIR Delay",
+      "Category": "delay/reverb",
+      "Description": "Wide, atmospheric digital delay."
+    },
+    {
+      "Name": "Dyn Delay",
+      "Category": "delay/reverb",
+      "Description": "Dynamic ducking delay."
+    },
+    {
+      "Name": "BBD Delay",
+      "Category": "delay/reverb",
+      "Description": "Analog bucket-brigade delay."
+    },
+    {
+      "Name": "Tape Echo",
+      "Category": "delay/reverb",
+      "Description": "Tape echo with wow, flutter and hiss."
+    },
+    {
+      "Name": "Pitch Delay",
+      "Category": "delay/reverb",
+      "Description": "Delay with pitch-shifted repeats."
+    },
+    {
+      "Name": "Reso Delay",
+      "Category": "delay/reverb",
+      "Description": "Resonant filtered delay."
+    },
+    {
+      "Name": "Reverse Delay",
+      "Category": "delay/reverb",
+      "Description": "Backwards delay."
+    },
+    {
+      "Name": "AIR Reverb",
+      "Category": "delay/reverb",
+      "Description": "Expansive hall-style reverb."
+    },
+    {
+      "Name": "Ambi Verb",
+      "Category": "delay/reverb",
+      "Description": "Ambient reverb with long tails."
+    },
+    {
+      "Name": "Eleven Reverb",
+      "Category": "delay/reverb",
+      "Description": "Natural room and hall reverb."
+    },
+    {
+      "Name": "Party Verb",
+      "Category": "delay/reverb",
+      "Description": "Lush, modulated reverb."
+    },
+    {
+      "Name": "Spring Reverb",
+      "Category": "delay/reverb",
+      "Description": "Spring tank reverb."
+    },
+    {
+      "Name": "Shimmer",
+      "Category": "delay/reverb",
+      "Description": "Pitch-shifted shimmer reverb."
+    },
+    {
+      "Name": "Acoust Sim",
+      "Category": "utility",
+      "Description": "Electric-to-acoustic simulator."
+    },
+    {
+      "Name": "FX-Loop",
+      "Category": "utility",
+      "Description": "Insert point for external pedals."
+    },
+    {
+      "Name": "IR",
+      "Category": "utility",
+      "Description": "Impulse response loader."
+    },
+    {
+      "Name": "IR (1024)",
+      "Category": "utility",
+      "Description": "High-resolution impulse response loader."
+    }
+  ]
+}

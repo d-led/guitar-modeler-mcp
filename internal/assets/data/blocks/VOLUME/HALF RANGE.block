@@ -1,0 +1,1 @@
+{"content":"{\"data\":{\"Volume\":{\"childorder\":[\"Volume\",\"MinVolume\",\"Linear\"],\"children\":{\"Linear\":{\"state\":false,\"type\":1},\"MinVolume\":{\"type\":0,\"value\":50},\"Volume\":{\"type\":0,\"value\":100}}}},\"info\":{\"version\":\"1.0.9\"}}","id":"5eeb3906-c257-4197-8391-a99317253953","readonly":false,"type":"VOLUME"}

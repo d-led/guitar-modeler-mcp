@@ -1,0 +1,1 @@
+{"content":"{\"data\":{\"Gate\":{\"childorder\":[\"Threshold\",\"Release\",\"FilterThreshhold\"],\"children\":{\"FilterThreshhold\":{\"type\":0,\"value\":-80},\"Release\":{\"type\":0,\"value\":50},\"Threshold\":{\"type\":0,\"value\":-74}}}},\"info\":{\"version\":\"1.0.9\"}}","id":"c679abcd-ec5b-44b3-b211-c9c4663457a6","readonly":false,"type":"GATE"}
