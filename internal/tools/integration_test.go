@@ -325,8 +325,10 @@ func TestIntegrationThrSetupCard(t *testing.T) {
 		"arguments": map[string]any{
 			"name":       "THR Clean",
 			"amp":        "Twin Reverb",
+			"cab":        "California 1x12",
 			"mod":        "CHORUS",
-			"echo_rev":   "HALL REVERB",
+			"echo":       "Tape",
+			"reverb":     "Hall",
 			"compressor": true,
 			"output_dir": dir,
 		},
@@ -336,6 +338,15 @@ func TestIntegrationThrSetupCard(t *testing.T) {
 	}
 	if cards, _ := filepath.Glob(filepath.Join(dir, "*.html")); len(cards) != 1 {
 		t.Fatalf("expected one .html card in %s, got %v", dir, cards)
+	}
+
+	// The effects catalog now includes cabinets, echo and reverb types.
+	fx := resultText(t, rpc(t, s, 4, "tools/call", map[string]any{
+		"name":      "thr_catalog_list_fx",
+		"arguments": map[string]any{},
+	}))
+	if !strings.Contains(fx, "Brown 4x12") || !strings.Contains(fx, "Digital Delay") || !strings.Contains(fx, "Spring") {
+		t.Fatalf("thr_catalog_list_fx missing cabs/echo/reverb: %s", fx)
 	}
 }
 

@@ -23,8 +23,11 @@ func TestDefaultDeviceShape(t *testing.T) {
 	if len(d.Amps) != 24 {
 		t.Fatalf("amps = %d, want 24", len(d.Amps))
 	}
-	if len(d.Modulation) != 4 || len(d.EchoRev) != 4 {
-		t.Fatalf("modulation/echoRev = %d/%d, want 4/4", len(d.Modulation), len(d.EchoRev))
+	if len(d.Modulation) != 4 || len(d.Echo) != 2 || len(d.Reverb) != 4 {
+		t.Fatalf("modulation/echo/reverb = %d/%d/%d, want 4/2/4", len(d.Modulation), len(d.Echo), len(d.Reverb))
+	}
+	if len(d.Cabs) != 16 {
+		t.Fatalf("cabs = %d, want 16", len(d.Cabs))
 	}
 }
 
@@ -57,8 +60,10 @@ func TestResolveEffects(t *testing.T) {
 	d := Default()
 	s, err := d.Resolve(Spec{
 		Amp:        "BROWN",
+		Cab:        "brown 4x12",
 		Mod:        "CHORUS",
-		EchoRev:    "spring reverb",
+		Echo:       "tape",
+		Reverb:     "spring",
 		Compressor: true,
 		NoiseGate:  true,
 	})
@@ -68,11 +73,24 @@ func TestResolveEffects(t *testing.T) {
 	if s.Amp != "SPECIAL CLASSIC" {
 		t.Fatalf("amp = %q, want SPECIAL CLASSIC (BROWN → CLASSIC)", s.Amp)
 	}
-	if s.Mod != "CHORUS" || s.EchoRev != "SPRING REVERB" {
-		t.Fatalf("mod/echoRev = %q/%q", s.Mod, s.EchoRev)
+	if s.Cab != "Brown 4x12" {
+		t.Fatalf("cab = %q, want Brown 4x12", s.Cab)
+	}
+	if s.Mod != "CHORUS" || s.Echo != "Tape" || s.Reverb != "Spring" {
+		t.Fatalf("mod/echo/reverb = %q/%q/%q", s.Mod, s.Echo, s.Reverb)
 	}
 	if !s.Compressor || !s.NoiseGate {
 		t.Fatal("compressor/noise gate should be on")
+	}
+}
+
+func TestResolveCabRequiresThrII(t *testing.T) {
+	if _, err := Default().Resolve(Spec{Amp: "CLEAN", Cab: "Not a cab"}); err == nil {
+		t.Fatal("expected an error for an unknown cabinet")
+	}
+	legacy, _ := ModelByName("thr10")
+	if _, err := legacy.Resolve(Spec{Amp: "Lead", Cab: "Brown 4x12"}); err == nil {
+		t.Fatal("legacy THR10 should reject a cabinet")
 	}
 }
 
@@ -87,12 +105,12 @@ func TestResolveRequiresAmp(t *testing.T) {
 
 func TestSetupCardHTML(t *testing.T) {
 	d := Default()
-	s, err := d.Resolve(Spec{Name: "THR Clean", Amp: "Twin Reverb", Mod: "CHORUS", EchoRev: "HALL REVERB"})
+	s, err := d.Resolve(Spec{Name: "THR Clean", Amp: "Twin Reverb", Cab: "California 1x12", Mod: "CHORUS", Echo: "Tape", Reverb: "Hall"})
 	if err != nil {
 		t.Fatalf("Resolve: %v", err)
 	}
 	html := d.SetupCardHTML(s)
-	for _, want := range []string{"THR Clean", "Yamaha THR-II", "CLEAN CLASSIC", "Fender Twin Reverb", "CHORUS", "HALL REVERB", "OFF"} {
+	for _, want := range []string{"THR Clean", "Yamaha THR-II", "CLEAN CLASSIC", "Fender Twin Reverb", "California 1x12", "CHORUS", "Tape", "Hall", "OFF"} {
 		if !strings.Contains(html, want) {
 			t.Fatalf("setup card missing %q", want)
 		}

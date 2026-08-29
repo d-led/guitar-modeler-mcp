@@ -6,13 +6,15 @@ import (
 	"strings"
 )
 
-// Spec is a tone to dial in on a THR: the amp-selector position, the EFFECT
-// and ECHO/REV knob choices, and the two app-only toggles.
+// Spec is a tone to dial in on a THR: the amp-selector position, the cabinet,
+// the EFFECT, ECHO and REVERB choices, and the two app-only toggles.
 type Spec struct {
 	Name       string
 	Amp        string
+	Cab        string
 	Mod        string
-	EchoRev    string
+	Echo       string
+	Reverb     string
 	Compressor bool
 	NoiseGate  bool
 }
@@ -47,10 +49,14 @@ td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;verti
 			} else {
 				writeModule(&b, module, "OFF", "")
 			}
+		case "CAB":
+			writeModule(&b, module, s.Cab, "")
 		case "MOD":
 			writeModule(&b, module, s.Mod, "")
-		case "ECHO/REV":
-			writeModule(&b, module, s.EchoRev, "")
+		case "ECHO":
+			writeModule(&b, module, s.Echo, "")
+		case "REVERB":
+			writeModule(&b, module, s.Reverb, "")
 		}
 	}
 

@@ -450,7 +450,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 
 	s.Register(mcp.Tool{
 		Name:        "thr_catalog_list_fx",
-		Description: "List a Yamaha THR model's effects: the EFFECT knob (chorus/flanger/phaser/tremolo) and the ECHO/REV knob (echo, echo+rev, spring reverb, hall reverb).",
+		Description: "List a Yamaha THR model's effects and cabinets: the EFFECT knob (chorus/flanger/phaser/tremolo), the ECHO delay types, the REVERB types, and the THR-II cabinet list.",
 		InputSchema: objectSchema(map[string]any{
 			"model": stringSchema("THR model (default: thr)."),
 			"query": stringSchema("Optional case-insensitive filter."),
@@ -467,8 +467,10 @@ func (r *Registrar) Register(s *mcp.Server) {
 			"name":       stringSchema("Patch name."),
 			"model":      stringSchema("THR model: thr (default), thr10, thr10c or thr10x."),
 			"amp":        stringSchema("Amp: CLEAN/CRUNCH/LEAD/HI GAIN/SPECIAL/BASS/ACOUSTIC/FLAT, optionally with CLASSIC/BOUTIQUE/MODERN (e.g. \"CLEAN BOUTIQUE\" or \"Twin Reverb\")."),
+			"cab":        stringSchema("Optional cabinet, e.g. \"Brown 4x12\" or \"American 1x12\" (THR-II only)."),
 			"mod":        stringSchema("Optional EFFECT knob: CHORUS, FLANGER, PHASER or TREMOLO."),
-			"echo_rev":   stringSchema("Optional ECHO/REV knob: ECHO, ECHO/REV, SPRING REVERB or HALL REVERB."),
+			"echo":       stringSchema("Optional ECHO type: Tape or Digital Delay."),
+			"reverb":     stringSchema("Optional REVERB type: Plate, Hall, Spring or Room."),
 			"compressor": map[string]any{"type": "boolean", "description": "Optional app-only compressor on/off."},
 			"noise_gate": map[string]any{"type": "boolean", "description": "Optional app-only noise gate on/off."},
 			"output_dir": stringSchema("Directory to write the HTML card into (default: current directory)."),
@@ -1296,7 +1298,9 @@ func (r *Registrar) thrListFX(args map[string]any) (string, error) {
 	query := argString(args, "query")
 	return marshal(map[string]any{
 		"modulation": filterThrItems(d.Modulation, query),
-		"echo_rev":   filterThrItems(d.EchoRev, query),
+		"echo":       filterThrItems(d.Echo, query),
+		"reverb":     filterThrItems(d.Reverb, query),
+		"cabs":       filterThrItems(d.Cabs, query),
 	})
 }
 
@@ -1308,8 +1312,10 @@ func (r *Registrar) thrSetupCard(args map[string]any) (string, error) {
 	spec, err := d.Resolve(thr.Spec{
 		Name:       argString(args, "name"),
 		Amp:        argString(args, "amp"),
+		Cab:        argString(args, "cab"),
 		Mod:        argString(args, "mod"),
-		EchoRev:    argString(args, "echo_rev"),
+		Echo:       argString(args, "echo"),
+		Reverb:     argString(args, "reverb"),
 		Compressor: argBool(args, "compressor", false),
 		NoiseGate:  argBool(args, "noise_gate", false),
 	})

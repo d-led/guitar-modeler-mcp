@@ -31,11 +31,14 @@ are supported:
   THR-II amp selector is a grid of eight types (CLEAN, CRUNCH, LEAD, HI GAIN,
   SPECIAL, BASS, ACOUSTIC, FLAT) × three modes (CLASSIC, BOUTIQUE, MODERN) —
   24 positions, each with Yamaha's official description plus a
-  community-sourced "inspired by" real amp. The effects are the EFFECT knob
-  (CHORUS, FLANGER, PHASER, TREMOLO) and the ECHO/REV knob (ECHO, ECHO/REV,
-  SPRING REVERB, HALL REVERB), plus app-only COMPRESSOR and NOISE GATE. Browse
-  with `thr_catalog_list_*` and design with `thr_setup_card`. The legacy
-  THR10/THR10C/THR10X amp lists are partial (community reference).
+  community-sourced "inspired by" real amp. THR-II also models 16 cabinets
+  (Brown 4x12, American 1x12, California 1x12, …), the EFFECT knob
+  (CHORUS, FLANGER, PHASER, TREMOLO), two ECHO delay types (Tape, Digital
+  Delay) and four REVERB types (Plate, Hall, Spring, Room), plus app-only
+  COMPRESSOR and NOISE GATE. Browse with `thr_catalog_list_*` and design with
+  `thr_setup_card`. The legacy
+  THR10/THR10C/THR10X amp lists are partial (community reference) and have no
+  cabinet list.
 
 Every parameter you pass is validated before a file is written, so an invalid
 preset is never produced. `design_rig` is Gigboard-only; Mooer presets go

@@ -40,8 +40,10 @@ type Device struct {
 	AmpTypes   []string
 	AmpModes   []string
 	Amps       []AmpCell
+	Cabs       []Item
 	Modulation []Item
-	EchoRev    []Item
+	Echo       []Item
+	Reverb     []Item
 }
 
 // Effect lists shared across the THR line (the two physical knobs).
@@ -52,11 +54,34 @@ var (
 		[2]string{"PHASER", ""},
 		[2]string{"TREMOLO", ""},
 	)
-	thrEchoRev = items(
-		[2]string{"ECHO", ""},
-		[2]string{"ECHO/REV", ""},
-		[2]string{"SPRING REVERB", ""},
-		[2]string{"HALL REVERB", ""},
+	thrEcho = items(
+		[2]string{"Tape", ""},
+		[2]string{"Digital Delay", ""},
+	)
+	thrReverb = items(
+		[2]string{"Plate", ""},
+		[2]string{"Hall", ""},
+		[2]string{"Spring", ""},
+		[2]string{"Room", ""},
+	)
+	// thrCabs is the THR-II cabinet list, in the app's selector order.
+	thrCabs = items(
+		[2]string{"Brown 4x12", ""},
+		[2]string{"American 4x12", ""},
+		[2]string{"Vintage 4x12", ""},
+		[2]string{"Boutique 2x12", ""},
+		[2]string{"British 4x12", ""},
+		[2]string{"California 1x12", ""},
+		[2]string{"Boutique 1x12", ""},
+		[2]string{"American 1x12", ""},
+		[2]string{"American 2x12", ""},
+		[2]string{"American 4x10", ""},
+		[2]string{"British 2x12", ""},
+		[2]string{"Yamaha 2x12", ""},
+		[2]string{"Juicy 4x12", ""},
+		[2]string{"Fuel 4x12", ""},
+		[2]string{"Mods 4x12", ""},
+		[2]string{"British Blues 2x12", ""},
 	)
 )
 
@@ -93,7 +118,7 @@ func thrII() Device {
 		Name:         "thr",
 		Display:      "Yamaha THR-II",
 		FileExchange: false,
-		Chain:        []string{"COMPRESSOR", "NOISE GATE", "AMP", "MOD", "ECHO/REV"},
+		Chain:        []string{"COMPRESSOR", "NOISE GATE", "AMP", "CAB", "MOD", "ECHO", "REVERB"},
 		AmpTypes:     []string{"CLEAN", "CRUNCH", "LEAD", "HI GAIN", "SPECIAL", "BASS", "ACOUSTIC", "FLAT"},
 		AmpModes:     []string{"CLASSIC", "BOUTIQUE", "MODERN"},
 		Amps: ampGrid(
@@ -122,8 +147,10 @@ func thrII() Device {
 			[5]string{"FLAT BOUTIQUE", "FLAT", "BOUTIQUE", "A neutral tone with no amp or speaker modeling and a slight bass boost.", "FRFR bypass (bass boost)"},
 			[5]string{"FLAT MODERN", "FLAT", "MODERN", "A neutral tone with no amp or speaker modeling and a slight mid scoop.", "FRFR bypass (mid scoop)"},
 		),
+		Cabs:       thrCabs,
 		Modulation: thrModulation,
-		EchoRev:    thrEchoRev,
+		Echo:       thrEcho,
+		Reverb:     thrReverb,
 	}
 }
 
@@ -136,14 +163,15 @@ func thr10() Device {
 		Display:      "Yamaha THR10",
 		FileExchange: false,
 		Note:         "Partial amp list (community reference); not the full factory set.",
-		Chain:        []string{"AMP", "MOD", "ECHO/REV"},
+		Chain:        []string{"AMP", "MOD", "ECHO", "REVERB"},
 		Amps: ampItems(
 			[2]string{"Lead", "Marshall Plexi"},
 			[2]string{"Modern", "Mesa/Boogie Rectifier-style high gain"},
 			[2]string{"Brit Hi", "Marshall JCM800"},
 		),
 		Modulation: thrModulation,
-		EchoRev:    thrEchoRev,
+		Echo:       thrEcho,
+		Reverb:     thrReverb,
 	}
 }
 
@@ -153,7 +181,7 @@ func thr10c() Device {
 		Display:      "Yamaha THR10C",
 		FileExchange: false,
 		Note:         "Partial amp list (community reference); not the full factory set.",
-		Chain:        []string{"AMP", "MOD", "ECHO/REV"},
+		Chain:        []string{"AMP", "MOD", "ECHO", "REVERB"},
 		Amps: ampItems(
 			[2]string{"Deluxe", "Fender Twin Reverb / Deluxe Reverb"},
 			[2]string{"Class A", "Matchless DC30"},
@@ -161,7 +189,8 @@ func thr10c() Device {
 			[2]string{"Mini", "Dr. Z Mini Z"},
 		),
 		Modulation: thrModulation,
-		EchoRev:    thrEchoRev,
+		Echo:       thrEcho,
+		Reverb:     thrReverb,
 	}
 }
 
@@ -171,14 +200,15 @@ func thr10x() Device {
 		Display:      "Yamaha THR10X",
 		FileExchange: false,
 		Note:         "Partial amp list (community reference); not the full factory set.",
-		Chain:        []string{"AMP", "MOD", "ECHO/REV"},
+		Chain:        []string{"AMP", "MOD", "ECHO", "REVERB"},
 		Amps: ampItems(
 			[2]string{"Brown 1", "Early Van Halen Marshall (Brown Sound)"},
 			[2]string{"Southern Hi", "Dimebag Darrell-style high gain"},
 			[2]string{"Brown 2", "EVH 5150 (later Van Halen)"},
 		),
 		Modulation: thrModulation,
-		EchoRev:    thrEchoRev,
+		Echo:       thrEcho,
+		Reverb:     thrReverb,
 	}
 }
 
@@ -218,13 +248,31 @@ func (d Device) Resolve(s Spec) (Spec, error) {
 	}
 	s.Amp = cell.Name
 
+	if s.Cab, err = d.resolveCab(s.Cab); err != nil {
+		return s, err
+	}
 	if s.Mod, err = resolveItem(d.Modulation, s.Mod, "modulation"); err != nil {
 		return s, err
 	}
-	if s.EchoRev, err = resolveItem(d.EchoRev, s.EchoRev, "echo/rev"); err != nil {
+	if s.Echo, err = resolveItem(d.Echo, s.Echo, "echo"); err != nil {
+		return s, err
+	}
+	if s.Reverb, err = resolveItem(d.Reverb, s.Reverb, "reverb"); err != nil {
 		return s, err
 	}
 	return s, nil
+}
+
+// resolveCab resolves the cabinet selection. It may be empty (no cabinet, as
+// on the BASS/ACOUSTIC/FLAT amp types and the legacy models).
+func (d Device) resolveCab(query string) (string, error) {
+	if strings.TrimSpace(query) == "" {
+		return "", nil
+	}
+	if len(d.Cabs) == 0 {
+		return "", fmt.Errorf("this THR model has no selectable cabinet")
+	}
+	return resolveItem(d.Cabs, query, "cabinet")
 }
 
 func (d Device) resolveAmp(query string) (AmpCell, error) {

@@ -39,7 +39,9 @@ sponsored by HeadRush or any of the referenced brands.
   toggles) are modelled and printable on the setup card.
 - **Yamaha THR** — implemented (setup cards only). The THR-II amp selector is
   an 8-type × 3-mode grid (24 positions, including three FLAT variants) with
-  Yamaha's official descriptions plus community-sourced "inspired by" amps;
+  Yamaha's official descriptions plus community-sourced "inspired by" amps,
+  plus 16 cabinets, two ECHO delay types (Tape, Digital Delay) and four REVERB
+  types (Plate, Hall, Spring, Room);
   the legacy THR10/THR10C/THR10X amp lists are partial.
 - **Quad Cortex** — planned; see [OpenCortex](https://github.com/VanIseghemThomas/OpenCortex)
   (open-source QC preset format work) as a starting point for the preset format.
@@ -69,7 +71,7 @@ per-device backend supplies the model catalog and preset file format:
 - **Waza Air backend** — `internal/waza` (amp/effect catalogs, the BOSS TONE
   STUDIO `.tsl` backup format and setup cards).
 - **Yamaha THR backend** — `internal/thr` (the THR-II 8×3 amp-selector grid
-  with official descriptions, the EFFECT/ECHO-REV effect lists, and partial
+  with official descriptions, the cabinet/EFFECT/ECHO/REVERB lists, and partial
   legacy THR10/THR10C/THR10X catalogs; setup cards only).
 - `internal/assets/data/blocks` — factory block definitions captured from the
   device backup, used as defaults for every effect module.
@@ -214,7 +216,7 @@ guitar-modeler-mcp serve
 | `waza_setup_card` | Write a printable HTML setup card for a Waza Air tone |
 | `waza_catalog_list_modes` | List the four AIRSTEP BW footswitch modes (channel memories + effect toggles) |
 | `thr_catalog_list_amps` | List a Yamaha THR model's amp-selector grid (type × mode) with descriptions |
-| `thr_catalog_list_fx` | List a Yamaha THR model's EFFECT and ECHO/REV knob effects |
+| `thr_catalog_list_fx` | List a Yamaha THR model's cabinets, EFFECT, ECHO and REVERB options |
 | `thr_setup_card` | Write a printable HTML setup card for a Yamaha THR tone |
 
 Example agent workflow: list amps → translate the song's amp → `design_rig` with
