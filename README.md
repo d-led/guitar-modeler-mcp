@@ -23,9 +23,11 @@ sponsored by HeadRush or any of the referenced brands.
 ## Roadmap
 
 - **Gigboard** — implemented.
-- **Mooer GE150 Pro Li / GE200 / GE150 / GE100 Pro** — implemented (`.mo` files
-  and setup cards); the cross-device `map_preset` tool maps Gigboard rigs to
-  and from Mooer presets.
+- **Mooer GE150 Pro Li / GE200 / GE150 / GE100 Pro** — implemented. `.mo` files
+  are written only for the file-capable models (GE150 Pro Li, GE200, GE100 Pro);
+  the classic **GE150 is card-only**. The cross-device `map_preset` tool maps
+  Gigboard rigs to and from Mooer presets; mapped parameter values are neutral
+  defaults (128 = noon) rather than copied knob positions.
 - **BOSS Waza Air** — implemented (`.tsl` livesets and setup cards). The
   `.tsl` reader/writer is based on the observed `liveset → patches → param`
   variant; spatial-setting IDs (ambience, position, mode) are not yet written.

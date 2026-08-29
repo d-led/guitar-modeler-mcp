@@ -8,8 +8,13 @@ are supported:
 - **Mooer** (GE150 Pro Li, GE200, GE150, GE100 Pro) — a fixed nine-module chain
   (FX → DS/OD → AMP → CAB → NS → EQ → MOD → DELAY → REVERB). List devices with
   `device_list`, browse models with `mooer_catalog_list_*`, and design with
-  `mooer_design`. File-capable models also write a `.mo` file; every model gets
-  a printable HTML **setup card**.
+  `mooer_design`. Only the file-capable models — GE150 Pro Li, GE200, GE100 Pro
+  — write a `.mo` file; the classic **GE150 is card-only** (no `.mo`, just the
+  printable HTML **setup card**). Mapped parameter values are **neutral
+  defaults** (raw 0–255, 128 = noon): the two devices scale knobs differently,
+  so source positions are not copied. Setup cards and reports are named
+  `<preset>.<device>.html` (e.g. `Brown Sound.ge200.html`), while preset files
+  keep the terse `<preset>.mo` / `.rig` / `.tsl` scheme.
 - **BOSS Waza Air** — a wireless headphone amp. Preset is a BOSS TONE STUDIO
   liveset (`.tsl`). Browse models with `waza_catalog_list_*`, design with
   `waza_write_tsl` (or `waza_setup_card` for a printable card), and inspect a

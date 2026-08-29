@@ -42,7 +42,7 @@ func newReportCmd() *cobra.Command {
 			if dir == "" {
 				dir = filepath.Dir(rigFile)
 			}
-			htmlPath := filepath.Join(dir, file.Name()+".html")
+			htmlPath := filepath.Join(dir, file.Name()+".gigboard.html")
 			if err := os.WriteFile(htmlPath, []byte(html), 0o644); err != nil {
 				return err
 			}

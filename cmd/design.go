@@ -104,7 +104,7 @@ func newDesignCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			htmlPath := filepath.Join(out, file.Name()+".html")
+			htmlPath := filepath.Join(out, file.Name()+".gigboard.html")
 			if err := os.WriteFile(htmlPath, []byte(html), 0o644); err != nil {
 				return err
 			}

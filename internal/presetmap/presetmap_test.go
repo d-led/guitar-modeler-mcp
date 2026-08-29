@@ -196,4 +196,15 @@ func TestGigboardToMooer(t *testing.T) {
 	if !got.Reverb.Enabled || m.EffectName("reverb", got.Reverb.Type) != "Spring" {
 		t.Fatalf("reverb = %+v, want enabled Spring", got.Reverb)
 	}
+
+	// Structural mapping must leave neutral parameter values, not zeroes.
+	if got.Amp.Gain != 128 || got.Amp.Master != 128 {
+		t.Fatalf("amp values = %+v, want noon (128)", got.Amp)
+	}
+	if got.Cab.Mic != 0 || got.Cab.Center != 128 {
+		t.Fatalf("cab values = %+v, want mic 0 / noon", got.Cab)
+	}
+	if got.Delay.TimeMS != 400 || got.Delay.Level != 128 {
+		t.Fatalf("delay values = %+v, want 400ms / noon", got.Delay)
+	}
 }

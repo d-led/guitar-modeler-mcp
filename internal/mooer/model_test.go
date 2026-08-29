@@ -49,6 +49,35 @@ func TestGE200CatalogShape(t *testing.T) {
 	}
 }
 
+// TestFileExchangeMatrix pins the GE150 Pro vs classic GE150 distinction: the
+// .mo preset format belongs to the file-capable models only. The classic
+// GE150 has no USB preset transfer, so only a setup card may be written for it.
+func TestFileExchangeMatrix(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		want bool
+	}{
+		{"ge150pro", true},
+		{"ge200", true},
+		{"ge150", false},
+		{"ge100pro", true},
+	} {
+		m, ok := ModelByName(tc.name)
+		if !ok {
+			t.Fatalf("model %q not registered", tc.name)
+		}
+		if m.FileExchange != tc.want {
+			t.Fatalf("%s FileExchange = %v, want %v", tc.name, m.FileExchange, tc.want)
+		}
+		if tc.want && m.FileExt != ".mo" {
+			t.Fatalf("%s FileExt = %q, want .mo", tc.name, m.FileExt)
+		}
+		if !tc.want && m.FileExt != "" {
+			t.Fatalf("%s should have no FileExt, got %q", tc.name, m.FileExt)
+		}
+	}
+}
+
 func TestGE200AmpLookup(t *testing.T) {
 	m, _ := ModelByName("ge200")
 
@@ -190,5 +219,33 @@ func TestBuildPresetUnknownEffect(t *testing.T) {
 	m, _ := ModelByName("ge200")
 	if _, err := m.BuildPreset(Spec{Amp: "800", FX: []FXSpec{{Module: "od", Type: "nope"}}}); err == nil {
 		t.Fatal("expected an error for an unknown effect")
+	}
+}
+
+func TestBuildPresetAppliesNeutralDefaults(t *testing.T) {
+	m, _ := ModelByName("ge200")
+	p, err := m.BuildPreset(Spec{Name: "Neutral", Amp: "800", Cab: "1960 412"})
+	if err != nil {
+		t.Fatalf("BuildPreset: %v", err)
+	}
+
+	// Amount knobs land on noon (128), selectors on the first option (0).
+	if p.Amp.Gain != 128 || p.Amp.Master != 128 || p.Amp.Treble != 128 {
+		t.Fatalf("amp values = %+v, want noon (128)", p.Amp)
+	}
+	if p.Cab.Mic != 0 || p.Cab.Center != 128 {
+		t.Fatalf("cab values = %+v, want mic 0 / noon", p.Cab)
+	}
+}
+
+func TestSetModuleNeutralDelay(t *testing.T) {
+	p := New()
+	SetModule(&p, "delay", 2, true)
+
+	if !p.Delay.Enabled || p.Delay.Type != 2 {
+		t.Fatalf("delay = %+v, want enabled type 2", p.Delay)
+	}
+	if p.Delay.Level != 128 || p.Delay.Feedback != 128 || p.Delay.TimeMS != 400 || p.Delay.Subdivision != 0 {
+		t.Fatalf("delay values = %+v, want noon/400ms/subdivision 0", p.Delay)
 	}
 }

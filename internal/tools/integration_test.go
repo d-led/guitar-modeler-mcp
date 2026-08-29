@@ -180,6 +180,9 @@ func TestIntegrationMooerCatalogDesignAndCard(t *testing.T) {
 	if err != nil || len(cards) != 1 {
 		t.Fatalf("expected one setup card .html in %s (got %v, err %v)", dir, cards, err)
 	}
+	if got := filepath.Base(cards[0]); got != "Mooer Test.ge200.html" {
+		t.Fatalf("setup card filename = %q, want Mooer Test.ge200.html", got)
+	}
 }
 
 func TestIntegrationMooerCardOnlyDevice(t *testing.T) {
@@ -260,7 +263,7 @@ func TestIntegrationWazaTSLAndCard(t *testing.T) {
 			"output_dir": dir,
 		},
 	}))
-	if !strings.Contains(card, "setup card") {
+	if !strings.Contains(card, "setup card") || !strings.Contains(card, ".wazaair.html") {
 		t.Fatalf("waza_setup_card unexpected output: %s", card)
 	}
 

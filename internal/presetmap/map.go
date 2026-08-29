@@ -36,7 +36,7 @@ func (t *Table) GigboardToMooer(file *rig.RigFile) (mooer.Preset, error) {
 			if model, ok := m.Params["Type"].(string); ok {
 				if mooerModel, found := t.MapAmp(DeviceGigboard, model, DeviceMooer); found {
 					if index, found := t.mooer.AmpIndex(mooerModel); found {
-						p.Amp = mooer.Amp{Enabled: m.On, Type: index}
+						mooer.SetModule(&p, "amp", index, m.On)
 					}
 				}
 			}
@@ -44,7 +44,7 @@ func (t *Table) GigboardToMooer(file *rig.RigFile) (mooer.Preset, error) {
 			if model, ok := m.Params["CabType"].(string); ok {
 				if mooerModel, found := t.MapCab(DeviceGigboard, model, DeviceMooer); found {
 					if index, found := t.mooer.CabIndex(mooerModel); found {
-						p.Cab = mooer.Cab{Enabled: m.On, Type: index}
+						mooer.SetModule(&p, "cab", index, m.On)
 					}
 				}
 			}
@@ -53,7 +53,7 @@ func (t *Table) GigboardToMooer(file *rig.RigFile) (mooer.Preset, error) {
 		default:
 			if module, name, ok := t.MapFXGigboardToMooer(slot); ok {
 				if index, found := t.mooer.EffectIndex(module, name); found {
-					setMooerModule(&p, module, index, m.On)
+					mooer.SetModule(&p, module, index, m.On)
 				}
 			}
 		}
@@ -106,21 +106,6 @@ func mappedFX(t *Table, module, name string, enabled bool) []rig.Block {
 		return nil
 	}
 	return []rig.Block{{Type: gig, Enabled: true}}
-}
-
-func setMooerModule(p *mooer.Preset, module string, index uint8, enabled bool) {
-	switch module {
-	case "fx":
-		p.FX = mooer.FX{Enabled: enabled, Type: index}
-	case "od":
-		p.Drive = mooer.Drive{Enabled: enabled, Type: index}
-	case "mod":
-		p.Mod = mooer.Mod{Enabled: enabled, Type: index}
-	case "delay":
-		p.Delay = mooer.Delay{Enabled: enabled, Type: index}
-	case "reverb":
-		p.Reverb = mooer.Reverb{Enabled: enabled, Type: index}
-	}
 }
 
 // UnmappedError reports that a Mooer model has no Gigboard counterpart, so the

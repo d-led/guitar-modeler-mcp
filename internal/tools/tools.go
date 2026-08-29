@@ -510,7 +510,7 @@ func (r *Registrar) designRig(args map[string]any) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	htmlPath := filepath.Join(outDir, file.Name()+".html")
+	htmlPath := filepath.Join(outDir, file.Name()+".gigboard.html")
 	if err := os.WriteFile(htmlPath, []byte(html), 0o644); err != nil {
 		return "", err
 	}
@@ -535,7 +535,7 @@ func (r *Registrar) renderReport(args map[string]any) (string, error) {
 	if outDir == "" {
 		outDir = filepath.Dir(path)
 	}
-	htmlPath := filepath.Join(outDir, file.Name()+".html")
+	htmlPath := filepath.Join(outDir, file.Name()+".gigboard.html")
 	if err := os.WriteFile(htmlPath, []byte(html), 0o644); err != nil {
 		return "", err
 	}
@@ -1002,7 +1002,7 @@ func (r *Registrar) writeMooerOutput(m mooer.Model, p mooer.Preset, outDir strin
 		fmt.Fprintf(&b, "%s does not support preset file transfer; here is a printable setup card.\n", m.Display)
 	}
 
-	cardPath := filepath.Join(outDir, base+".html")
+	cardPath := filepath.Join(outDir, base+"."+m.Name+".html")
 	if err := os.WriteFile(cardPath, []byte(mooer.SetupCardHTML(m, p)), 0o644); err != nil {
 		return "", err
 	}
@@ -1015,6 +1015,7 @@ func (r *Registrar) writeMooerOutput(m mooer.Model, p mooer.Preset, outDir strin
 		}
 		fmt.Fprintf(&b, "- %s: %s (%s)\n", d.Module, d.Effect, state)
 	}
+	fmt.Fprintf(&b, "Parameter values are neutral defaults (raw 0-255, 128 = noon); source knob positions are not copied across devices.\n")
 	return b.String(), nil
 }
 
@@ -1035,7 +1036,7 @@ func (r *Registrar) renderSetupCard(args map[string]any) (string, error) {
 	if outDir == "" {
 		outDir = filepath.Dir(path)
 	}
-	cardPath := filepath.Join(outDir, sanitizeFileBase(p.Name)+".html")
+	cardPath := filepath.Join(outDir, sanitizeFileBase(p.Name)+"."+m.Name+".html")
 	if err := os.WriteFile(cardPath, []byte(mooer.SetupCardHTML(m, p)), 0o644); err != nil {
 		return "", err
 	}
@@ -1129,7 +1130,7 @@ func (r *Registrar) wazaSetupCard(args map[string]any) (string, error) {
 		card = d.SetupCardHTML(spec)
 	}
 
-	path := filepath.Join(outDir, sanitizeFileBase(spec.Name)+".html")
+	path := filepath.Join(outDir, sanitizeFileBase(spec.Name)+"."+d.Name+".html")
 	if err := os.WriteFile(path, []byte(card), 0o644); err != nil {
 		return "", err
 	}

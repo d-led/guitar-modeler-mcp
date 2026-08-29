@@ -192,14 +192,14 @@ func (m Model) BuildPreset(s Spec) (Preset, error) {
 	if err != nil {
 		return p, err
 	}
-	p.Amp = Amp{Enabled: true, Type: ampIndex}
+	SetModule(&p, "amp", ampIndex, true)
 
 	if s.Cab != "" {
 		cabIndex, err := m.ResolveCab(s.Cab)
 		if err != nil {
 			return p, err
 		}
-		p.Cab = Cab{Enabled: true, Type: cabIndex}
+		SetModule(&p, "cab", cabIndex, true)
 	}
 
 	for _, f := range s.FX {
@@ -211,27 +211,7 @@ func (m Model) BuildPreset(s Spec) (Preset, error) {
 		if err != nil {
 			return p, err
 		}
-		setModule(&p, module, index, f.Enabled)
+		SetModule(&p, module, index, f.Enabled)
 	}
 	return p, nil
-}
-
-// setModule places an effect_type into one module of the fixed chain.
-func setModule(p *Preset, module string, index uint8, enabled bool) {
-	switch module {
-	case "fx":
-		p.FX = FX{Enabled: enabled, Type: index}
-	case "od":
-		p.Drive = Drive{Enabled: enabled, Type: index}
-	case "ns":
-		p.NoiseGate = NoiseGate{Enabled: enabled, Type: index}
-	case "eq":
-		p.EQ = EQ{Enabled: enabled, Type: index}
-	case "mod":
-		p.Mod = Mod{Enabled: enabled, Type: index}
-	case "delay":
-		p.Delay = Delay{Enabled: enabled, Type: index}
-	case "reverb":
-		p.Reverb = Reverb{Enabled: enabled, Type: index}
-	}
 }
