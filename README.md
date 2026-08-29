@@ -6,6 +6,14 @@ multiple hardware devices, written in Go. The first supported device is the
 device-agnostic design core with per-device backends, so Quad Cortex, Mooer
 GE100 Pro and others can be added as new backends.
 
+## Trademarks & disclaimer
+
+All trademarks, logos and brand names are the property of their respective
+owners. All company, product and service names used in this project are for
+identification purposes only; use of these names, trademarks and brands does not
+imply endorsement. This project is not affiliated with, endorsed by, or
+sponsored by HeadRush or any of the referenced brands.
+
 ## Roadmap
 
 - **Gigboard** — implemented (the only backend today).
@@ -245,14 +253,6 @@ Amp/cab/mic model lists come from the device backup and the community-maintained
 [Gigboard Hints](https://boguz.github.io/gigboardhints/) translation table.
 Where the emulated amplifier is not publicly documented, the brand is left empty
 rather than guessed.
-
-## Trademarks & disclaimer
-
-All trademarks, logos and brand names are the property of their respective
-owners. All company, product and service names used in this project are for
-identification purposes only; use of these names, trademarks and brands does not
-imply endorsement. This project is not affiliated with, endorsed by, or
-sponsored by HeadRush or any of the referenced brands.
 
 ## Testing
 
