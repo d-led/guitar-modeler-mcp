@@ -24,9 +24,10 @@ func newDesignCmd() *cobra.Command {
 		amp2       string
 		cab2       string
 		mic2       string
-		tempo      float64
-		inputGain  float64
-		out        string
+		tempo       float64
+		inputGain   float64
+		outputLevel float64
+		out         string
 		fxJSON     string
 		pathAFX    string
 		pathBFX    string
@@ -68,8 +69,9 @@ func newDesignCmd() *cobra.Command {
 				Amp2:       amp2,
 				Cab2:       cab2,
 				Mic2:       mic2,
-				Tempo:      tempo,
-				InputGain:  inputGain,
+				Tempo:       tempo,
+				InputGain:   inputGain,
+				OutputLevel: outputLevel,
 				FX:         fx,
 				PathAFX:    pathAFXBlocks,
 				PathBFX:    pathBFXBlocks,
@@ -119,6 +121,7 @@ func newDesignCmd() *cobra.Command {
 	cmd.Flags().StringVar(&mic2, "mic2", "", "mic for the second amp path")
 	cmd.Flags().Float64Var(&tempo, "tempo", 0, "tempo in BPM")
 	cmd.Flags().Float64Var(&inputGain, "input-gain", 0, "input gain in dB")
+	cmd.Flags().Float64Var(&outputLevel, "output-level", 0, "overall rig output level in dB (RigVolume, 0 = unity)")
 	cmd.Flags().StringVar(&out, "out", ".", "output directory")
 	cmd.Flags().StringVar(&fxJSON, "fx", "", "effects as a JSON array")
 	cmd.Flags().StringVar(&pathAFX, "path-a-fx", "", "effects for parallel path A as a JSON array")

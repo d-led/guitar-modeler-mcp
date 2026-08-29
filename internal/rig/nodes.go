@@ -26,10 +26,10 @@ func inputNode(inputGain float64) *Node {
 	return n
 }
 
-func outputNode() *Node {
+func outputNode(rigVolume float64) *Node {
 	n := newNode("PresetName", "RigVolume", "RigWidth")
 	n.set("PresetName", label(""))
-	n.set("RigVolume", num(0))
+	n.set("RigVolume", num(rigVolume))
 	n.set("RigWidth", num(100))
 	return n
 }

@@ -106,6 +106,9 @@ type Spec struct {
 	Color     int
 	Tempo     float64
 	InputGain float64
+	// OutputVolume is the rig's overall output level in dB (the Output block's
+	// RigVolume), 0 = unity.
+	OutputVolume float64
 
 	// Routing selects the topology; empty means serial.
 	Routing Routing

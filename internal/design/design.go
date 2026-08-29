@@ -27,7 +27,9 @@ type Request struct {
 	Mic       string    `json:"mic,omitempty"` // device model or description
 	Tempo     float64   `json:"tempo,omitempty"`
 	InputGain float64   `json:"input_gain,omitempty"`
-	FX        []FXBlock `json:"fx,omitempty"`
+	// OutputLevel is the rig's overall output level in dB (RigVolume).
+	OutputLevel float64 `json:"output_level,omitempty"`
+	FX          []FXBlock `json:"fx,omitempty"`
 
 	// Routing selects the signal-chain topology: "" or "S" (serial, default),
 	// "SPS-1" (serial → parallel → serial) or "PS-1" (parallel from the input).
@@ -93,15 +95,16 @@ func (d *Designer) Design(req Request) (*Result, error) {
 	}
 
 	spec := rig.Spec{
-		Name:       req.Name,
-		Tempo:      tempo,
-		InputGain:  req.InputGain,
-		Routing:    req.Routing,
-		Para1Level: req.Para1Level,
-		Para2Level: req.Para2Level,
-		Para1Pan:   req.Para1Pan,
-		Para2Pan:   req.Para2Pan,
-		ParaDelay:  req.ParaDelay,
+		Name:         req.Name,
+		Tempo:        tempo,
+		InputGain:    req.InputGain,
+		OutputVolume: req.OutputLevel,
+		Routing:      req.Routing,
+		Para1Level:   req.Para1Level,
+		Para2Level:   req.Para2Level,
+		Para1Pan:     req.Para1Pan,
+		Para2Pan:     req.Para2Pan,
+		ParaDelay:    req.ParaDelay,
 	}
 
 	switch {

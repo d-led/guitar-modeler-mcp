@@ -152,7 +152,7 @@ func (b *Builder) Build(spec Spec) (*RigFile, error) {
 	patch.Children["Chain"] = chainNode(c.routing, c.slots(), pathMix)
 	patch.Children["Rig"] = rigNode(spec.Name, spec.Tempo)
 	patch.Children["Input"] = inputNode(spec.InputGain)
-	patch.Children["Output"] = outputNode()
+	patch.Children["Output"] = outputNode(spec.OutputVolume)
 	patch.Children["Mix"] = mixNode(pathMix)
 
 	footSwitch, err := footSwitchFor(b.footSwitch, c.slots())
