@@ -104,15 +104,24 @@ func (d Device) inspired(name string, items []Item) string {
 	return ""
 }
 
-// SetupCardHTML renders a printable setup card for a resolved Spec. It is the
-// only output for the card-only Waza Air.
+// SetupCardHTML renders a printable setup card for a resolved Spec.
 func (d Device) SetupCardHTML(s Spec) string {
+	return d.setupCardHTML(s, nil)
+}
+
+// SetupCardHTMLWithAirStep renders the setup card plus the AIRSTEP BW
+// footswitch mapping for one mode.
+func (d Device) SetupCardHTMLWithAirStep(s Spec, m AirStepMode) string {
+	return d.setupCardHTML(s, &m)
+}
+
+func (d Device) setupCardHTML(s Spec, mode *AirStepMode) string {
 	var b strings.Builder
 	b.WriteString("<!doctype html><html><head><meta charset=\"utf-8\">")
 	fmt.Fprintf(&b, "<title>%s — %s</title>", html.EscapeString(s.Name), html.EscapeString(d.Display))
 	b.WriteString(`<style>
 body{font-family:system-ui,-apple-system,sans-serif;max-width:720px;margin:2rem auto;padding:0 1rem;color:#1a1a1a}
-h1{margin-bottom:.25rem}h2{font-size:1rem;color:#555;margin-top:0}
+h1{margin-bottom:.25rem}h2{font-size:1rem;color:#555;margin-top:1.25rem}
 table{width:100%;border-collapse:collapse;margin-bottom:1rem}
 td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;vertical-align:top}
 .module{font-weight:600;white-space:nowrap}
@@ -155,8 +164,34 @@ td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;verti
 	}
 
 	b.WriteString("<p class=\"inspired\">Effect parameter values are set in BOSS TONE STUDIO.</p>")
+
+	if mode != nil {
+		writeAirStepMode(&b, d, *mode)
+	}
+
 	b.WriteString("</body></html>")
 	return b.String()
+}
+
+func writeAirStepMode(b *strings.Builder, d Device, m AirStepMode) {
+	if m.Number == 0 || len(m.Bindings) == 0 {
+		return
+	}
+	fmt.Fprintf(b, "<h2>AIRSTEP BW — Mode %d</h2>", m.Number)
+	fmt.Fprintf(b, "<p class=\"inspired\">%s (hold A, B, C or B+C while powering on to select a mode)</p>", html.EscapeString(m.Indication))
+	b.WriteString("<table><tr><th>Switch</th><th>Press</th><th>Long press</th></tr>")
+	for _, bi := range m.Bindings {
+		press, longPress := bi.Press, bi.LongPress
+		if press == "" {
+			press = "—"
+		}
+		if longPress == "" {
+			longPress = "—"
+		}
+		fmt.Fprintf(b, "<tr><td class=\"module\">%s</td><td>%s</td><td>%s</td></tr>",
+			html.EscapeString(bi.Switch), html.EscapeString(press), html.EscapeString(longPress))
+	}
+	b.WriteString("</table>")
 }
 
 func writeModule(b *strings.Builder, module, effect, inspired string) {

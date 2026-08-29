@@ -395,9 +395,18 @@ func (r *Registrar) Register(s *mcp.Server) {
 	})
 
 	s.Register(mcp.Tool{
+		Name:        "waza_catalog_list_modes",
+		Description: "List the four XSONIC AIRSTEP BW footswitch modes for the Boss Waza Air: which footswitch toggles which effect or channel in each mode.",
+		InputSchema: objectSchema(map[string]any{}),
+		Handler: func(_ context.Context, _ map[string]any) (string, error) {
+			return r.wazaListModes()
+		},
+	})
+
+	s.Register(mcp.Tool{
 		Name:        "waza_setup_card",
-		Description: "Write a printable HTML setup card for a Boss Waza Air tone: the amp, booster, mod, fx, delay, reverb and spatial settings.",
-		InputSchema: objectSchema(wazaToneProps()),
+		Description: "Write a printable HTML setup card for a Boss Waza Air tone, optionally including the AIRSTEP BW footswitch mapping (airstep_mode 1-4).",
+		InputSchema: objectSchema(wazaCardProps()),
 		Handler: func(_ context.Context, args map[string]any) (string, error) {
 			return r.wazaSetupCard(args)
 		},
@@ -443,6 +452,14 @@ func wazaToneProps() map[string]any {
 		"mode":              stringSchema("Optional: DELAY, DLY+REV or REVERB."),
 		"output_dir":        stringSchema("Directory to write the output into (default: current directory)."),
 	}
+}
+
+// wazaCardProps is the setup-card argument schema: the shared tone props plus
+// the optional AIRSTEP BW mode to print on the card.
+func wazaCardProps() map[string]any {
+	props := wazaToneProps()
+	props["airstep_mode"] = numberSchema("Optional AIRSTEP BW mode (1-4) whose footswitch mapping is printed on the card.")
+	return props
 }
 
 func (r *Registrar) designRig(args map[string]any) (string, error) {
@@ -1083,6 +1100,10 @@ func (r *Registrar) wazaListFX(args map[string]any) (string, error) {
 	})
 }
 
+func (r *Registrar) wazaListModes() (string, error) {
+	return marshal(waza.DefaultAirStep())
+}
+
 func (r *Registrar) wazaSetupCard(args map[string]any) (string, error) {
 	spec, err := r.wazaSpec(args)
 	if err != nil {
@@ -1096,8 +1117,20 @@ func (r *Registrar) wazaSetupCard(args map[string]any) (string, error) {
 		outDir = "."
 	}
 	d := waza.Default()
+
+	var card string
+	if n := int(argFloat(args, "airstep_mode")); n > 0 {
+		mode, ok := waza.DefaultAirStep().Mode(n)
+		if !ok {
+			return "", fmt.Errorf("unknown AIRSTEP BW mode %d (valid: 1-4)", n)
+		}
+		card = d.SetupCardHTMLWithAirStep(spec, mode)
+	} else {
+		card = d.SetupCardHTML(spec)
+	}
+
 	path := filepath.Join(outDir, sanitizeFileBase(spec.Name)+".html")
-	if err := os.WriteFile(path, []byte(d.SetupCardHTML(spec)), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte(card), 0o644); err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("Wrote Waza Air setup card to %s", path), nil

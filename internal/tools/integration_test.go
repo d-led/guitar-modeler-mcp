@@ -96,6 +96,7 @@ func TestIntegrationInitializeAndToolList(t *testing.T) {
 		"device_list", "mooer_catalog_list_amps", "mooer_catalog_list_cabs", "mooer_catalog_list_fx",
 		"mooer_design", "render_setup_card", "map_preset",
 		"waza_catalog_list_amps", "waza_catalog_list_fx", "waza_setup_card", "waza_write_tsl", "waza_read_tsl",
+		"waza_catalog_list_modes",
 	} {
 		if !names[want] {
 			t.Errorf("missing tool %q in tools/list", want)
@@ -261,6 +262,38 @@ func TestIntegrationWazaTSLAndCard(t *testing.T) {
 	}))
 	if !strings.Contains(card, "setup card") {
 		t.Fatalf("waza_setup_card unexpected output: %s", card)
+	}
+
+	// The AIRSTEP BW modes are listed and can be printed on the card.
+	modes := resultText(t, rpc(t, s, 5, "tools/call", map[string]any{
+		"name":      "waza_catalog_list_modes",
+		"arguments": map[string]any{},
+	}))
+	if !strings.Contains(modes, "airstep-bw") || !strings.Contains(modes, "Toggle DELAY") || !strings.Contains(modes, "CH 6") {
+		t.Fatalf("waza_catalog_list_modes missing AIRSTEP bindings: %s", modes)
+	}
+
+	cardWithMode := resultText(t, rpc(t, s, 6, "tools/call", map[string]any{
+		"name": "waza_setup_card",
+		"arguments": map[string]any{
+			"name":         "Scene Brown",
+			"amp":          "BROWN",
+			"booster":      "T-SCREAM",
+			"airstep_mode": 3,
+			"output_dir":   dir,
+		},
+	}))
+	if !strings.Contains(cardWithMode, "setup card") {
+		t.Fatalf("waza_setup_card(airstep_mode) unexpected output: %s", cardWithMode)
+	}
+
+	// A bad mode is rejected rather than silently ignored.
+	bad := resultText(t, rpc(t, s, 7, "tools/call", map[string]any{
+		"name":      "waza_setup_card",
+		"arguments": map[string]any{"name": "X", "amp": "BROWN", "airstep_mode": 9, "output_dir": dir},
+	}))
+	if !strings.Contains(bad, "unknown AIRSTEP BW mode 9") {
+		t.Fatalf("airstep_mode 9 should be rejected, got %q", bad)
 	}
 }
 

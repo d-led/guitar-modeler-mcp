@@ -15,7 +15,11 @@ are supported:
   `waza_write_tsl` (or `waza_setup_card` for a printable card), and inspect a
   liveset with `waza_read_tsl`. Its `.tsl` uses the `liveset → patches → param
   array` variant of the format — *not* the Katana/GT `liveSetData → patchList`
-  variant, so don't copy Katana parameter IDs into it.
+  variant, so don't copy Katana parameter IDs into it. An **XSONIC AIRSTEP BW**
+  foot controller turns the six channel memories (CH 1–6, the Waza Air's
+  "scenes") and the effect blocks into hands-free footswitches; list its four
+  layouts with `waza_catalog_list_modes` and print one on the card with
+  `waza_setup_card`'s `airstep_mode` (1–4).
 
 Every parameter you pass is validated before a file is written, so an invalid
 preset is never produced. `design_rig` is Gigboard-only; Mooer presets go

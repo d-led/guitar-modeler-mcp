@@ -29,6 +29,9 @@ sponsored by HeadRush or any of the referenced brands.
 - **BOSS Waza Air** — implemented (`.tsl` livesets and setup cards). The
   `.tsl` reader/writer is based on the observed `liveset → patches → param`
   variant; spatial-setting IDs (ambience, position, mode) are not yet written.
+  The **XSONIC AIRSTEP BW** foot controller's four footswitch modes (channel
+  memories CH 1–6 + effect toggles) are modelled and printable on the setup
+  card.
 - **Quad Cortex** — planned; see [OpenCortex](https://github.com/VanIseghemThomas/OpenCortex)
   (open-source QC preset format work) as a starting point for the preset format.
 
@@ -197,6 +200,7 @@ guitar-modeler-mcp serve
 | `waza_write_tsl` | Write a BOSS TONE STUDIO `.tsl` liveset for the Waza Air from a tone description |
 | `waza_read_tsl` | Read a Waza Air `.tsl` and report the first patch's tone |
 | `waza_setup_card` | Write a printable HTML setup card for a Waza Air tone |
+| `waza_catalog_list_modes` | List the four AIRSTEP BW footswitch modes (channel memories + effect toggles) |
 
 Example agent workflow: list amps → translate the song's amp → `design_rig` with
 effects → read the report → tweak by re-running `design_rig` with parameter
