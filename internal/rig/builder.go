@@ -185,6 +185,15 @@ func (b *Builder) Build(spec Spec) (*RigFile, error) {
 	if author == "" {
 		author = "UserName"
 	}
+	// The device's rig colour is an integer 1..9 (0 is not accepted). A zero
+	// spec colour falls back to the factory default.
+	color := spec.Color
+	if color == 0 {
+		color = 4
+	}
+	if color < 1 || color > 9 {
+		return nil, fmt.Errorf("rig colour must be 1..9, got %d", spec.Color)
+	}
 	id, err := newUUID()
 	if err != nil {
 		return nil, err
@@ -192,12 +201,12 @@ func (b *Builder) Build(spec Spec) (*RigFile, error) {
 
 	return &RigFile{
 		Author:    author,
-		Color:     spec.Color,
+		Color:     color,
 		Content:   string(contentJSON),
 		CreatedAt: time.Now().Unix(),
 		ID:        id,
 		Order:     0,
-		ProgNum:   0,
+		ProgNum:   -1,
 		Readonly:  false,
 	}, nil
 }
