@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"math"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -64,11 +65,17 @@ type ParamSpec struct {
 	// unmeasured marks a parameter whose bounds the catalog names but nobody
 	// has measured; Normalize/Denormalize refuse it instead of guessing.
 	unmeasured bool
+	// padding marks a wire placeholder (type="empty") that is not a knob. It
+	// is kept so positional wire indices stay faithful to the catalog.
+	padding bool
 }
 
 // Normalize converts a value in the parameter's own units to the wire's 0..1,
 // applying the catalog's skew. Values outside the range are refused.
 func (p ParamSpec) Normalize(real float64) (float64, error) {
+	if p.padding {
+		return 0, fmt.Errorf("%s is a wire placeholder, not a knob", p.Name)
+	}
 	if p.unmeasured {
 		return 0, fmt.Errorf("%s: bounds are unmeasured; pass an encoded 0..1 value", p.Name)
 	}
@@ -83,6 +90,9 @@ func (p ParamSpec) Normalize(real float64) (float64, error) {
 
 // Denormalize converts a wire 0..1 value back to the parameter's own units.
 func (p ParamSpec) Denormalize(wire float64) (float64, error) {
+	if p.padding {
+		return 0, fmt.Errorf("%s is a wire placeholder, not a knob", p.Name)
+	}
 	if p.unmeasured {
 		return 0, fmt.Errorf("%s: bounds are unmeasured", p.Name)
 	}
@@ -133,9 +143,13 @@ type ModelSpec struct {
 	Params   []ParamSpec
 }
 
-// Param returns the parameter with the given (case-insensitive) name.
+// Param returns the parameter with the given (case-insensitive) name and its
+// wire index. Padding placeholders are never matched by name.
 func (m ModelSpec) Param(name string) (ParamSpec, int, bool) {
 	for i, p := range m.Params {
+		if p.padding {
+			continue
+		}
 		if strings.EqualFold(p.Name, name) {
 			return p, i, true
 		}
@@ -147,6 +161,21 @@ func (m ModelSpec) Param(name string) (ParamSpec, int, bool) {
 type Catalog struct {
 	byID   map[int]*ModelSpec
 	byName map[string][]*ModelSpec
+}
+
+// sortedByID returns every model in ascending wire-hash order, so callers
+// that enumerate the catalog get a stable, device-consistent sequence.
+func (c *Catalog) sortedByID() []*ModelSpec {
+	ids := make([]int, 0, len(c.byID))
+	for id := range c.byID {
+		ids = append(ids, id)
+	}
+	sort.Ints(ids)
+	out := make([]*ModelSpec, 0, len(ids))
+	for _, id := range ids {
+		out = append(out, c.byID[id])
+	}
+	return out
 }
 
 // Model returns the model with the given wire hash.
@@ -213,11 +242,6 @@ func parseModelRepo(data []byte) (*Catalog, error) {
 				BasedOn:  cleanBasedOn(xm.TM),
 			}
 			for _, xp := range xm.Params {
-				// "empty" parameters are wire padding, not knobs; they carry no
-				// bounds and must not become addressable parameters.
-				if strings.TrimSpace(xp.Type) == "empty" || strings.TrimSpace(xp.Name) == "" {
-					continue
-				}
 				spec, err := parseParamSpec(xp)
 				if err != nil {
 					return nil, fmt.Errorf("qc: model %q parameter %q: %w", xm.Name, xp.Name, err)
@@ -248,6 +272,15 @@ func parseParamSpec(p xmlParam) (ParamSpec, error) {
 		MinLabel:  strings.TrimSpace(p.MinString),
 		MaxLabel:  strings.TrimSpace(p.MaxString),
 		StepNames: splitStepNames(p.StepNames),
+	}
+	// "empty" parameters are wire padding: they occupy a wire index but are
+	// not knobs, and they carry no bounds at all.
+	if spec.Type == "empty" || spec.Name == "" {
+		spec.padding = true
+		spec.Min = 0
+		spec.Max = 1
+		spec.Skew = 1
+		return spec, nil
 	}
 	if v, err := parseFloat(p.DefaultValue, 0); err == nil {
 		spec.Default = v

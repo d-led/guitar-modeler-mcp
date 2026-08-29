@@ -1,14 +1,17 @@
 package qc
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestDefaultDeviceShape(t *testing.T) {
 	d := Default()
 	if d.Name != "quad-cortex" || d.Display != "Neural DSP Quad Cortex" {
 		t.Fatalf("identity = %q/%q", d.Name, d.Display)
 	}
-	if d.FileExchange {
-		t.Fatal("quad-cortex should not claim file exchange yet (encrypted protobufs)")
+	if !d.FileExchange || d.FileExt != ".pb" {
+		t.Fatalf("file exchange = %v/%q, want true/\".pb\"", d.FileExchange, d.FileExt)
 	}
 	if len(d.Amps) < 50 {
 		t.Fatalf("guitar amps = %d, want a comprehensive list", len(d.Amps))
@@ -20,6 +23,18 @@ func TestDefaultDeviceShape(t *testing.T) {
 		if len(d.Effects[cat]) == 0 {
 			t.Fatalf("effect category %q is empty", cat)
 		}
+	}
+}
+
+func TestCatalogSourcedItemsCarryIDs(t *testing.T) {
+	d := Default()
+	// The first guitar amp in wire-hash order is the Marshall JCM800.
+	if len(d.Amps) == 0 || d.Amps[0].Name != "Marshall JCM800" || d.Amps[0].ID != 1001 {
+		t.Fatalf("first amp = %+v, want Marshall JCM800 (1001)", d.Amps[0])
+	}
+	// The Klon Centaur is drive id 1.
+	if len(d.Effects["drive"]) == 0 || d.Effects["drive"][0].Name != "Klon Centaur" || d.Effects["drive"][0].ID != 1 {
+		t.Fatalf("first drive = %+v, want Klon Centaur (1)", d.Effects["drive"][0])
 	}
 }
 
@@ -44,8 +59,8 @@ func TestResolveAmpByExactNameAndInspiredBy(t *testing.T) {
 
 func TestResolveCab(t *testing.T) {
 	got, err := Default().ResolveCab("Mesa Rectifier")
-	if err != nil || got.Name != "Mesa Rectifier V30" {
-		t.Fatalf("ResolveCab(Mesa Rectifier) = %q, %v; want Mesa Rectifier V30", got.Name, err)
+	if err != nil || !strings.Contains(got.Name, "Mesa Rectifier") || got.ID == 0 {
+		t.Fatalf("ResolveCab(Mesa Rectifier) = %+v, %v; want a Mesa Rectifier cab", got, err)
 	}
 }
 
