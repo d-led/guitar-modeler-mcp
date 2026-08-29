@@ -96,6 +96,14 @@ func TestDesignRejectsUnknownFX(t *testing.T) {
 	}
 }
 
+func TestDesignRejectsUnknownDevice(t *testing.T) {
+	d := NewDesigner(catalog.New())
+	_, err := d.Design(Request{Name: "x", Amp: "65 Black SR", Device: "quad-cortex"})
+	if err == nil {
+		t.Fatal("expected an error for an unsupported device")
+	}
+}
+
 func TestDesignDualAmpBuildsParallelPaths(t *testing.T) {
 	d := NewDesigner(catalog.New())
 	res, err := d.Design(Request{

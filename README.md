@@ -44,29 +44,29 @@ Requires Go 1.27+.
 
 ```sh
 # What models exist?
-headrush-gigboard-mcp catalog amps
-headrush-gigboard-mcp catalog cabs
-headrush-gigboard-mcp catalog mics
-headrush-gigboard-mcp catalog fx
-headrush-gigboard-mcp catalog fx --category delay
-headrush-gigboard-mcp catalog fx-categories
-headrush-gigboard-mcp catalog presets "Tape Echo"
-headrush-gigboard-mcp catalog params "Tape Echo"   # ranges, units, options
+guitar-modeler-mcp catalog amps
+guitar-modeler-mcp catalog cabs
+guitar-modeler-mcp catalog mics
+guitar-modeler-mcp catalog fx
+guitar-modeler-mcp catalog fx --category delay
+guitar-modeler-mcp catalog fx-categories
+guitar-modeler-mcp catalog presets "Tape Echo"
+guitar-modeler-mcp catalog params "Tape Echo"   # ranges, units, options
 
 # Translate real hardware into device models
-headrush-gigboard-mcp translate amp "Marshall JCM800"
-headrush-gigboard-mcp translate cab "greenback 4x12"
-headrush-gigboard-mcp translate mic "SM57"
+guitar-modeler-mcp translate amp "Marshall JCM800"
+guitar-modeler-mcp translate cab "greenback 4x12"
+guitar-modeler-mcp translate mic "SM57"
 
 # Fuzzy-search amps, cabs, mics and effects (by name or the real hardware)
-headrush-gigboard-mcp search "JCM800"
-headrush-gigboard-mcp search "tube screamer" --kind fx
+guitar-modeler-mcp search "JCM800"
+guitar-modeler-mcp search "tube screamer" --kind fx
 
 # Where each effect category goes in each chain layout
-headrush-gigboard-mcp fx-placement
+guitar-modeler-mcp fx-placement
 
 # Dial in a tone and write the patch + HTML report
-headrush-gigboard-mcp design \
+guitar-modeler-mcp design \
   --name "Brown Sound" --song "Van Halen - Panama" \
   --amp "Marshall JCM800" \
   --fx '[{"type":"Green JRC-OD","enabled":true},{"type":"Tape Echo","enabled":true}]' \
@@ -74,20 +74,20 @@ headrush-gigboard-mcp design \
   --out ./rigs
 
 # Decode an existing rig for analysis
-headrush-gigboard-mcp decode "001 HOW DOES IT FEEL.rig"
+guitar-modeler-mcp decode "001 HOW DOES IT FEEL.rig"
 
 # Estimate a rig's output level and the RigVolume to reach 0 dB
-headrush-gigboard-mcp level "001 HOW DOES IT FEEL.rig"
+guitar-modeler-mcp level "001 HOW DOES IT FEEL.rig"
 
 # Render an HTML report for an existing rig
-headrush-gigboard-mcp report --rig "001 HOW DOES IT FEEL.rig"
+guitar-modeler-mcp report --rig "001 HOW DOES IT FEEL.rig"
 
 # Install the MCP server in a client (default: VS Code user profile = global)
-headrush-gigboard-mcp mcp install
-headrush-gigboard-mcp mcp install --target workspace   # .vscode/mcp.json here
-headrush-gigboard-mcp mcp install --target claude      # Claude Desktop
-headrush-gigboard-mcp mcp install --print              # show the config only
-headrush-gigboard-mcp mcp uninstall --target vscode
+guitar-modeler-mcp mcp install
+guitar-modeler-mcp mcp install --target workspace   # .vscode/mcp.json here
+guitar-modeler-mcp mcp install --target claude      # Claude Desktop
+guitar-modeler-mcp mcp install --print              # show the config only
+guitar-modeler-mcp mcp uninstall --target vscode
 ```
 
 ## MCP server
@@ -95,7 +95,7 @@ headrush-gigboard-mcp mcp uninstall --target vscode
 Run over stdio:
 
 ```sh
-headrush-gigboard-mcp serve
+guitar-modeler-mcp serve
 ```
 
 `mcp install` writes the registration for you. The equivalent manual
@@ -104,9 +104,9 @@ headrush-gigboard-mcp serve
 ```json
 {
   "servers": {
-    "headrush-gigboard-mcp": {
+    "guitar-modeler-mcp": {
       "type": "stdio",
-      "command": "/absolute/path/to/headrush-gigboard-mcp",
+      "command": "/absolute/path/to/guitar-modeler-mcp",
       "args": ["serve"]
     }
   }
@@ -174,7 +174,7 @@ one press: give it a `label` and list the blocks the scene turns `on` and `off`
 (blocks not listed keep their current state):
 
 ```sh
-headrush-gigboard-mcp design --name "Always" --amp "67 Black Duo" \
+guitar-modeler-mcp design --name "Always" --amp "67 Black Duo" \
   --fx '[{"type":"S1 Drive"},{"type":"Green JRC-OD"},{"type":"BBD Delay"}]' \
   --footswitches '[
     {"module":"Green JRC-OD","mode":"scene","label":"DRIVE",
@@ -192,9 +192,9 @@ One song with incompatible chains (e.g. clean, drive, solo) is best handled as
 **several rigs bound into a setlist** — design each rig, then bind them:
 
 ```sh
-headrush-gigboard-mcp design --name "Song Clean" --amp "65 Black SR" --out <card>/Rigs
-headrush-gigboard-mcp design --name "Song Drive" --amp "68 Plexiglas 50W" --out <card>/Rigs
-headrush-gigboard-mcp setlist --name "Song" --out <card>/Setlists <card>/Rigs/*.rig
+guitar-modeler-mcp design --name "Song Clean" --amp "65 Black SR" --out <card>/Rigs
+guitar-modeler-mcp design --name "Song Drive" --amp "68 Plexiglas 50W" --out <card>/Rigs
+guitar-modeler-mcp setlist --name "Song" --out <card>/Setlists <card>/Rigs/*.rig
 ```
 
 Copy `Rigs/` and `Setlists/` onto the Gigboard and the whole song travels as one
