@@ -165,15 +165,25 @@ with `design_rig`'s `footswitches` argument (CLI: `--footswitches`), an ordered
 list of up to four `{"module": "...", "operation": "On"}` entries mapped to
 FS5, FS6, FS7 and FS8. `module` is the module **instance name** exactly as it
 appears in the chain (`Wham`, `Green JRC-OD`, `Amp 2`); `operation` defaults to
-`"On"` (toggle on/off); add `"mode": "scene"` to make the switch a Scene (a
-multi-block on/off snapshot). A module not in the chain — or a fifth switch —
-is rejected:
+`"On"` (toggle on/off). A module not in the chain — or a fifth switch — is
+rejected.
+
+A **Scene** switch (`"mode": "scene"`) recalls a multi-block on/off snapshot in
+one press: give it a `label` and list the blocks the scene turns `on` and `off`
+(blocks not listed keep their current state):
 
 ```sh
-headrush-gigboard-mcp design --name "Whammy" --amp "65 Black SR" \
-  --fx '[{"type":"Wham","enabled":true}]' \
-  --footswitches '[{"module":"Wham"},{"module":"Green JRC-OD","mode":"scene"}]'
+headrush-gigboard-mcp design --name "Always" --amp "67 Black Duo" \
+  --fx '[{"type":"S1 Drive"},{"type":"Green JRC-OD"},{"type":"BBD Delay"}]' \
+  --footswitches '[
+    {"module":"Green JRC-OD","mode":"scene","label":"DRIVE",
+     "scene":{"on":["S1 Drive","Green JRC-OD"],"off":["BBD Delay"]}},
+    {"module":"BBD Delay","mode":"scene","label":"CLEAN",
+     "scene":{"on":["BBD Delay"],"off":["S1 Drive","Green JRC-OD"]}}]'
 ```
+
+The scene writes each slot's state directly into the `.rig` (0 = no change,
+1 = on, 2 = off), matching what the device's own scene editor produces.
 
 ### Songs with multiple sounds
 

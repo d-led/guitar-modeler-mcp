@@ -1,6 +1,7 @@
 package rig
 
 import (
+	"encoding/base64"
 	"testing"
 
 	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/catalog"
@@ -237,5 +238,87 @@ func TestFootswitchRejectsUnknownMode(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("expected an error for an unknown footswitch mode")
+	}
+}
+
+func TestFootswitchSceneSnapshotHeaders(t *testing.T) {
+	b, err := NewBuilder(catalog.New())
+	if err != nil {
+		t.Fatalf("NewBuilder: %v", err)
+	}
+	file, err := b.Build(Spec{
+		Name: "Scene Snapshot",
+		Blocks: []Block{
+			{Type: "Green JRC-OD", Enabled: true},
+			{Type: "Amp", Params: map[string]any{"Type": "65 Black SR"}},
+			{Type: "Cab", Params: map[string]any{"CabType": "1x12 Black Panel Lux"}},
+			{Type: "Tape Echo", Enabled: true},
+		},
+		Footswitches: []Footswitch{{
+			Module: "Green JRC-OD",
+			Mode:   "Scene",
+			Label:  "DRIVE",
+			Scene: &SceneSnapshot{
+				On:  []string{"Green JRC-OD"},
+				Off: []string{"Tape Echo"},
+			},
+		}},
+	})
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+
+	children := footswitchChildren(t, file)
+	if got := footswitchField(t, children, "UserFootSwitchText5"); got != "DRIVE" {
+		t.Fatalf("UserFootSwitchText5 = %q, want DRIVE", got)
+	}
+	if got := footswitchField(t, children, "ModeNew5"); got != "Scene" {
+		t.Fatalf("ModeNew5 = %q, want Scene", got)
+	}
+
+	raw, err := base64.StdEncoding.DecodeString(children["Scene5"].(map[string]any)["state"].(string))
+	if err != nil {
+		t.Fatalf("decode scene blob: %v", err)
+	}
+	// Chain: slot1=Green JRC-OD, slot2=Amp, slot3=Cab, slot4=Tape Echo.
+	// Scene turns Green JRC-OD on (1) and Tape Echo off (2); Amp/Cab unchanged (0).
+	got := []byte{raw[0], raw[36], raw[36*2], raw[36*3]}
+	want := []byte{1, 0, 0, 2}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("scene header slot %d = %d, want %d (headers: %v)", i+1, got[i], want[i], got)
+		}
+	}
+	// State2Scene (the revert state) must stay "no change".
+	state2, err := base64.StdEncoding.DecodeString(children["State2Scene5"].(map[string]any)["state"].(string))
+	if err != nil {
+		t.Fatalf("decode State2Scene5: %v", err)
+	}
+	for i := 0; i < 4; i++ {
+		if state2[i*36] != 0 {
+			t.Fatalf("State2Scene5 slot %d header = %d, want 0 (no change)", i+1, state2[i*36])
+		}
+	}
+}
+
+func TestFootswitchSceneRejectsUnknownBlock(t *testing.T) {
+	b, err := NewBuilder(catalog.New())
+	if err != nil {
+		t.Fatalf("NewBuilder: %v", err)
+	}
+	_, err = b.Build(Spec{
+		Name: "Bad Scene",
+		Blocks: []Block{
+			{Type: "Amp", Params: map[string]any{"Type": "65 Black SR"}},
+			{Type: "Cab", Params: map[string]any{"CabType": "1x12 Black Panel Lux"}},
+		},
+		Footswitches: []Footswitch{{
+			Module: "Amp",
+			Mode:   "Scene",
+			Scene:  &SceneSnapshot{On: []string{"Not In Chain"}},
+		}},
+	})
+	if err == nil {
+		t.Fatal("expected an error for a scene block not in the chain")
 	}
 }

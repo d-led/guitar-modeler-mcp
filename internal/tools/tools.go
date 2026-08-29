@@ -511,6 +511,16 @@ func parseFootswitches(raw any) []rig.Footswitch {
 			Module:    argString(m, "module"),
 			Operation: argString(m, "operation"),
 			Mode:      argString(m, "mode"),
+			Label:     argString(m, "label"),
+		}
+		if scene, ok := m["scene"].(map[string]any); ok {
+			snap := &rig.SceneSnapshot{
+				On:  argStrings(scene["on"]),
+				Off: argStrings(scene["off"]),
+			}
+			if len(snap.On) > 0 || len(snap.Off) > 0 {
+				sw.Scene = snap
+			}
 		}
 		if sw.Module != "" {
 			out = append(out, sw)
@@ -632,5 +642,10 @@ func footswitchItemSchema() map[string]any {
 		"module":    stringSchema("Module instance name to control, e.g. \"Wham\" or \"Amp 2\"."),
 		"operation": stringSchema("What the switch controls; \"On\" toggles the module on/off (default)."),
 		"mode":      stringSchema("Switch type: \"Toggle\" (default) or \"Scene\" (recalls a multi-block on/off snapshot)."),
+		"label":     stringSchema("Optional on-screen text for the switch, e.g. \"DRIVE\"."),
+		"scene": objectSchema(map[string]any{
+			"on":  arraySchema("Modules the scene turns ON (instance names).", stringSchema("Module instance name.")),
+			"off": arraySchema("Modules the scene turns OFF (instance names).", stringSchema("Module instance name.")),
+		}),
 	})
 }

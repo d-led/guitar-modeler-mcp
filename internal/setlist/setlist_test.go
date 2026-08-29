@@ -1,5 +1,4 @@
 package setlist
-package setlist
 
 import (
 	"encoding/json"

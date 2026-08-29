@@ -135,10 +135,9 @@ To alternate between two tones on the Gigboard:
 - **Amp/cab Doubling** (device): one Amp block can carry two channels —
   `Doubling`/`DoubleStates`, `Type`/`Type2`, `Master`/`Master2`, … — the
   tightest two-amps-in-one-block switch. Not yet emitted by `design_rig`.
-- **Scene footswitches**: a footswitch can be set to Scene mode
-  (`{"module":"X","mode":"scene"}`) to recall a multi-block on/off snapshot —
-  see the scene editing on the device to set which blocks the scene turns on
-  and off.
+- **Scene footswitches**: a footswitch can be set to Scene mode to recall a
+  multi-block on/off snapshot in one press. Specify which blocks each scene
+  turns on and off with the `scene` object (see below).
 
 The Gigboard's mixer has **no "Solo A/B"** parameter — that belongs to newer
 HeadRush hardware (Flex Prime / Prime). Do not try to assign a footswitch to a
@@ -160,9 +159,26 @@ Each entry's `module` is the module **instance name** exactly as it appears in
 the chain (`Wham`, `Green JRC-OD`, `Amp`, `Amp 2` — repeated modules get a
 `" N"` suffix). The default `operation` is `"On"` (toggle the module on/off);
 pass a different `operation` to control a module-specific parameter instead.
-Pass `"mode": "scene"` to make the switch a **Scene** (a saved multi-block
-on/off snapshot) instead of a plain toggle. A module that is not in the chain
-is rejected, and you can never assign more than four switches.
+A module that is not in the chain is rejected, and you can never assign more
+than four switches.
+
+A **Scene** switch recalls a saved snapshot of which blocks are on and off in
+one press. Set `"mode": "scene"`, give it a `label` for the screen, and list
+the blocks the scene turns `on` and `off` (any block not listed keeps its
+current state):
+
+```json
+"footswitches": [
+  {"module": "Green JRC-OD", "mode": "scene", "label": "DRIVE",
+   "scene": {"on": ["S1 Drive", "Green JRC-OD"], "off": ["BBD Delay"]}},
+  {"module": "BBD Delay", "mode": "scene", "label": "CLEAN",
+   "scene": {"on": ["BBD Delay"], "off": ["S1 Drive", "Green JRC-OD"]}}
+]
+```
+
+Every scene turns on, turns off, or leaves alone each of the 11 chain slots
+(0 = no change, 1 = on, 2 = off) — exactly what the device's scene editor
+writes.
 
 **Order matters: put the most important switches first.** The first two entries
 land on buttons 1 and 2 (FS5/FS6), which stay dedicated to the patch in every
@@ -178,9 +194,9 @@ guess wastes a round trip:
 
 - **Scenes** — one rig, one chain. A Scene footswitch turns several blocks on
   and off at once. Use this when the sounds are variations of the *same chain*
-  (same amp/cab, different pedals or a boost). Design the rig with
-  `footswitches: [{"module":"X","mode":"scene"}, …]`; the multi-block on/off
-  matrix is then edited on the device's scene editor.
+  (same amp/cab, different pedals or a boost). Design the rig with scene
+  footswitches (see above); the on/off snapshot is written into the `.rig`, so
+  nothing needs editing on the device afterwards.
 - **A setlist of rigs** — several full `.rig` files stepped through as a bank.
   Use this when the sounds need *incompatible chains* (different amps/cabs that
   won't all fit in 11 slots, or a chain that must be rebuilt). Design each rig
