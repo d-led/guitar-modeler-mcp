@@ -76,7 +76,7 @@ func newDesignCmd() *cobra.Command {
 				Mic2:         mic2,
 				Tempo:        tempo,
 				InputGain:    inputGain,
-				OutputLevel:  outputLevel,
+				OutputLevel:  floatPtr(cmd, "output-level", outputLevel),
 				FX:           fx,
 				PathAFX:      pathAFXBlocks,
 				PathBFX:      pathBFXBlocks,
@@ -113,6 +113,7 @@ func newDesignCmd() *cobra.Command {
 			}
 			if summary, err := rig.Describe(file); err == nil {
 				fmt.Printf("Footswitches: %s\n", rig.FootswitchLine(summary.Footswitches))
+				fmt.Printf("Levels: input %+g dB, output %+g dB\n", summary.InputGain, summary.OutputVolume)
 			}
 			fmt.Printf("Rig file: %s\n", rigPath)
 			fmt.Printf("Report:  %s\n", htmlPath)
@@ -130,7 +131,7 @@ func newDesignCmd() *cobra.Command {
 	cmd.Flags().StringVar(&mic2, "mic2", "", "mic for the second amp path")
 	cmd.Flags().Float64Var(&tempo, "tempo", 0, "tempo in BPM")
 	cmd.Flags().Float64Var(&inputGain, "input-gain", 0, "input gain in dB")
-	cmd.Flags().Float64Var(&outputLevel, "output-level", 0, "overall rig output level in dB (RigVolume, 0 = unity)")
+	cmd.Flags().Float64Var(&outputLevel, "output-level", 6, "overall rig output level in dB (RigVolume, default +6 to compensate the amp master)")
 	cmd.Flags().StringVar(&out, "out", ".", "output directory")
 	cmd.Flags().StringVar(&fxJSON, "fx", "", "effects as a JSON array")
 	cmd.Flags().StringVar(&pathAFX, "path-a-fx", "", "effects for parallel path A as a JSON array")

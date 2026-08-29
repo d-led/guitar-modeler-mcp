@@ -27,8 +27,10 @@ type Request struct {
 	Mic       string  `json:"mic,omitempty"` // device model or description
 	Tempo     float64 `json:"tempo,omitempty"`
 	InputGain float64 `json:"input_gain,omitempty"`
-	// OutputLevel is the rig's overall output level in dB (RigVolume).
-	OutputLevel float64   `json:"output_level,omitempty"`
+	// OutputLevel is the rig's overall output level in dB (RigVolume). When nil
+	// the designer defaults to +6 dB, compensating the amp master's −6 dB so a
+	// fresh rig lands at unity.
+	OutputLevel *float64  `json:"output_level,omitempty"`
 	FX          []FXBlock `json:"fx,omitempty"`
 
 	// Routing selects the signal-chain topology: "" or "S" (serial, default),
@@ -75,6 +77,11 @@ type Designer struct {
 // NewDesigner creates a Designer.
 func NewDesigner(cat *catalog.Catalog) *Designer { return &Designer{cat: cat} }
 
+// defaultOutputLevel compensates the amp master's −6 dB (50% master) so a fresh
+// serial rig lands at ~0 dB net, matching the device's own presets (whose
+// RigVolume sits around +5 dB).
+const defaultOutputLevel = 6.0
+
 // Design resolves a request into a buildable rig spec.
 func (d *Designer) Design(req Request) (*Result, error) {
 	if strings.TrimSpace(req.Name) == "" {
@@ -99,11 +106,16 @@ func (d *Designer) Design(req Request) (*Result, error) {
 		tempo = 100
 	}
 
+	outputVolume := defaultOutputLevel
+	if req.OutputLevel != nil {
+		outputVolume = *req.OutputLevel
+	}
+
 	spec := rig.Spec{
 		Name:         req.Name,
 		Tempo:        tempo,
 		InputGain:    req.InputGain,
-		OutputVolume: req.OutputLevel,
+		OutputVolume: outputVolume,
 		Routing:      req.Routing,
 		Para1Level:   req.Para1Level,
 		Para2Level:   req.Para2Level,

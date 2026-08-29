@@ -205,7 +205,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 			"cab2":       stringSchema("Optional cab for the second amp path."),
 			"mic2":       stringSchema("Optional mic for the second amp path."),
 			"tempo":      numberSchema("Optional tempo in BPM."),
-			"input_gain": numberSchema("Optional input gain in dB."), "output_level": numberSchema("Optional overall rig output level in dB (RigVolume, 0 = unity)."), "output_dir": stringSchema("Directory to write the files into (default: current directory)."),
+			"input_gain": numberSchema("Optional input gain in dB."), "output_level": numberSchema("Optional overall rig output level in dB (RigVolume; default +6 dB to compensate the amp master's −6 dB)."), "output_dir": stringSchema("Directory to write the files into (default: current directory)."),
 			"fx":           arraySchema("Optional effects, in any order; they will be placed sensibly.", fxItemSchema()),
 			"path_a_fx":    arraySchema("Optional effects for parallel path A (shared-amp SPS-1).", fxItemSchema()),
 			"path_b_fx":    arraySchema("Optional effects for parallel path B (shared-amp SPS-1).", fxItemSchema()),
@@ -283,7 +283,7 @@ func (r *Registrar) designRig(args map[string]any) (string, error) {
 		Mic2:         argString(args, "mic2"),
 		Tempo:        argFloat(args, "tempo"),
 		InputGain:    argFloat(args, "input_gain"),
-		OutputLevel:  argFloat(args, "output_level"),
+		OutputLevel:  argFloatPtr(args, "output_level"),
 		FX:           parseFX(args["fx"]),
 		PathAFX:      parseFX(args["path_a_fx"]),
 		PathBFX:      parseFX(args["path_b_fx"]),
@@ -395,10 +395,11 @@ func summarize(file *rig.RigFile, notes []string, song, rigPath, htmlPath string
 		fmt.Fprintf(&b, "- %s\n", n)
 	}
 
-	// Report the hardware assignments so the caller never forgets what the
-	// stomp switches (FS5..FS8) control.
+	// Report the hardware assignments and levels so the caller can confirm the
+	// switches and gain staging at a glance.
 	if summary, err := rig.Describe(file); err == nil {
 		fmt.Fprintf(&b, "Footswitches: %s.\n", rig.FootswitchLine(summary.Footswitches))
+		fmt.Fprintf(&b, "Levels: input %+g dB, output %+g dB.\n", summary.InputGain, summary.OutputVolume)
 	}
 
 	fmt.Fprintf(&b, "Rig file: %s\n", rigPath)

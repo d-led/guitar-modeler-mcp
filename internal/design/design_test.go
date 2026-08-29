@@ -56,6 +56,31 @@ func TestDesignDefaultsCabForFenderAmp(t *testing.T) {
 	}
 }
 
+func TestDesignDefaultsOutputLevelToCompensateMaster(t *testing.T) {
+	d := NewDesigner(catalog.New())
+	res, err := d.Design(Request{Name: "Clean", Amp: "65 Black SR"})
+	if err != nil {
+		t.Fatalf("Design: %v", err)
+	}
+	// The amp master defaults to 50% (−6 dB); the designer defaults the output
+	// to +6 dB so a fresh rig lands at unity.
+	if res.Spec.OutputVolume != 6 {
+		t.Fatalf("default output volume = %v, want 6", res.Spec.OutputVolume)
+	}
+}
+
+func TestDesignRespectsExplicitOutputLevel(t *testing.T) {
+	d := NewDesigner(catalog.New())
+	level := -3.0
+	res, err := d.Design(Request{Name: "Clean", Amp: "65 Black SR", OutputLevel: &level})
+	if err != nil {
+		t.Fatalf("Design: %v", err)
+	}
+	if res.Spec.OutputVolume != -3 {
+		t.Fatalf("output volume = %v, want -3", res.Spec.OutputVolume)
+	}
+}
+
 func TestDesignRequiresAmp(t *testing.T) {
 	d := NewDesigner(catalog.New())
 	if _, err := d.Design(Request{Name: "No Amp"}); err == nil {

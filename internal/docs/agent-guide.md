@@ -73,9 +73,11 @@ Keep it tight and don't spiral:
    lists the assigned switches (or warns that none are assigned) so you can
    tell at a glance whether the controls are wired up.
 8. `rig_decode` / `render_report` — inspect or re-report an existing preset.
-9. `estimate_rig_level` — check a rig's output level (the default amp master of
-   50% is −6 dB, so a fresh rig is usually ~6 dB quiet). Set `output_level` on
-   `design_rig` (or the recommended RigVolume) to compensate.
+9. `estimate_rig_level` — check a rig's net output level and the RigVolume that
+   reaches a target. Default gain staging: input 0 dB → amp master 50% (−6 dB)
+   → cab 0 dB → output **+6 dB** (the designer's default) ≈ 0 dB net. For more
+   **drive** raise the amp `Gain` (or the drive pedal's `Drive`) — raising
+   `Master`/`output_level` only makes it louder, not more overdriven.
 
 ## Effect categories
 
