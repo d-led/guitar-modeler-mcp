@@ -231,3 +231,50 @@ func TestRenderProducesMergedJSON(t *testing.T) {
 		t.Fatal("Render output missing servers key")
 	}
 }
+
+// TestUninstallMissingConfigIsNoop guards the idempotency of Uninstall: with no
+// config file on disk it must be a silent no-op, not an error.
+func TestUninstallMissingConfigIsNoop(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+
+	path, changed, err := Uninstall(TargetVSCodeWorkspace, server().Name)
+	if err != nil {
+		t.Fatalf("Uninstall on missing config: %v", err)
+	}
+	if changed {
+		t.Fatal("Uninstall on a missing config reported a change")
+	}
+	if path != filepath.Join(".vscode", "mcp.json") {
+		t.Fatalf("Uninstall path = %q", path)
+	}
+}
+
+// TestInstallUninstallInstallCycle proves the operations round-trip cleanly:
+// install, remove, then install again leaves the same entry as the first time.
+func TestInstallUninstallInstallCycle(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+
+	if _, _, err := Install(TargetVSCodeWorkspace, server()); err != nil {
+		t.Fatalf("first Install: %v", err)
+	}
+	if _, _, err := Uninstall(TargetVSCodeWorkspace, server().Name); err != nil {
+		t.Fatalf("Uninstall: %v", err)
+	}
+	_, changed, err := Install(TargetVSCodeWorkspace, server())
+	if err != nil {
+		t.Fatalf("re-Install: %v", err)
+	}
+	if !changed {
+		t.Fatal("re-Install after Uninstall reported no change")
+	}
+
+	data, err := os.ReadFile(filepath.Join(dir, ".vscode", "mcp.json"))
+	if err != nil {
+		t.Fatalf("read config after cycle: %v", err)
+	}
+	if !strings.Contains(string(data), server().Name) {
+		t.Fatalf("server missing after install/uninstall/install cycle: %s", data)
+	}
+}

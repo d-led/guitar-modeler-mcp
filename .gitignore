@@ -6,3 +6,6 @@ guitar-modeler-mcp
 # Goreleaser build output
 /.goreleaser-dist/
 /dist/
+
+# CI-generated test reports
+/build/

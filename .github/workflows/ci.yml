@@ -11,6 +11,9 @@ permissions:
 jobs:
   checks:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write # for the test report check run
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: actions/setup-go@v7.0.0
@@ -22,7 +25,17 @@ jobs:
         with:
           version: v2.13.1
       - name: Run unit tests
-        run: go test ./...
+        run: |
+          set -o pipefail
+          mkdir -p build/test-results
+          go test -json ./... | tee build/test-results/test.json
+      - name: Test report
+        uses: dorny/test-reporter@v3
+        if: success() || failure()
+        with:
+          name: Go Tests
+          path: build/test-results/test.json
+          reporter: golang-json
 
   # "Latest" binaries for the main branch: every push to main uploads fresh
   # per-platform binaries as build artifacts (not releases). Tagged releases
