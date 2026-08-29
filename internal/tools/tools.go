@@ -343,7 +343,9 @@ func (r *Registrar) Register(s *mcp.Server) {
 			"model":      stringSchema("Mooer model: ge150pro, ge200, ge150 or ge100pro (default ge150pro)."),
 			"name":       stringSchema("Preset name."),
 			"amp":        stringSchema("Amp: device model name or a real-hardware description, e.g. \"Marshall JCM800\"."),
+			"amp_params": mooerAmpParamsSchema(),
 			"cab":        stringSchema("Optional cab: device model name or description."),
+			"cab_params": mooerCabParamsSchema(),
 			"fx":         arraySchema("Optional effects; each names a module and an effect within it.", mooerFXItemSchema()),
 			"output_dir": stringSchema("Directory to write the files into (default: current directory)."),
 		}),
@@ -1150,10 +1152,12 @@ func (r *Registrar) mooerDesign(args map[string]any) (string, error) {
 		name = "New Preset"
 	}
 	spec := mooer.Spec{
-		Name: name,
-		Amp:  argString(args, "amp"),
-		Cab:  argString(args, "cab"),
-		FX:   parseMooerFX(args["fx"]),
+		Name:      name,
+		Amp:       argString(args, "amp"),
+		AmpParams: argFloatMap(args, "amp_params"),
+		Cab:       argString(args, "cab"),
+		CabParams: argFloatMap(args, "cab_params"),
+		FX:        parseMooerFX(args["fx"]),
 	}
 	p, err := m.BuildPreset(spec)
 	if err != nil {
@@ -1181,6 +1185,7 @@ func parseMooerFX(raw any) []mooer.FXSpec {
 			Module:  argString(m, "module"),
 			Type:    argString(m, "type"),
 			Enabled: argBool(m, "enabled", true),
+			Params:  argFloatMap(m, "params"),
 		}
 		if spec.Module != "" && spec.Type != "" {
 			out = append(out, spec)
@@ -1694,5 +1699,64 @@ func mooerFXItemSchema() map[string]any {
 		"module":  stringSchema("Target module: fx, od, mod, delay, reverb, ns or eq."),
 		"type":    stringSchema("Effect name within the module, e.g. \"808\" in module \"od\"."),
 		"enabled": map[string]any{"type": "boolean", "description": "Whether the module is on."},
+		"params":  mooerModuleParamsSchema(),
+	})
+}
+
+// mooerAmpParamsSchema is the amp knob schema (raw 0-255, 128 = noon).
+func mooerAmpParamsSchema() map[string]any {
+	return objectSchema(map[string]any{
+		"gain":     numberSchema("Amp gain, raw 0-255 (128 = noon)."),
+		"bass":     numberSchema("Amp bass, raw 0-255 (128 = noon)."),
+		"mid":      numberSchema("Amp middle, raw 0-255 (128 = noon)."),
+		"treble":   numberSchema("Amp treble, raw 0-255 (128 = noon)."),
+		"presence": numberSchema("Amp presence, raw 0-255 (128 = noon)."),
+		"master":   numberSchema("Amp master volume, raw 0-255 (128 = noon)."),
+	})
+}
+
+// mooerCabParamsSchema is the cab knob schema (raw 0-255, 128 = noon).
+func mooerCabParamsSchema() map[string]any {
+	return objectSchema(map[string]any{
+		"mic":      numberSchema("Cab microphone index."),
+		"center":   numberSchema("Mic position, raw 0-255 (128 = center)."),
+		"distance": numberSchema("Mic distance, raw 0-255 (128 = noon)."),
+		"tube":     numberSchema("Tube power-amp drive, raw 0-255 (128 = noon)."),
+	})
+}
+
+// mooerModuleParamsSchema is the per-effect knob schema shared by every module.
+// All values are the device's raw 0-255 scale (128 = noon) unless noted.
+func mooerModuleParamsSchema() map[string]any {
+	return objectSchema(map[string]any{
+		"gain":        numberSchema("Drive/effect gain, raw 0-255 (128 = noon)."),
+		"volume":      numberSchema("Output volume, raw 0-255 (128 = noon)."),
+		"tone":        numberSchema("Tone, raw 0-255 (128 = noon)."),
+		"level":       numberSchema("Effect level, raw 0-255 (128 = noon)."),
+		"rate":        numberSchema("Modulation rate, raw 0-255 (128 = noon)."),
+		"depth":       numberSchema("Modulation depth, raw 0-255 (128 = noon)."),
+		"feedback":    numberSchema("Delay feedback, raw 0-255 (128 = noon)."),
+		"time_ms":     numberSchema("Delay time in milliseconds."),
+		"subdivision": numberSchema("Delay subdivision index."),
+		"decay":       numberSchema("Reverb decay, raw 0-255 (128 = noon)."),
+		"pre_delay":   numberSchema("Reverb pre-delay, raw 0-255 (128 = noon)."),
+		"threshold":   numberSchema("Noise-gate threshold, raw 0-255."),
+		"attack":      numberSchema("Attack, raw 0-255 (128 = noon)."),
+		"release":     numberSchema("Release, raw 0-255 (128 = noon)."),
+		"q":           numberSchema("Q, raw 0-255 (128 = noon)."),
+		"position":    numberSchema("Position, raw 0-255 (128 = noon)."),
+		"peak":        numberSchema("Peak, raw 0-255 (128 = noon)."),
+		"band1":       numberSchema("EQ band 1, raw 0-255 (128 = flat)."),
+		"band2":       numberSchema("EQ band 2, raw 0-255 (128 = flat)."),
+		"band3":       numberSchema("EQ band 3, raw 0-255 (128 = flat)."),
+		"band4":       numberSchema("EQ band 4, raw 0-255 (128 = flat)."),
+		"band5":       numberSchema("EQ band 5, raw 0-255 (128 = flat)."),
+		"band6":       numberSchema("EQ band 6, raw 0-255 (128 = flat)."),
+		"band7":       numberSchema("EQ band 7, raw 0-255 (128 = flat)."),
+		"band8":       numberSchema("EQ band 8, raw 0-255 (128 = flat)."),
+		"band9":       numberSchema("EQ band 9, raw 0-255 (128 = flat)."),
+		"band10":      numberSchema("EQ band 10, raw 0-255 (128 = flat)."),
+		"band11":      numberSchema("EQ band 11, raw 0-255 (128 = flat)."),
+		"band12":      numberSchema("EQ band 12, raw 0-255 (128 = flat)."),
 	})
 }

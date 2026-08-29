@@ -238,6 +238,54 @@ func TestBuildPresetAppliesNeutralDefaults(t *testing.T) {
 	}
 }
 
+// TestBuildPresetAppliesParams proves amp, cab and per-module raw knob values
+// reach the correct module fields (the gap that previously forced every preset
+// out at neutral 128).
+func TestBuildPresetAppliesParams(t *testing.T) {
+	m, _ := ModelByName("ge200")
+	p, err := m.BuildPreset(Spec{
+		Name:      "MoP Rhythm",
+		Amp:       "MARK III DS",
+		AmpParams: Params{"gain": 191, "bass": 179, "mid": 64, "treble": 191, "presence": 166, "master": 200},
+		Cab:       "REC 412",
+		CabParams: Params{"mic": 1, "distance": 90},
+		FX: []FXSpec{
+			{Module: "od", Type: "808", Enabled: true, Params: Params{"Gain": 20, "Tone": 179, "Volume": 217}},
+			{Module: "ns", Type: "NOISE GATE", Enabled: true, Params: Params{"Threshold": 40}},
+			{Module: "eq", Type: "EQ-G", Enabled: true, Params: Params{"band1": 160, "band3": 96}},
+			{Module: "delay", Type: "DIGITAL", Enabled: true, Params: Params{"Time (ms)": 400, "feedback": 76}},
+		},
+	})
+	if err != nil {
+		t.Fatalf("BuildPreset: %v", err)
+	}
+	if p.Amp.Gain != 191 || p.Amp.Bass != 179 || p.Amp.Mid != 64 || p.Amp.Treble != 191 || p.Amp.Presence != 166 || p.Amp.Master != 200 {
+		t.Fatalf("amp params not applied: %+v", p.Amp)
+	}
+	if p.Cab.Mic != 1 || p.Cab.Distance != 90 {
+		t.Fatalf("cab params not applied: %+v", p.Cab)
+	}
+	if p.Drive.Gain != 20 || p.Drive.Tone != 179 || p.Drive.Volume != 217 {
+		t.Fatalf("drive params not applied: %+v", p.Drive)
+	}
+	if !p.NoiseGate.Enabled || p.NoiseGate.Threshold != 40 {
+		t.Fatalf("noise gate = %+v", p.NoiseGate)
+	}
+	if !p.EQ.Enabled || p.EQ.Bands[0] != 160 || p.EQ.Bands[2] != 96 {
+		t.Fatalf("eq params not applied: %+v", p.EQ)
+	}
+	if p.Delay.TimeMS != 400 || p.Delay.Feedback != 76 {
+		t.Fatalf("delay params not applied: %+v", p.Delay)
+	}
+	// Unspecified knobs stay at their neutral value, not zero.
+	if p.Amp.Gain != 191 && p.Drive.Volume != 217 && p.Amp.Mid != 64 {
+		t.Fatalf("unexpected values: %+v", p.Amp)
+	}
+	if p.Cab.Center != 128 || p.Cab.Tube != 128 {
+		t.Fatalf("unspecified cab knobs should stay at noon: %+v", p.Cab)
+	}
+}
+
 func TestSetModuleNeutralDelay(t *testing.T) {
 	p := New()
 	SetModule(&p, "delay", 2, true)

@@ -40,9 +40,12 @@ sponsored by HeadRush or any of the referenced brands.
 - **Gigboard** — implemented.
 - **Mooer GE150 Pro Li / GE200 / GE150 / GE100 Pro** — implemented. `.mo` files
   are written only for the file-capable models (GE150 Pro Li, GE200, GE100 Pro);
-  the classic **GE150 is card-only**. The cross-device `map_preset` tool maps
-  Gigboard rigs to and from Mooer presets; mapped parameter values are neutral
-  defaults (128 = noon) rather than copied knob positions.
+  the classic **GE150 is card-only**. `mooer_design` dials in every module's
+  raw knob values (`amp_params`, `cab_params`, and per-effect `params`), so
+  presets carry real gain/EQ/delay/reverb settings rather than neutral noon.
+  The cross-device `map_preset` tool maps Gigboard rigs to and from Mooer
+  presets; mapped parameter values stay neutral (128 = noon) because the two
+  devices scale knobs differently.
 - **BOSS Waza Air** — implemented (`.tsl` backups and setup cards). The
   `.tsl` reader/writer follows the real backup format — a named set of patches
   each stored as a 2335-byte Katana-layout record under

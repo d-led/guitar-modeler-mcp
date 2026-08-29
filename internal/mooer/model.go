@@ -124,19 +124,25 @@ func itemInspiredBy(items []Item, name string) (string, bool) {
 	return "", false
 }
 
-// FXSpec is one effect to place in a module of the fixed chain.
+// FXSpec is one effect to place in a module of the fixed chain. Params holds
+// the module's raw knob values keyed by canonical name (e.g. gain, rate,
+// level, threshold, band1..band12, time_ms).
 type FXSpec struct {
 	Module  string // fx, od, mod, delay, reverb, ns or eq
 	Type    string // effect name within that module
 	Enabled bool
+	Params  Params
 }
 
-// Spec is a tone to dial in on a Mooer device.
+// Spec is a tone to dial in on a Mooer device. AmpParams/CabParams carry the
+// amp/cab knob values keyed by canonical name.
 type Spec struct {
-	Name string
-	Amp  string // amp model name, or a real-hardware description to resolve
-	Cab  string // cab model name or description (optional)
-	FX   []FXSpec
+	Name      string
+	Amp       string // amp model name, or a real-hardware description to resolve
+	AmpParams Params
+	Cab       string // cab model name or description (optional)
+	CabParams Params
+	FX        []FXSpec
 }
 
 // ResolveAmp finds the amp effect_type for a query: exact model name first,
@@ -193,6 +199,7 @@ func (m Model) BuildPreset(s Spec) (Preset, error) {
 		return p, err
 	}
 	SetModule(&p, "amp", ampIndex, true)
+	applyAmpParams(&p.Amp, normalizeParams(s.AmpParams))
 
 	if s.Cab != "" {
 		cabIndex, err := m.ResolveCab(s.Cab)
@@ -200,6 +207,7 @@ func (m Model) BuildPreset(s Spec) (Preset, error) {
 			return p, err
 		}
 		SetModule(&p, "cab", cabIndex, true)
+		applyCabParams(&p.Cab, normalizeParams(s.CabParams))
 	}
 
 	for _, f := range s.FX {
@@ -212,6 +220,28 @@ func (m Model) BuildPreset(s Spec) (Preset, error) {
 			return p, err
 		}
 		SetModule(&p, module, index, f.Enabled)
+		applyModuleParams(&p, module, normalizeParams(f.Params))
 	}
 	return p, nil
+}
+
+// applyModuleParams writes raw knob values onto one module. Amp and cab are
+// handled by BuildPreset directly (they sit on the Spec, not in FX).
+func applyModuleParams(p *Preset, module string, params Params) {
+	switch module {
+	case "fx":
+		applyFXParams(&p.FX, params)
+	case "od":
+		applyDriveParams(&p.Drive, params)
+	case "ns":
+		applyNoiseGateParams(&p.NoiseGate, params)
+	case "eq":
+		applyEQParams(&p.EQ, params)
+	case "mod":
+		applyModParams(&p.Mod, params)
+	case "delay":
+		applyDelayParams(&p.Delay, params)
+	case "reverb":
+		applyReverbParams(&p.Reverb, params)
+	}
 }

@@ -10,9 +10,19 @@ are supported:
   `device_list`, browse models with `mooer_catalog_list_*`, and design with
   `mooer_design`. Only the file-capable models — GE150 Pro Li, GE200, GE100 Pro
   — write a `.mo` file; the classic **GE150 is card-only** (no `.mo`, just the
-  printable HTML **setup card**). Mapped parameter values are **neutral
-  defaults** (raw 0–255, 128 = noon): the two devices scale knobs differently,
-  so source positions are not copied. Setup cards and reports are named
+  printable HTML **setup card**).
+
+  **Dial in the knobs, don't leave them at noon.** `mooer_design` accepts raw
+  parameter values (0–255, 128 = noon) via `amp_params`, `cab_params`, and each
+  `fx` item's `params` object. Canonical keys per module: amp `gain`/`bass`/
+  `mid`/`treble`/`presence`/`master`; cab `mic`/`center`/`distance`/`tube`;
+  drive `gain`/`tone`/`volume`; mod `rate`/`depth`/`level`; delay `level`/
+  `feedback`/`time_ms`/`subdivision`; reverb `pre_delay`/`level`/`decay`/`tone`;
+  noise gate `threshold`/`attack`/`release`; EQ `band1`..`band12`. Keys are
+  case- and separator-insensitive (`"Time (ms)"` = `time_ms`). Convert a
+  0–10 knob to raw with `value/10 × 255`; an EQ dB lift of +N is `128 + N/20×255`.
+  Cross-device `map_preset` still writes neutral 128s (the two devices scale
+  knobs differently). Setup cards and reports are named
   `<preset>.<device>.html` (e.g. `Brown Sound.ge200.html`), while preset files
   keep the terse `<preset>.mo` / `.rig` / `.tsl` scheme.
 - **BOSS Waza Air** — a wireless headphone amp. Preset is a BOSS TONE STUDIO
