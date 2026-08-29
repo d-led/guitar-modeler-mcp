@@ -60,6 +60,25 @@ func Describe(cat *catalog.Catalog, moduleName string) (map[string]modspec.Param
 	return out, nil
 }
 
+// DescribeMany returns the parameter specs for several modules at once:
+// canonical module name -> parameter name -> spec. Modules that fail to resolve
+// or have no spec are skipped.
+func DescribeMany(cat *catalog.Catalog, moduleNames []string) map[string]map[string]modspec.Param {
+	out := make(map[string]map[string]modspec.Param, len(moduleNames))
+	for _, name := range moduleNames {
+		canon, err := Resolve(cat, name)
+		if err != nil {
+			continue
+		}
+		spec, err := Describe(cat, canon)
+		if err != nil {
+			continue
+		}
+		out[canon] = spec
+	}
+	return out
+}
+
 func ampParams(cat *catalog.Catalog) map[string]modspec.Param {
 	spec, ok := modspec.Get("Amp")
 	if !ok {

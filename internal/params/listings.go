@@ -1,6 +1,10 @@
 package params
 
-import "github.com/dmitryledentsov/headrush-gigboard-mcp/internal/catalog"
+import (
+	"strings"
+
+	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/catalog"
+)
 
 // AmpListing enriches an amp with its capability keywords.
 type AmpListing struct {
@@ -30,6 +34,25 @@ func FXListings(cat *catalog.Catalog) []FXListing {
 	out := make([]FXListing, 0)
 	for _, f := range cat.FX() {
 		out = append(out, FXListing{FX: f, Capabilities: Capabilities(cat, f.Name)})
+	}
+	return out
+}
+
+// FXListingsMatching filters effects by a case-insensitive query over name,
+// category, description and capability keywords. An empty query returns the
+// full list.
+func FXListingsMatching(cat *catalog.Catalog, query string) []FXListing {
+	q := strings.ToLower(strings.TrimSpace(query))
+	if q == "" {
+		return FXListings(cat)
+	}
+	out := make([]FXListing, 0)
+	for _, f := range cat.FX() {
+		capabilities := Capabilities(cat, f.Name)
+		hay := strings.ToLower(f.Name + " " + f.Category + " " + f.Description + " " + strings.Join(capabilities, " "))
+		if strings.Contains(hay, q) {
+			out = append(out, FXListing{FX: f, Capabilities: capabilities})
+		}
 	}
 	return out
 }

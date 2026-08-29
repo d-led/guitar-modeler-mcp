@@ -117,7 +117,7 @@ headrush-gigboard-mcp serve
 | `translate_amp` / `translate_cab` / `translate_mic` | Hardware → device model |
 | `design_rig` | Translate, order, write `.rig` + HTML report (serial or parallel chain) |
 | `render_report` | HTML report for an existing `.rig` |
-| `rig_decode` | Decode a `.rig` into chain + parameter values |
+| `rig_decode` | Decode a `.rig` into chain + mixer (levels/pans/delay) + parameter values |
 
 Example agent workflow: list amps → translate the song's amp → `design_rig` with
 effects → read the report → tweak by re-running `design_rig` with parameter

@@ -3,7 +3,7 @@ package rig
 import "strconv"
 
 // Summary is a structured, agent-friendly description of a rig file: the chain
-// order and every module's effective parameter values.
+// order, the parallel-path mixer and every module's effective parameter values.
 type Summary struct {
 	Name      string          `json:"name"`
 	ID        string          `json:"id"`
@@ -12,8 +12,20 @@ type Summary struct {
 	Version   string          `json:"version"`
 	Tempo     float64         `json:"tempo"`
 	Routing   string          `json:"routing"`
+	Mixer     MixerSummary    `json:"mixer"`
 	Slots     []string        `json:"slots"`
 	Modules   []SummaryModule `json:"modules"`
+}
+
+// MixerSummary is the parallel-path mixer: the per-path level, pan and delay
+// that balance the two paths of a split (SPS-1 / PS-1) chain.
+type MixerSummary struct {
+	Tails      bool    `json:"tails"`
+	Para1Level float64 `json:"para1_level"`
+	Para2Level float64 `json:"para2_level"`
+	Para1Pan   float64 `json:"para1_pan"`
+	Para2Pan   float64 `json:"para2_pan"`
+	ParaDelay  float64 `json:"para_delay"`
 }
 
 // SummaryModule is one module in the chain with its parameter values.
@@ -44,6 +56,7 @@ func Describe(file *RigFile) (Summary, error) {
 		if item, ok := chain.Children["Routing"]; ok && item.Str != nil {
 			s.Routing = *item.Str
 		}
+		s.Mixer = mixerSummary(chain)
 	}
 
 	if rigNode, ok := patch.Children["Rig"]; ok {
@@ -75,6 +88,28 @@ func isStructuralNode(name string) bool {
 		return true
 	}
 	return false
+}
+
+// mixerSummary reads the parallel-path mixer values from the Chain node. Every
+// rig carries these fields, even a serial one (where they sit at their
+// defaults and have no effect).
+func mixerSummary(chain *Node) MixerSummary {
+	var m MixerSummary
+	if item, ok := chain.Children["Tails"]; ok && item.State != nil {
+		m.Tails = *item.State
+	}
+	num := func(key string) float64 {
+		if item, ok := chain.Children[key]; ok && item.Value != nil {
+			return *item.Value
+		}
+		return 0
+	}
+	m.Para1Level = num("Para1Level")
+	m.Para2Level = num("Para2Level")
+	m.Para1Pan = num("Para1Pan")
+	m.Para2Pan = num("Para2Pan")
+	m.ParaDelay = num("ParaDelay")
+	return m
 }
 
 // chainSlots returns the ModuleType1..ModuleType11 values of the Chain node,

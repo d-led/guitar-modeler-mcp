@@ -70,10 +70,10 @@ func (r *Registrar) Register(s *mcp.Server) {
 	})
 	s.Register(mcp.Tool{
 		Name:        "catalog_list_fx",
-		Description: "List every effect module that can be placed in a rig chain.",
-		InputSchema: objectSchema(map[string]any{}),
-		Handler: func(_ context.Context, _ map[string]any) (string, error) {
-			return marshal(params.FXListings(r.cat))
+		Description: "List effect modules that can be placed in a rig chain. Pass a query to filter by name, category, description or capability (e.g. query=\"pitch shift\" or query=\"delay\"); without a query the full list is returned.",
+		InputSchema: objectSchema(map[string]any{"query": stringSchema("Optional filter over name/category/description/capabilities, e.g. \"pitch shift\" or \"reverb\".")}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return marshal(params.FXListingsMatching(r.cat, argString(args, "query")))
 		},
 	})
 	s.Register(mcp.Tool{
@@ -122,18 +122,24 @@ func (r *Registrar) Register(s *mcp.Server) {
 
 	s.Register(mcp.Tool{
 		Name:        "catalog_list_module_params",
-		Description: "Describe a module's editable parameters: kind (range/toggle/set), label, unit and the allowed values/range, so only valid inputs are produced.",
-		InputSchema: objectSchema(map[string]any{"type": stringSchema("Module display name, e.g. \"Tape Echo\", \"Amp\" or \"Cab\".")}),
+		Description: "Describe one or more modules' editable parameters: kind (range/toggle/set), label, unit and the allowed values/range, so only valid inputs are produced.",
+		InputSchema: objectSchema(map[string]any{
+			"type":  stringSchema("Module display name, e.g. \"Tape Echo\", \"Amp\" or \"Cab\"."),
+			"types": arraySchema("Optional list of module names to describe in one call (alternative to type).", stringSchema("A module display name.")),
+		}),
 		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			names := argStrings(args["types"])
+			if len(names) > 0 {
+				if len(names) == 1 {
+					return r.describeModule(names[0])
+				}
+				return marshal(params.DescribeMany(r.cat, names))
+			}
 			typ := argString(args, "type")
 			if typ == "" {
-				return "", fmt.Errorf("a module \"type\" is required")
+				return "", fmt.Errorf("a module \"type\" (or \"types\" list) is required")
 			}
-			spec, err := params.Describe(r.cat, typ)
-			if err != nil {
-				return "", err
-			}
-			return marshal(spec)
+			return r.describeModule(typ)
 		},
 	})
 
@@ -166,21 +172,21 @@ func (r *Registrar) Register(s *mcp.Server) {
 		Name:        "design_rig",
 		Description: "Dial in a tone: translate hardware into device models, order the effects into a signal chain, write a .rig file and a human-readable HTML report. The chain can be serial (default) or parallel: pass routing=\"SPS-1\" (serial → two parallel paths → serial) with amp2 for a dual-amp rig, or routing=\"PS-1\" (parallel from the input).",
 		InputSchema: objectSchema(map[string]any{
-			"name":       stringSchema("Rig/patch name."),
-			"song":       stringSchema("Optional song the tone is for."),
-			"amp":        stringSchema("Amp: device model or real-hardware description."),
-			"cab":        stringSchema("Optional cab: device model or description."),
-			"mic":        stringSchema("Optional mic: device model or description."),
-			"routing":    stringSchema("Signal-chain topology: \"S\" (serial, default), \"SPS-1\" (serial → parallel → serial) or \"PS-1\" (parallel from the input)."),
-			"amp2":       stringSchema("Optional second amp for a dual-amp parallel rig (device model or description). Same model as amp = same amp on both channels."),
-			"cab2":       stringSchema("Optional cab for the second amp path."),
-			"mic2":       stringSchema("Optional mic for the second amp path."),
-			"tempo":      numberSchema("Optional tempo in BPM."),
-			"input_gain": numberSchema("Optional input gain in dB."),
-			"output_dir": stringSchema("Directory to write the files into (default: current directory)."),
-			"fx":         arraySchema("Optional effects, in any order; they will be placed sensibly.", fxItemSchema()),
-			"path_a_fx":  arraySchema("Optional effects for parallel path A (shared-amp SPS-1).", fxItemSchema()),
-			"path_b_fx":  arraySchema("Optional effects for parallel path B (shared-amp SPS-1).", fxItemSchema()),
+			"name":        stringSchema("Rig/patch name."),
+			"song":        stringSchema("Optional song the tone is for."),
+			"amp":         stringSchema("Amp: device model or real-hardware description."),
+			"cab":         stringSchema("Optional cab: device model or description."),
+			"mic":         stringSchema("Optional mic: device model or description."),
+			"routing":     stringSchema("Signal-chain topology: \"S\" (serial, default), \"SPS-1\" (serial → parallel → serial) or \"PS-1\" (parallel from the input)."),
+			"amp2":        stringSchema("Optional second amp for a dual-amp parallel rig (device model or description). Same model as amp = same amp on both channels."),
+			"cab2":        stringSchema("Optional cab for the second amp path."),
+			"mic2":        stringSchema("Optional mic for the second amp path."),
+			"tempo":       numberSchema("Optional tempo in BPM."),
+			"input_gain":  numberSchema("Optional input gain in dB."),
+			"output_dir":  stringSchema("Directory to write the files into (default: current directory)."),
+			"fx":          arraySchema("Optional effects, in any order; they will be placed sensibly.", fxItemSchema()),
+			"path_a_fx":   arraySchema("Optional effects for parallel path A (shared-amp SPS-1).", fxItemSchema()),
+			"path_b_fx":   arraySchema("Optional effects for parallel path B (shared-amp SPS-1).", fxItemSchema()),
 			"para1_level": numberSchema("Optional level of path A in dB (default -6)."),
 			"para2_level": numberSchema("Optional level of path B in dB (default -6)."),
 			"para1_pan":   numberSchema("Optional pan of path A, -100..100 (default 0; -100 = hard left)."),
@@ -207,7 +213,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 
 	s.Register(mcp.Tool{
 		Name:        "rig_decode",
-		Description: "Decode an existing .rig file into its signal chain and per-module parameter values, so the agent can analyze or fix a preset.",
+		Description: "Decode an existing .rig file into its signal chain, parallel-path mixer (levels, pans, delay) and per-module parameter values, so you can analyze or verify a preset.",
 		InputSchema: objectSchema(map[string]any{
 			"rig_file": stringSchema("Path to the .rig file to decode."),
 		}),
@@ -310,6 +316,14 @@ func (r *Registrar) decodeRig(args map[string]any) (string, error) {
 	return marshal(summary)
 }
 
+func (r *Registrar) describeModule(typ string) (string, error) {
+	spec, err := params.Describe(r.cat, typ)
+	if err != nil {
+		return "", err
+	}
+	return marshal(spec)
+}
+
 func readRigFile(path string) (*rig.RigFile, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -370,6 +384,22 @@ func argString(args map[string]any, key string) string {
 		}
 	}
 	return ""
+}
+
+// argStrings returns the string elements of an array argument, or nil when the
+// argument is absent or not an array.
+func argStrings(raw any) []string {
+	arr, ok := raw.([]any)
+	if !ok {
+		return nil
+	}
+	out := make([]string, 0, len(arr))
+	for _, item := range arr {
+		if s, ok := item.(string); ok {
+			out = append(out, s)
+		}
+	}
+	return out
 }
 
 func argFloat(args map[string]any, key string) float64 {

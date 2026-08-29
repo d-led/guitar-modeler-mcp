@@ -13,9 +13,12 @@ is written, so an invalid preset is never produced.
    `capabilities`).
 2. `catalog_list_cabs`, `catalog_list_mics` — pick a cabinet and microphone.
 3. `catalog_list_fx_categories` then `catalog_list_fx_by_category` — browse
-   effects by category (see below) and their `capabilities`.
+   effects by category (see below) and their `capabilities`. To find an effect
+   by what it does (e.g. `query: "pitch shift"` or `query: "reverb"`), use
+   `catalog_list_fx` with a query instead of listing everything.
 4. `catalog_list_module_params` — read a module's editable parameters, ranges
-   and enum options before setting them.
+   and enum options before setting them. Pass a `types` list to describe several
+   modules in one call.
 5. `design_rig` — resolve everything and write the `.rig` + an HTML report.
 6. `rig_decode` / `render_report` — inspect or re-report an existing preset.
 
@@ -54,12 +57,15 @@ Constraints:
 - **Path mixer.** `Para1Level`/`Para2Level` (dB, default −6),
   `Para1Pan`/`Para2Pan` (−100…100, default 0) and `ParaDelay` (ms, default 0)
   balance the two paths; pan −100/+100 hard-pans paths A/B for wet/dry/wet.
+  Set them directly on `design_rig` (`para1_level`, `para2_level`, `para1_pan`,
+  `para2_pan`, `para_delay`) — there is no need to edit the file afterwards.
 - **Slot budget.** 11 slots total; a section that exceeds its budget is
   rejected rather than silently overflowing.
 
 In `design_rig`, pass `routing: "SPS-1"` with `amp2` (and optional `cab2`,
 `mic2`) for a dual-amp rig, or `routing: "SPS-1"` without `amp2` and
-`path_a_fx`/`path_b_fx` for a shared-amp split.
+`path_a_fx`/`path_b_fx` for a shared-amp split. Balance and pan the two paths
+with `para1_level`/`para2_level`, `para1_pan`/`para2_pan` and `para_delay`.
 
 ## Validation
 

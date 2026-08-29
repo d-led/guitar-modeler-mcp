@@ -29,10 +29,15 @@ func newCatalogCmd() *cobra.Command {
 			if category != "" {
 				return printJSON(params.FXListingsByCategory(a.cat, category))
 			}
+			query, _ := cmd.Flags().GetString("query")
+			if query != "" {
+				return printJSON(params.FXListingsMatching(a.cat, query))
+			}
 			return printJSON(params.FXListings(a.cat))
 		},
 	}
 	fxCmd.Flags().String("category", "", "only list effects in this category (see `catalog fx-categories`)")
+	fxCmd.Flags().String("query", "", "filter effects by name, category, description or capability (e.g. \"pitch shift\")")
 
 	cmd.AddCommand(
 		&cobra.Command{

@@ -243,3 +243,42 @@ func TestParallelValidationRequiresPrefixAmpOrPathAmp(t *testing.T) {
 		t.Fatalf("expected missing Amp error, got %v", err)
 	}
 }
+
+func TestDescribeIncludesMixerAndRouting(t *testing.T) {
+	b := newTestBuilder(t)
+	level := -8.0
+	panA := -100.0
+	panB := 100.0
+	delay := 12.0
+	file, err := b.Build(Spec{
+		Name:       "Panned",
+		Routing:    RoutingSPS,
+		Prefix:     []Block{ampBlock("65 Black SR"), cabBlock("1x12 Black Panel Lux")},
+		PathA:      []Block{{Type: "Tape Echo", Enabled: true}},
+		PathB:      []Block{{Type: "Eleven Reverb", Enabled: true}},
+		Para1Level: &level,
+		Para1Pan:   &panA,
+		Para2Pan:   &panB,
+		ParaDelay:  &delay,
+	})
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+
+	sum, err := Describe(file)
+	if err != nil {
+		t.Fatalf("Describe: %v", err)
+	}
+	if sum.Routing != "SPS-1" {
+		t.Fatalf("Routing = %q, want SPS-1", sum.Routing)
+	}
+	if sum.Mixer.Para1Pan != -100 || sum.Mixer.Para2Pan != 100 {
+		t.Fatalf("mixer pans = %v/%v, want -100/100", sum.Mixer.Para1Pan, sum.Mixer.Para2Pan)
+	}
+	if sum.Mixer.Para1Level != -8 {
+		t.Fatalf("mixer Para1Level = %v, want -8", sum.Mixer.Para1Level)
+	}
+	if sum.Mixer.ParaDelay != 12 {
+		t.Fatalf("mixer ParaDelay = %v, want 12", sum.Mixer.ParaDelay)
+	}
+}
