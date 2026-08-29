@@ -157,7 +157,44 @@ func (d *Designer) Design(req Request) (*Result, error) {
 		spec.Blocks = blocks
 	}
 
+	notes = append(notes, d.footswitchHints(req)...)
+
 	return &Result{Spec: spec, Notes: notes}, nil
+}
+
+// footswitchHints nudges the caller towards assigning a stomp switch to the
+// modules that need one. Expression-category modules (wah, whammy, …) are
+// built to be toggled by a footswitch; when the request includes one but no
+// footswitch targets it, the rig would be unplayable as a stompbox.
+func (d *Designer) footswitchHints(req Request) []string {
+	types := make([]string, 0, len(req.FX)+len(req.PathAFX)+len(req.PathBFX))
+	for _, f := range req.FX {
+		types = append(types, f.Type)
+	}
+	for _, f := range req.PathAFX {
+		types = append(types, f.Type)
+	}
+	for _, f := range req.PathBFX {
+		types = append(types, f.Type)
+	}
+
+	assigned := make(map[string]bool, len(req.Footswitches))
+	for _, sw := range req.Footswitches {
+		assigned[strings.ToLower(sw.Module)] = true
+	}
+
+	var hints []string
+	for _, t := range types {
+		def, ok := d.cat.FXByName(t)
+		if !ok || def.Category != "expression" {
+			continue
+		}
+		if assigned[strings.ToLower(def.Name)] {
+			continue
+		}
+		hints = append(hints, fmt.Sprintf("%s has no footswitch — pass footswitches: [{\"module\": \"%s\"}] to toggle it on/off", def.Name, def.Name))
+	}
+	return hints
 }
 
 // classifyFX orders effects into pre-amp, post-amp and final (Volume) groups.

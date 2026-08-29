@@ -111,6 +111,9 @@ func newDesignCmd() *cobra.Command {
 			for _, n := range res.Notes {
 				fmt.Printf("  - %s\n", n)
 			}
+			if summary, err := rig.Describe(file); err == nil {
+				fmt.Printf("Footswitches: %s\n", rig.FootswitchLine(summary.Footswitches))
+			}
 			fmt.Printf("Rig file: %s\n", rigPath)
 			fmt.Printf("Report:  %s\n", htmlPath)
 			return nil

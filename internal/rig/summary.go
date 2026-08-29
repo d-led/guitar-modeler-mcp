@@ -1,6 +1,10 @@
 package rig
 
-import "strconv"
+import (
+	"fmt"
+	"strconv"
+	"strings"
+)
 
 // Summary is a structured, agent-friendly description of a rig file: the chain
 // order, the parallel-path mixer and every module's effective parameter values.
@@ -23,6 +27,19 @@ type FootswitchSummary struct {
 	Switch    string `json:"switch"` // FS5..FS8
 	Module    string `json:"module"`
 	Operation string `json:"operation"`
+}
+
+// FootswitchLine renders the assigned stomp switches as a one-liner
+// ("FS5=Wham (On), FS6=Amp (On)") or a "none assigned" message.
+func FootswitchLine(fs []FootswitchSummary) string {
+	if len(fs) == 0 {
+		return "none assigned"
+	}
+	parts := make([]string, 0, len(fs))
+	for _, f := range fs {
+		parts = append(parts, fmt.Sprintf("%s=%s (%s)", f.Switch, f.Module, f.Operation))
+	}
+	return strings.Join(parts, ", ")
 }
 
 // MixerSummary is the parallel-path mixer: the per-path level, pan and delay

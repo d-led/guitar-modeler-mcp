@@ -28,6 +28,11 @@ is written, so an invalid preset is never produced.
 6. `get_fx_placement` — where each effect category goes (before vs after the
    amp) and how many slots each chain layout offers, so you know what fits.
 7. `design_rig` — resolve everything and write the `.rig` + an HTML report.
+   **Assign the hardware controls in the same call** (see Footswitches below):
+   a wah, whammy or solo-boost that the player toggles must be put on a stomp
+   switch, otherwise the rig is unplayable as a stompbox. The tool's reply
+   lists the assigned switches (or warns that none are assigned) so you can
+   tell at a glance whether the controls are wired up.
 8. `rig_decode` / `render_report` — inspect or re-report an existing preset.
 9. `estimate_rig_level` — check a rig's output level (the default amp master of
    50% is −6 dB, so a fresh rig is usually ~6 dB quiet). Set `output_level` on

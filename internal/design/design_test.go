@@ -1,6 +1,7 @@
 package design
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/catalog"
@@ -137,5 +138,61 @@ func TestDesignParallelRequiresSecondAmp(t *testing.T) {
 	d := NewDesigner(catalog.New())
 	if _, err := d.Design(Request{Name: "x", Amp: "65 Black SR", Routing: rig.RoutingPS}); err == nil {
 		t.Fatal("expected error: PS-1 needs a second amp (amp2)")
+	}
+}
+
+func notesMention(t *testing.T, notes []string, substr string) bool {
+	t.Helper()
+	for _, n := range notes {
+		if strings.Contains(n, substr) {
+			return true
+		}
+	}
+	return false
+}
+
+func TestDesignHintsExpressionModuleNeedsFootswitch(t *testing.T) {
+	d := NewDesigner(catalog.New())
+	res, err := d.Design(Request{
+		Name: "Whammy",
+		Amp:  "65 Black SR",
+		FX:   []FXBlock{{Type: "Wham", Enabled: true}},
+	})
+	if err != nil {
+		t.Fatalf("Design: %v", err)
+	}
+	if !notesMention(t, res.Notes, "Wham") || !notesMention(t, res.Notes, "footswitch") {
+		t.Fatalf("expected a footswitch hint for Wham, notes = %v", res.Notes)
+	}
+}
+
+func TestDesignNoFootswitchHintWhenAssigned(t *testing.T) {
+	d := NewDesigner(catalog.New())
+	res, err := d.Design(Request{
+		Name:         "Whammy Toe",
+		Amp:          "65 Black SR",
+		FX:           []FXBlock{{Type: "Wham", Enabled: true}},
+		Footswitches: []rig.Footswitch{{Module: "Wham"}},
+	})
+	if err != nil {
+		t.Fatalf("Design: %v", err)
+	}
+	if notesMention(t, res.Notes, "has no footswitch") {
+		t.Fatalf("did not expect a footswitch hint when Wham is assigned, notes = %v", res.Notes)
+	}
+}
+
+func TestDesignNoFootswitchHintForNonExpressionModule(t *testing.T) {
+	d := NewDesigner(catalog.New())
+	res, err := d.Design(Request{
+		Name: "Boost",
+		Amp:  "65 Black SR",
+		FX:   []FXBlock{{Type: "Green JRC-OD", Enabled: true}},
+	})
+	if err != nil {
+		t.Fatalf("Design: %v", err)
+	}
+	if notesMention(t, res.Notes, "has no footswitch") {
+		t.Fatalf("did not expect a footswitch hint for a distortion, notes = %v", res.Notes)
 	}
 }

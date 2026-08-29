@@ -243,6 +243,9 @@ func TestIntegrationDesignFootswitches(t *testing.T) {
 	if !strings.Contains(out, "Rig file:") {
 		t.Fatalf("design_rig output missing rig path: %s", out)
 	}
+	if !strings.Contains(out, "Footswitches: FS5=Wham (On)") {
+		t.Fatalf("design_rig output missing footswitch summary: %s", out)
+	}
 
 	rigs, err := filepath.Glob(filepath.Join(dir, "*.rig"))
 	if err != nil || len(rigs) != 1 {
@@ -258,6 +261,29 @@ func TestIntegrationDesignFootswitches(t *testing.T) {
 	}
 	if !strings.Contains(decoded, `"operation": "On"`) {
 		t.Fatalf("rig_decode missing default On operation: %s", decoded)
+	}
+}
+
+func TestIntegrationDesignReportsUnassignedFootswitches(t *testing.T) {
+	s := newIntegrationServer(t)
+	dir := t.TempDir()
+
+	out := resultText(t, rpc(t, s, 1, "tools/call", map[string]any{
+		"name": "design_rig",
+		"arguments": map[string]any{
+			"name":       "No Switch",
+			"amp":        "65 Black SR",
+			"output_dir": dir,
+			"fx": []any{
+				map[string]any{"type": "Wham", "enabled": true},
+			},
+		},
+	}))
+	if !strings.Contains(out, "Footswitches: none assigned") {
+		t.Fatalf("design_rig output should warn about unassigned footswitches: %s", out)
+	}
+	if !strings.Contains(out, "Wham has no footswitch") {
+		t.Fatalf("design_rig output should hint that Wham needs a footswitch: %s", out)
 	}
 }
 

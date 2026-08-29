@@ -394,6 +394,13 @@ func summarize(file *rig.RigFile, notes []string, song, rigPath, htmlPath string
 	for _, n := range notes {
 		fmt.Fprintf(&b, "- %s\n", n)
 	}
+
+	// Report the hardware assignments so the caller never forgets what the
+	// stomp switches (FS5..FS8) control.
+	if summary, err := rig.Describe(file); err == nil {
+		fmt.Fprintf(&b, "Footswitches: %s.\n", rig.FootswitchLine(summary.Footswitches))
+	}
+
 	fmt.Fprintf(&b, "Rig file: %s\n", rigPath)
 	fmt.Fprintf(&b, "Report:  %s\n", htmlPath)
 	return b.String()
