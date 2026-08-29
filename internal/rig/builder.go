@@ -116,13 +116,13 @@ func (b *Builder) Build(spec Spec) (*RigFile, error) {
 		case "Amp":
 			model := strParam(block.Params, "Type")
 			if model == "" {
-				return nil, fmt.Errorf("Amp block requires a \"Type\" parameter with the amp model")
+				return nil, fmt.Errorf("amp block requires a \"Type\" parameter with the amp model")
 			}
 			node = ampNode(model, block.Params)
 		case "Cab":
 			cab := strParam(block.Params, "CabType")
 			if cab == "" {
-				return nil, fmt.Errorf("Cab block requires a \"CabType\" parameter with the cabinet model")
+				return nil, fmt.Errorf("cab block requires a \"CabType\" parameter with the cabinet model")
 			}
 			mic := strParam(block.Params, "MicType")
 			if mic == "" {

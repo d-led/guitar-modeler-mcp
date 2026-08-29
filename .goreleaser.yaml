@@ -1,0 +1,63 @@
+version: 2
+
+project_name: guitar-modeler-mcp
+
+# Separate dir so --clean never wipes anything the repo owns.
+dist: .goreleaser-dist
+
+before:
+  hooks:
+    - go mod tidy
+    - go test ./...
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X github.com/d-led/guitar-modeler-mcp/cmd.version={{ .Version }}
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    # Requested matrix: linux amd64/arm64, windows amd64, darwin universal.
+    ignore:
+      - goos: windows
+        goarch: arm64
+
+# Merge darwin/amd64 and darwin/arm64 into a single universal binary.
+universal_binaries:
+  - replace: true
+
+archives:
+  - formats: ['tar.gz']
+    # uname-compatible name template; zip for Windows.
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    format_overrides:
+      - goos: windows
+        formats: ['zip']
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+
+# vim: set ts=2 sw=2 tw=0 fo=cnqoj

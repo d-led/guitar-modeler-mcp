@@ -67,7 +67,7 @@ type Placement struct {
 func PlacementGuide() Placement {
 	categories := make([]PlacementCategory, 0, len(categoryPlacements))
 	for _, cp := range categoryPlacements {
-		categories = append(categories, PlacementCategory{Category: cp.Category, Place: cp.Place, Why: cp.Why})
+		categories = append(categories, PlacementCategory(cp))
 	}
 
 	return Placement{

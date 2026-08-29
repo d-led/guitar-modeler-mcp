@@ -2,18 +2,36 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+
+	"github.com/d-led/guitar-modeler-mcp/internal/mooer"
 )
 
 // deviceInfo describes one supported device for the `device list` command.
 type deviceInfo struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	FileExt     string `json:"file_ext"`
+	Name         string `json:"name"`
+	Description  string `json:"description"`
+	FileExchange bool   `json:"file_exchange"`
+	FileExt      string `json:"file_ext,omitempty"`
 }
 
-var supportedDevices = []deviceInfo{
-	{Name: "gigboard", Description: "HeadRush Gigboard", FileExt: ".rig"},
-	{Name: "mooer", Description: "Mooer GE150 Pro Li / GE150 Max", FileExt: ".mo"},
+// supportedDevices lists the Gigboard plus every registered Mooer model.
+func supportedDevices() []deviceInfo {
+	list := []deviceInfo{
+		{Name: "gigboard", Description: "HeadRush Gigboard", FileExchange: true, FileExt: ".rig"},
+	}
+	for _, m := range mooer.Models() {
+		ext := ""
+		if m.FileExchange {
+			ext = m.FileExt
+		}
+		list = append(list, deviceInfo{
+			Name:         m.Name,
+			Description:  m.Display,
+			FileExchange: m.FileExchange,
+			FileExt:      ext,
+		})
+	}
+	return list
 }
 
 func newDeviceCmd() *cobra.Command {
@@ -26,7 +44,7 @@ func newDeviceCmd() *cobra.Command {
 		Short: "List supported devices",
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			return printJSON(supportedDevices)
+			return printJSON(supportedDevices())
 		},
 	})
 	return cmd

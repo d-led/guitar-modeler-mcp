@@ -47,15 +47,15 @@ type rawParam struct {
 var (
 	once    sync.Once
 	modules map[string]Module
-	loadErr error
 )
 
 func load() {
 	once.Do(func() {
 		var raw map[string]map[string]rawParam
+		// The specs are embedded at build time; a parse failure is a
+		// programmer error and must not be silently swallowed.
 		if err := json.Unmarshal(rawJSON, &raw); err != nil {
-			loadErr = err
-			return
+			panic("modspec: parse embedded params.json: " + err.Error())
 		}
 		modules = make(map[string]Module, len(raw))
 		for name, params := range raw {

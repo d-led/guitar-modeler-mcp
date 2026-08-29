@@ -1,0 +1,92 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Lint
+        uses: golangci/golangci-lint-action@v9.3.0
+        with:
+          version: v2.13.1
+      - name: Run unit tests
+        run: go test ./...
+
+  # "Latest" binaries for the main branch: every push to main uploads fresh
+  # per-platform binaries as build artifacts (not releases). Tagged releases
+  # are handled by the goreleaser workflow.
+  latest-binaries:
+    needs: checks
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            artifact: guitar-modeler-mcp-linux-amd64
+          - goos: linux
+            goarch: arm64
+            artifact: guitar-modeler-mcp-linux-arm64
+          - goos: windows
+            goarch: amd64
+            artifact: guitar-modeler-mcp-windows-amd64
+            ext: .exe
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Build binary
+        run: |
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} CGO_ENABLED=0 \
+            go build -trimpath \
+              -ldflags "-s -w -X github.com/d-led/guitar-modeler-mcp/cmd.version=$(git describe --tags --always --dirty)" \
+              -o dist/guitar-modeler-mcp${{ matrix.ext }} .
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/guitar-modeler-mcp${{ matrix.ext }}
+
+  latest-macos-universal:
+    needs: checks
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Build darwin amd64
+        run: |
+          GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 \
+            go build -trimpath \
+              -ldflags "-s -w -X github.com/d-led/guitar-modeler-mcp/cmd.version=$(git describe --tags --always --dirty)" \
+              -o dist/guitar-modeler-mcp-amd64 .
+      - name: Build darwin arm64
+        run: |
+          GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 \
+            go build -trimpath \
+              -ldflags "-s -w -X github.com/d-led/guitar-modeler-mcp/cmd.version=$(git describe --tags --always --dirty)" \
+              -o dist/guitar-modeler-mcp-arm64 .
+      - name: Merge universal binary
+        run: lipo -create -output dist/guitar-modeler-mcp dist/guitar-modeler-mcp-amd64 dist/guitar-modeler-mcp-arm64
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: guitar-modeler-mcp-macos-universal
+          path: dist/guitar-modeler-mcp

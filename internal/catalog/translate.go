@@ -116,7 +116,6 @@ func (c *Catalog) TranslateAmp(query string) []Match {
 		model := normalize(a.Model)
 		channel := normalize(a.Channel)
 		wattage := normalize(a.Wattage)
-		desc := normalize(a.Description)
 		var styles []string
 		for _, s := range a.Style {
 			styles = append(styles, normalize(s))
@@ -154,9 +153,6 @@ func (c *Catalog) TranslateAmp(query string) []Match {
 				if st == w {
 					score++
 				}
-			}
-			if containsWord(desc, w) {
-				// Description overlap is a weak signal only.
 			}
 		}
 

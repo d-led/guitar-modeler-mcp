@@ -1,3 +1,8 @@
 /rigs/
 *.html
 guitar-modeler-mcp
+/guitar-modeler-mcp.exe
+
+# Goreleaser build output
+/.goreleaser-dist/
+/dist/
