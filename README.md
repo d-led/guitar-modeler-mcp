@@ -47,9 +47,11 @@ sponsored by HeadRush or any of the referenced brands.
   `.tsl` reader/writer follows the real backup format — a named set of patches
   each stored as a 2335-byte Katana-layout record under
   `data[0][].paramSet["User%Patch"]` — with the offsets and encodings taken
-  from the `waza-tsl` reverse-engineering reference (amp gain scaling, booster
-  on/off, the second delay block, and the gyro/ambience/mode spatial settings
-  included). The **XSONIC AIRSTEP BW** foot controller's four footswitch modes
+  from the `waza-tsl` reverse-engineering reference: amp gain scaling, booster
+  on/off plus bottom/solo/direct mix, the second delay block, per-effect knobs
+  for every MOD/FX effect (`mod_params`/`fx_params`), reverb time and
+  pre-delay, the noise suppressor, and the gyro/ambience/mode spatial settings.
+  The **XSONIC AIRSTEP BW** foot controller's four footswitch modes
   (channel memories CH 1–6 + effect toggles) are modelled and printable on the
   setup card.
 - **Quad Cortex** — planned; see [OpenCortex](https://github.com/VanIseghemThomas/OpenCortex)

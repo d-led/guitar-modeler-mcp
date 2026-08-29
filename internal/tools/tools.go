@@ -522,29 +522,50 @@ func thrKnobProps() map[string]any {
 // directory).
 func wazaPatchProps() map[string]any {
 	return map[string]any{
-		"amp":               stringSchema("Amp type: CLEAN, CRUNCH, LEAD, BROWN or FLAT (or a description, e.g. \"Twin Reverb\")."),
-		"amp_gain":          numberSchema("Optional amp gain (0-100)."),
-		"amp_volume":        numberSchema("Optional amp volume (0-100)."),
-		"amp_bass":          numberSchema("Optional amp bass (0-100)."),
-		"amp_middle":        numberSchema("Optional amp middle (0-100)."),
-		"amp_treble":        numberSchema("Optional amp treble (0-100)."),
-		"amp_presence":      numberSchema("Optional amp presence (0-100)."),
-		"booster":           stringSchema("Optional BOOSTER effect, e.g. \"T-SCREAM\" or \"TS-808\"."),
-		"booster_drive":     numberSchema("Optional booster drive (0-120)."),
-		"booster_tone":      numberSchema("Optional booster tone (0-100, 50 = neutral)."),
-		"booster_level":     numberSchema("Optional booster level (0-100)."),
-		"mod":               stringSchema("Optional MOD effect, e.g. \"CHORUS\"."),
+		"amp":                stringSchema("Amp type: CLEAN, CRUNCH, LEAD, BROWN or FLAT (or a description, e.g. \"Twin Reverb\")."),
+		"amp_gain":           numberSchema("Optional amp gain (0-100)."),
+		"amp_volume":         numberSchema("Optional amp volume (0-100)."),
+		"amp_bass":           numberSchema("Optional amp bass (0-100)."),
+		"amp_middle":         numberSchema("Optional amp middle (0-100)."),
+		"amp_treble":         numberSchema("Optional amp treble (0-100)."),
+		"amp_presence":       numberSchema("Optional amp presence (0-100)."),
+		"booster":            stringSchema("Optional BOOSTER effect, e.g. \"T-SCREAM\" or \"TS-808\"."),
+		"booster_drive":      numberSchema("Optional booster drive (0-120)."),
+		"booster_bottom":     numberSchema("Optional booster bottom (-50..+50)."),
+		"booster_tone":       numberSchema("Optional booster tone (0-100, 50 = neutral)."),
+		"booster_solo":       boolSchema("Optional booster solo switch (true/false)."),
+		"booster_solo_level": numberSchema("Optional booster solo level (0-100)."),
+		"booster_level":      numberSchema("Optional booster level (0-100)."),
+		"booster_direct_mix": numberSchema("Optional booster direct mix (0-100)."),
+		"mod":                stringSchema("Optional MOD effect, e.g. \"CHORUS\"."),
+		"mod_params": objectSchema(map[string]any{
+			"rate":         numberSchema("e.g. 35"),
+			"depth":        numberSchema("e.g. 60"),
+			"effect_level": numberSchema("e.g. 50"),
+			"direct_mix":   numberSchema("e.g. 100"),
+		}),
 		"fx":                stringSchema("Optional FX effect (same list as MOD)."),
+		"fx_params":         objectSchema(map[string]any{}),
 		"delay":             stringSchema("Optional DELAY effect, e.g. \"TAPE ECHO\"."),
 		"delay_time":        numberSchema("Optional delay time in milliseconds."),
 		"delay_feedback":    numberSchema("Optional delay feedback (0-100)."),
+		"delay_high_cut":    numberSchema("Optional delay high cut (0-14)."),
 		"delay_level":       numberSchema("Optional delay level (0-120)."),
+		"delay_direct_mix":  numberSchema("Optional delay direct mix (0-100)."),
 		"reverb":            stringSchema("Optional REVERB effect, e.g. \"HALL REVERB\"."),
+		"reverb_time":       numberSchema("Optional reverb time in seconds (0.1-10.0)."),
+		"reverb_pre_delay":  numberSchema("Optional reverb pre-delay in milliseconds (0-500)."),
 		"reverb_level":      numberSchema("Optional reverb level (0-100)."),
+		"reverb_direct_mix": numberSchema("Optional reverb direct mix (0-100)."),
 		"cabinet_resonance": stringSchema("Optional: VINTAGE, MODERN or DEEP."),
 		"ambience":          stringSchema("Optional: STUDIO or STAGE."),
+		"ambience_level":    numberSchema("Optional ambience level (0-100)."),
 		"position":          stringSchema("Optional: SURROUND, STATIC or STAGE."),
+		"guitar_position":   numberSchema("Optional guitar position in degrees (-180..+180, SURROUND only)."),
 		"mode":              stringSchema("Optional: DELAY, DLY+REV or REVERB."),
+		"ns_on":             boolSchema("Optional noise suppressor switch (true = on, false = off)."),
+		"ns_threshold":      numberSchema("Optional noise suppressor threshold (0-100)."),
+		"ns_release":        numberSchema("Optional noise suppressor release (0-100)."),
 	}
 }
 
@@ -915,6 +936,41 @@ func argBool(args map[string]any, key string, def bool) bool {
 	return def
 }
 
+// argFloatMap returns the numeric entries of an object argument (e.g.
+// mod_params/fx_params), or nil when the argument is absent or not an object.
+func argFloatMap(args map[string]any, key string) map[string]float64 {
+	obj, ok := args[key].(map[string]any)
+	if !ok {
+		return nil
+	}
+	out := make(map[string]float64, len(obj))
+	for k, v := range obj {
+		switch n := v.(type) {
+		case float64:
+			out[k] = n
+		case int:
+			out[k] = float64(n)
+		case int64:
+			out[k] = float64(n)
+		}
+	}
+	return out
+}
+
+// argBoolPtr returns the boolean argument as a pointer, or nil when absent.
+// Used for optional switches where nil means "keep the default".
+func argBoolPtr(args map[string]any, key string) *bool {
+	v, ok := args[key]
+	if !ok {
+		return nil
+	}
+	b, ok := v.(bool)
+	if !ok {
+		return nil
+	}
+	return &b
+}
+
 func marshal(v any) (string, error) {
 	b, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
@@ -938,6 +994,10 @@ func stringSchema(desc string) map[string]any {
 
 func numberSchema(desc string) map[string]any {
 	return map[string]any{"type": "number", "description": desc}
+}
+
+func boolSchema(desc string) map[string]any {
+	return map[string]any{"type": "boolean", "description": desc}
 }
 
 func arraySchema(desc string, items map[string]any) map[string]any {
@@ -1344,28 +1404,44 @@ func wazaPatch(tmpl waza.Patch, spec waza.Spec) waza.Patch {
 		name = "New Patch"
 	}
 	return tmpl.WriteParams(waza.Params{
-		AmpType:       spec.Amp,
-		AmpGain:       spec.Gain,
-		AmpVolume:     spec.Volume,
-		AmpBass:       spec.Bass,
-		AmpMiddle:     spec.Middle,
-		AmpTreble:     spec.Treble,
-		AmpPresence:   spec.Presence,
-		BoosterType:   spec.Booster,
-		BoosterDrive:  spec.BoosterDrive,
-		BoosterTone:   spec.BoosterTone,
-		BoosterLevel:  spec.BoosterLevel,
-		ModType:       spec.Mod,
-		FXType:        spec.FX,
-		DelayType:     spec.Delay,
-		DelayTime:     spec.DelayTime,
-		DelayFeedback: spec.DelayFeedback,
-		DelayLevel:    spec.DelayLevel,
-		ReverbType:    spec.Reverb,
-		ReverbLevel:   spec.ReverbLevel,
-		Position:      spec.Position,
-		Ambience:      spec.Ambience,
-		Mode:          spec.Mode,
+		AmpType:          spec.Amp,
+		AmpGain:          spec.Gain,
+		AmpVolume:        spec.Volume,
+		AmpBass:          spec.Bass,
+		AmpMiddle:        spec.Middle,
+		AmpTreble:        spec.Treble,
+		AmpPresence:      spec.Presence,
+		BoosterType:      spec.Booster,
+		BoosterDrive:     spec.BoosterDrive,
+		BoosterBottom:    spec.BoosterBottom,
+		BoosterTone:      spec.BoosterTone,
+		BoosterSolo:      spec.BoosterSolo,
+		BoosterSoloLevel: spec.BoosterSoloLevel,
+		BoosterLevel:     spec.BoosterLevel,
+		BoosterDirectMix: spec.BoosterDirectMix,
+		ModType:          spec.Mod,
+		ModParams:        spec.ModParams,
+		FXType:           spec.FX,
+		FXParams:         spec.FXParams,
+		DelayType:        spec.Delay,
+		DelayTime:        spec.DelayTime,
+		DelayFeedback:    spec.DelayFeedback,
+		DelayHighCut:     spec.DelayHighCut,
+		DelayLevel:       spec.DelayLevel,
+		DelayDirectMix:   spec.DelayDirectMix,
+		ReverbType:       spec.Reverb,
+		ReverbTime:       spec.ReverbTime,
+		ReverbPreDelay:   spec.ReverbPreDelay,
+		ReverbLevel:      spec.ReverbLevel,
+		ReverbDirectMix:  spec.ReverbDirectMix,
+		Position:         spec.Position,
+		GuitarPosition:   spec.GuitarPosition,
+		Ambience:         spec.Ambience,
+		AmbienceLevel:    spec.AmbienceLevel,
+		Mode:             spec.Mode,
+		NSOn:             spec.NSOn,
+		NSThreshold:      spec.NSThreshold,
+		NSRelease:        spec.NSRelease,
 	}).WithName(name)
 }
 
@@ -1383,29 +1459,45 @@ func (r *Registrar) wazaReadTSL(args map[string]any) (string, error) {
 	for _, p := range patches {
 		params := p.ReadParams()
 		decoded = append(decoded, map[string]any{
-			"name":           p.Name,
-			"amp":            params.AmpType,
-			"gain":           params.AmpGain,
-			"volume":         params.AmpVolume,
-			"bass":           params.AmpBass,
-			"middle":         params.AmpMiddle,
-			"treble":         params.AmpTreble,
-			"presence":       params.AmpPresence,
-			"booster":        params.BoosterType,
-			"booster_drive":  params.BoosterDrive,
-			"booster_tone":   params.BoosterTone,
-			"booster_level":  params.BoosterLevel,
-			"mod":            params.ModType,
-			"fx":             params.FXType,
-			"delay":          params.DelayType,
-			"delay_time_ms":  params.DelayTime,
-			"delay_feedback": params.DelayFeedback,
-			"delay_level":    params.DelayLevel,
-			"reverb":         params.ReverbType,
-			"reverb_level":   params.ReverbLevel,
-			"position":       params.Position,
-			"ambience":       params.Ambience,
-			"mode":           params.Mode,
+			"name":                p.Name,
+			"amp":                 params.AmpType,
+			"gain":                params.AmpGain,
+			"volume":              params.AmpVolume,
+			"bass":                params.AmpBass,
+			"middle":              params.AmpMiddle,
+			"treble":              params.AmpTreble,
+			"presence":            params.AmpPresence,
+			"booster":             params.BoosterType,
+			"booster_drive":       params.BoosterDrive,
+			"booster_bottom":      params.BoosterBottom,
+			"booster_tone":        params.BoosterTone,
+			"booster_solo":        params.BoosterSolo,
+			"booster_solo_level":  params.BoosterSoloLevel,
+			"booster_level":       params.BoosterLevel,
+			"booster_direct_mix":  params.BoosterDirectMix,
+			"mod":                 params.ModType,
+			"mod_params":          params.ModParams,
+			"fx":                  params.FXType,
+			"fx_params":           params.FXParams,
+			"delay":               params.DelayType,
+			"delay_time_ms":       params.DelayTime,
+			"delay_feedback":      params.DelayFeedback,
+			"delay_high_cut":      params.DelayHighCut,
+			"delay_level":         params.DelayLevel,
+			"delay_direct_mix":    params.DelayDirectMix,
+			"reverb":              params.ReverbType,
+			"reverb_time_s":       params.ReverbTime,
+			"reverb_pre_delay_ms": params.ReverbPreDelay,
+			"reverb_level":        params.ReverbLevel,
+			"reverb_direct_mix":   params.ReverbDirectMix,
+			"position":            params.Position,
+			"guitar_position":     params.GuitarPosition,
+			"ambience":            params.Ambience,
+			"ambience_level":      params.AmbienceLevel,
+			"mode":                params.Mode,
+			"ns_on":               params.NSOn != nil && *params.NSOn,
+			"ns_threshold":        params.NSThreshold,
+			"ns_release":          params.NSRelease,
 		})
 	}
 	return marshal(map[string]any{
@@ -1420,30 +1512,46 @@ func (r *Registrar) wazaReadTSL(args map[string]any) (string, error) {
 func (r *Registrar) wazaSpec(args map[string]any) (waza.Spec, error) {
 	d := waza.Default()
 	return d.Resolve(waza.Spec{
-		Name:          argString(args, "name"),
-		Amp:           argString(args, "amp"),
-		Booster:       argString(args, "booster"),
-		Mod:           argString(args, "mod"),
-		FX:            argString(args, "fx"),
-		Delay:         argString(args, "delay"),
-		Reverb:        argString(args, "reverb"),
-		CabResonance:  argString(args, "cabinet_resonance"),
-		Ambience:      argString(args, "ambience"),
-		Position:      argString(args, "position"),
-		Mode:          argString(args, "mode"),
-		Gain:          int(argFloat(args, "amp_gain")),
-		Volume:        int(argFloat(args, "amp_volume")),
-		Bass:          int(argFloat(args, "amp_bass")),
-		Middle:        int(argFloat(args, "amp_middle")),
-		Treble:        int(argFloat(args, "amp_treble")),
-		Presence:      int(argFloat(args, "amp_presence")),
-		BoosterDrive:  int(argFloat(args, "booster_drive")),
-		BoosterTone:   int(argFloat(args, "booster_tone")),
-		BoosterLevel:  int(argFloat(args, "booster_level")),
-		DelayTime:     int(argFloat(args, "delay_time")),
-		DelayFeedback: int(argFloat(args, "delay_feedback")),
-		DelayLevel:    int(argFloat(args, "delay_level")),
-		ReverbLevel:   int(argFloat(args, "reverb_level")),
+		Name:             argString(args, "name"),
+		Amp:              argString(args, "amp"),
+		Booster:          argString(args, "booster"),
+		Mod:              argString(args, "mod"),
+		FX:               argString(args, "fx"),
+		Delay:            argString(args, "delay"),
+		Reverb:           argString(args, "reverb"),
+		CabResonance:     argString(args, "cabinet_resonance"),
+		Ambience:         argString(args, "ambience"),
+		Position:         argString(args, "position"),
+		Mode:             argString(args, "mode"),
+		Gain:             int(argFloat(args, "amp_gain")),
+		Volume:           int(argFloat(args, "amp_volume")),
+		Bass:             int(argFloat(args, "amp_bass")),
+		Middle:           int(argFloat(args, "amp_middle")),
+		Treble:           int(argFloat(args, "amp_treble")),
+		Presence:         int(argFloat(args, "amp_presence")),
+		BoosterDrive:     int(argFloat(args, "booster_drive")),
+		BoosterBottom:    int(argFloat(args, "booster_bottom")),
+		BoosterTone:      int(argFloat(args, "booster_tone")),
+		BoosterSolo:      argBool(args, "booster_solo", false),
+		BoosterSoloLevel: int(argFloat(args, "booster_solo_level")),
+		BoosterLevel:     int(argFloat(args, "booster_level")),
+		BoosterDirectMix: int(argFloat(args, "booster_direct_mix")),
+		ModParams:        argFloatMap(args, "mod_params"),
+		FXParams:         argFloatMap(args, "fx_params"),
+		DelayTime:        int(argFloat(args, "delay_time")),
+		DelayFeedback:    int(argFloat(args, "delay_feedback")),
+		DelayHighCut:     int(argFloat(args, "delay_high_cut")),
+		DelayLevel:       int(argFloat(args, "delay_level")),
+		DelayDirectMix:   int(argFloat(args, "delay_direct_mix")),
+		ReverbTime:       argFloat(args, "reverb_time"),
+		ReverbPreDelay:   int(argFloat(args, "reverb_pre_delay")),
+		ReverbLevel:      int(argFloat(args, "reverb_level")),
+		ReverbDirectMix:  int(argFloat(args, "reverb_direct_mix")),
+		GuitarPosition:   int(argFloat(args, "guitar_position")),
+		AmbienceLevel:    int(argFloat(args, "ambience_level")),
+		NSOn:             argBoolPtr(args, "ns_on"),
+		NSThreshold:      int(argFloat(args, "ns_threshold")),
+		NSRelease:        int(argFloat(args, "ns_release")),
 	})
 }
 

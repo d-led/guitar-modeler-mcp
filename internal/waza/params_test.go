@@ -204,6 +204,79 @@ func TestWriteParamsSpatial(t *testing.T) {
 	}
 }
 
+// TestWriteParamsEffectKnobs proves the MOD/FX effect sub-parameters (rate,
+// depth, effect level) reach the correct per-effect offsets and read back.
+func TestWriteParamsEffectKnobs(t *testing.T) {
+	tmpl, err := TemplatePatch()
+	if err != nil {
+		t.Fatalf("TemplatePatch: %v", err)
+	}
+
+	out := tmpl.WriteParams(Params{
+		ModType:   "CHORUS",
+		ModParams: map[string]float64{"rate": 35, "depth": 60, "effect_level": 50},
+		FXType:    "FLANGER",
+		FXParams:  map[string]float64{"rate": 15, "depth": 25},
+	})
+
+	got := out.ReadParams()
+	if got.ModType != "CHORUS" || got.FXType != "FLANGER" {
+		t.Fatalf("mod/fx = %q/%q", got.ModType, got.FXType)
+	}
+	if got.ModParams["rate"] != 35 || got.ModParams["depth"] != 60 || got.ModParams["effect_level"] != 50 {
+		t.Fatalf("chorus knobs = %v", got.ModParams)
+	}
+	if got.FXParams["rate"] != 15 || got.FXParams["depth"] != 25 {
+		t.Fatalf("flanger knobs = %v", got.FXParams)
+	}
+}
+
+// TestWriteParamsBlockExtras proves reverb time, delay high cut and the noise
+// suppressor are encoded with their documented scalings.
+func TestWriteParamsBlockExtras(t *testing.T) {
+	tmpl, err := TemplatePatch()
+	if err != nil {
+		t.Fatalf("TemplatePatch: %v", err)
+	}
+
+	out := tmpl.WriteParams(Params{
+		ReverbType:       "HALL REVERB",
+		ReverbTime:       3.2,
+		DelayType:        "DIGITAL DELAY",
+		DelayHighCut:     7,
+		NSOn:             boolPtr(false),
+		BoosterType:      "T-SCREAM",
+		BoosterBottom:    -30,
+		BoosterSolo:      true,
+		BoosterSoloLevel: 80,
+	})
+
+	if got := out.Raw[offReverbTime]; got != 31 {
+		t.Fatalf("reverb time byte = %d, want 31 (round(-1+10*3.2))", got)
+	}
+	if got := out.Raw[offDelayHighCut]; got != 7 {
+		t.Fatalf("delay high cut byte = %d, want 7", got)
+	}
+	if out.Raw[offNSOn] != 0 {
+		t.Fatalf("NS on/off = %d, want 0 (off)", out.Raw[offNSOn])
+	}
+	if got := out.Raw[offBoosterBottom]; got != 20 {
+		t.Fatalf("booster bottom byte = %d, want 20 (50-30)", got)
+	}
+	if out.Raw[offBoosterSoloSW] != 1 || out.Raw[offBoosterSoloLv] != 80 {
+		t.Fatalf("booster solo = %d/%d, want 1/80", out.Raw[offBoosterSoloSW], out.Raw[offBoosterSoloLv])
+	}
+
+	got := out.ReadParams()
+	if got.ReverbTime != 3.2 || got.BoosterBottom != -30 || got.DelayHighCut != 7 {
+		t.Fatalf("block extras round-trip = reverb_time %v, bottom %d, high_cut %d",
+			got.ReverbTime, got.BoosterBottom, got.DelayHighCut)
+	}
+	if got.NSOn == nil || *got.NSOn {
+		t.Fatalf("NS should read as off, got %v", got.NSOn)
+	}
+}
+
 // TestTypeIndexMaps guards the amp type mapping against accidental edits; the
 // first three values are read back from real backups.
 func TestTypeIndexMaps(t *testing.T) {

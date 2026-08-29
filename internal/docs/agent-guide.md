@@ -19,16 +19,25 @@ are supported:
   backup (`.tsl`): a named set of one or more patches, each a 2335-byte binary
   record stored as hex under `data[0][].paramSet["User%Patch"]`. The record is
   the Katana dense patch layout, so amp (type/gain/volume/bass/middle/treble/
-  presence), booster (type/drive/tone/level), mod/fx (type), delay (type/time/
-  feedback/level), reverb (type/level) and the spatial settings — POSITION
-  (gyro SURROUND/STATIC/STAGE), AMBIENCE (STUDIO/STAGE) and MODE
-  (DELAY/DLY+REV/REVERB) — are read and written at their Katana offsets.
-  Amp gain uses the Katana scaling (stored = 20 + 0.8×gain); a requested delay
-  switches the second delay block off. Browse models with
-  `waza_catalog_list_*`, design with `waza_write_tsl` (writes a backup from the
-  built-in template patch with the chosen tone applied) and `waza_setup_card`
-  (a printable card), and read a backup's decoded patches with
-  `waza_read_tsl`. An **XSONIC AIRSTEP BW** foot controller turns the six
+  presence), booster (type/drive/bottom/tone/solo/level/direct mix), mod/fx
+  (type **plus per-effect knobs**), delay (type/time/feedback/high cut/level/
+  direct mix), reverb (type/time/pre-delay/level/direct mix), the noise
+  suppressor (on/threshold/release) and the spatial settings — POSITION
+  (gyro SURROUND/STATIC/STAGE + guitar position), AMBIENCE (STUDIO/STAGE +
+  level) and MODE (DELAY/DLY+REV/REVERB) — are read and written at their
+  Katana offsets. Amp gain uses the Katana scaling (stored = 20 + 0.8×gain);
+  a requested delay switches the second delay block off.
+
+  **Effect knobs.** Every MOD/FX effect exposes its editable parameters through
+  `mod_params` / `fx_params` (a flat object of knob → number), keyed by
+  canonical names such as `rate`, `depth`, `effect_level`, `direct_mix`,
+  `manual`, `resonance`, `sustain`, `attack`, `threshold`, `release`,
+  `feedback`, and the chorus `low_rate`/`high_rate` bands (the short `rate`/
+  `depth`/`effect_level` names target the chorus's low band). Browse models
+  with `waza_catalog_list_*`, design with `waza_write_tsl` (writes a backup
+  from the built-in template patch with the chosen tone applied) and
+  `waza_setup_card` (a printable card), and read a backup's decoded patches
+  with `waza_read_tsl`. An **XSONIC AIRSTEP BW** foot controller turns the six
   channel memories (CH 1–6, the Waza Air's "scenes") and the effect blocks into
   hands-free footswitches; list its four layouts with `waza_catalog_list_modes`
   and print one on the card with `waza_setup_card`'s `airstep_mode` (1–4).

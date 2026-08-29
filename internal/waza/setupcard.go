@@ -11,30 +11,46 @@ import (
 // value means "leave to BOSS TONE STUDIO" (the knob is omitted from the card
 // and, on write, the template's byte is kept).
 type Spec struct {
-	Name          string
-	Amp           string
-	Booster       string
-	Mod           string
-	FX            string
-	Delay         string
-	Reverb        string
-	CabResonance  string
-	Ambience      string
-	Position      string
-	Mode          string
-	Gain          int
-	Volume        int
-	Bass          int
-	Middle        int
-	Treble        int
-	Presence      int
-	BoosterDrive  int
-	BoosterTone   int
-	BoosterLevel  int
-	DelayTime     int
-	DelayFeedback int
-	DelayLevel    int
-	ReverbLevel   int
+	Name             string
+	Amp              string
+	Booster          string
+	Mod              string
+	FX               string
+	Delay            string
+	Reverb           string
+	CabResonance     string
+	Ambience         string
+	Position         string
+	Mode             string
+	Gain             int
+	Volume           int
+	Bass             int
+	Middle           int
+	Treble           int
+	Presence         int
+	BoosterDrive     int
+	BoosterBottom    int
+	BoosterTone      int
+	BoosterSolo      bool
+	BoosterSoloLevel int
+	BoosterLevel     int
+	BoosterDirectMix int
+	ModParams        map[string]float64
+	FXParams         map[string]float64
+	DelayTime        int
+	DelayFeedback    int
+	DelayHighCut     int
+	DelayLevel       int
+	DelayDirectMix   int
+	ReverbTime       float64
+	ReverbPreDelay   int
+	ReverbLevel      int
+	ReverbDirectMix  int
+	GuitarPosition   int
+	AmbienceLevel    int
+	NSOn             *bool
+	NSThreshold      int
+	NSRelease        int
 }
 
 // Resolve canonicalises the spec's selections to on-device names. Each field
@@ -181,7 +197,7 @@ td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;verti
 func writeParams(b *strings.Builder, s Spec) {
 	var rows []struct{ name, value string }
 	add := func(name string, v int) {
-		if v > 0 {
+		if v != 0 {
 			rows = append(rows, struct{ name, value string }{name, fmt.Sprintf("%d", v)})
 		}
 	}
@@ -192,18 +208,56 @@ func writeParams(b *strings.Builder, s Spec) {
 	add("AMP TREBLE", s.Treble)
 	add("AMP PRESENCE", s.Presence)
 	add("BOOSTER DRIVE", s.BoosterDrive)
+	add("BOOSTER BOTTOM", s.BoosterBottom)
 	add("BOOSTER TONE", s.BoosterTone)
 	add("BOOSTER LEVEL", s.BoosterLevel)
+	add("BOOSTER DIRECT MIX", s.BoosterDirectMix)
+	if s.BoosterSolo {
+		rows = append(rows, struct{ name, value string }{"BOOSTER SOLO", fmt.Sprintf("ON (%d)", s.BoosterSoloLevel)})
+	}
+	for _, name := range []string{"rate", "depth", "effect_level", "direct_mix", "level", "manual", "resonance", "sustain", "attack", "threshold", "release", "feedback"} {
+		if v, ok := s.ModParams[name]; ok && v != 0 {
+			rows = append(rows, struct{ name, value string }{strings.ToUpper(name), trimFloat(v)})
+		}
+	}
 	if s.DelayTime > 0 {
 		rows = append(rows, struct{ name, value string }{"DELAY TIME", fmt.Sprintf("%d ms", s.DelayTime)})
 	}
 	add("DELAY FEEDBACK", s.DelayFeedback)
+	add("DELAY HIGH CUT", s.DelayHighCut)
 	add("DELAY LEVEL", s.DelayLevel)
+	add("DELAY DIRECT MIX", s.DelayDirectMix)
+	if s.ReverbTime > 0 {
+		rows = append(rows, struct{ name, value string }{"REVERB TIME", fmt.Sprintf("%.1f s", s.ReverbTime)})
+	}
+	if s.ReverbPreDelay > 0 {
+		rows = append(rows, struct{ name, value string }{"REVERB PRE DELAY", fmt.Sprintf("%d ms", s.ReverbPreDelay)})
+	}
 	add("REVERB LEVEL", s.ReverbLevel)
+	add("REVERB DIRECT MIX", s.ReverbDirectMix)
+	add("GUITAR POSITION", s.GuitarPosition)
+	add("AMBIENCE LEVEL", s.AmbienceLevel)
+	if s.NSOn != nil {
+		on := "OFF"
+		if *s.NSOn {
+			on = "ON"
+		}
+		rows = append(rows, struct{ name, value string }{"NOISE SUPPRESSOR", on})
+	}
+	add("NS THRESHOLD", s.NSThreshold)
+	add("NS RELEASE", s.NSRelease)
 
 	for _, r := range rows {
 		writeSetting(b, r.name, r.value)
 	}
+}
+
+// trimFloat renders a float knob value without a trailing ".0".
+func trimFloat(v float64) string {
+	if v == float64(int(v)) {
+		return fmt.Sprintf("%d", int(v))
+	}
+	return fmt.Sprintf("%g", v)
 }
 
 func writeAirStepMode(b *strings.Builder, d Device, m AirStepMode) {
