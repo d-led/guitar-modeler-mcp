@@ -21,6 +21,12 @@ is written, so an invalid preset is never produced.
   description at a time; "Marshall Plexi clean edge of breakup tweed" mixes
   four amp characters and returns noise. Run separate queries (or filter
   `catalog_list_amps` by one keyword) and pick from the results.
+- **If a tool argument seems missing, trust `get_guide` and just try it.** The
+  server serves `get_guide` fresh on every call — it always documents the
+  current schema — while the client's tool list can be a stale snapshot from
+  session start. Likewise `rig_decode` re-reads the `.rig` file and reports the
+  actual `footswitches` on every call, so never guess hardware assignments from
+  memory: decode the file and read them.
 
 ## Tools and workflow
 
