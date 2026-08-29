@@ -40,9 +40,14 @@ func TestResolveAmpByNameAndInspiredBy(t *testing.T) {
 		t.Fatalf("Resolve(Twin Reverb) = %q, %v; want CLEAN", s.Amp, err)
 	}
 
-	s, err = d.Resolve(Spec{Amp: "EVH"})
+	s, err = d.Resolve(Spec{Amp: "SLO-100"})
 	if err != nil || s.Amp != "BROWN" {
-		t.Fatalf("Resolve(EVH) = %q, %v; want BROWN", s.Amp, err)
+		t.Fatalf("Resolve(SLO-100) = %q, %v; want BROWN", s.Amp, err)
+	}
+
+	s, err = d.Resolve(Spec{Amp: "5150"})
+	if err != nil || s.Amp != "LEAD" {
+		t.Fatalf("Resolve(5150) = %q, %v; want LEAD", s.Amp, err)
 	}
 }
 

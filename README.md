@@ -9,10 +9,8 @@ Supported devices:
 - **HeadRush Gigboard** — `.rig` patch files.
 - **Mooer** GE150 Pro Li, GE200, GE150, GE100 Pro — `.mo` files (file-capable
   models) plus a printable setup card for every model.
-- **BOSS Waza Air** — BOSS TONE STUDIO backups (`.tsl`, one or more patches)
-  plus a printable setup card.
-- **Yamaha THR** (THR-II, THR10, THR10C, THR10X) — printable setup cards (no
-  preset file format).
+- **BOSS Waza Air** — BOSS TONE STUDIO livesets (`.tsl`) plus a printable setup
+  card.
 
 ## Trademarks & disclaimer
 
@@ -22,14 +20,6 @@ identification purposes only; use of these names, trademarks and brands does not
 imply endorsement. This project is not affiliated with, endorsed by, or
 sponsored by HeadRush or any of the referenced brands.
 
-This software, its MCP tools, and any output produced by AI agents or the MCP
-server are provided "as is", without warranty of any kind. Presets, setup cards
-and other generated files are for reference only: you are solely responsible
-for verifying them before use. The authors and contributors accept no
-liability for any damage to hardware, loss of data, or other consequences
-arising from the use or misuse of this software or of output produced by AI
-agents or the MCP server.
-
 ## Roadmap
 
 - **Gigboard** — implemented.
@@ -38,19 +28,12 @@ agents or the MCP server.
   the classic **GE150 is card-only**. The cross-device `map_preset` tool maps
   Gigboard rigs to and from Mooer presets; mapped parameter values are neutral
   defaults (128 = noon) rather than copied knob positions.
-- **BOSS Waza Air** — implemented (`.tsl` backups and setup cards). The
-  `.tsl` reader/writer round-trips the real backup format — a named set of one
-  or more 2335-byte hex-encoded patches under `data[0][].paramSet["User%Patch"]`
-  — losslessly; new patches start from the built-in template with a new name
-  (parameter-level mapping is still set in the app). The **XSONIC AIRSTEP BW**
-  foot controller's four footswitch modes (channel memories CH 1–6 + effect
-  toggles) are modelled and printable on the setup card.
-- **Yamaha THR** — implemented (setup cards only). The THR-II amp selector is
-  an 8-type × 3-mode grid (24 positions, including three FLAT variants) with
-  Yamaha's official descriptions plus community-sourced "inspired by" amps,
-  plus 16 cabinets, two ECHO delay types (Tape, Digital Delay) and four REVERB
-  types (Plate, Hall, Spring, Room);
-  the legacy THR10/THR10C/THR10X amp lists are partial.
+- **BOSS Waza Air** — implemented (`.tsl` livesets and setup cards). The
+  `.tsl` reader/writer is based on the observed `liveset → patches → param`
+  variant; spatial-setting IDs (ambience, position, mode) are not yet written.
+  The **XSONIC AIRSTEP BW** foot controller's four footswitch modes (channel
+  memories CH 1–6 + effect toggles) are modelled and printable on the setup
+  card.
 - **Quad Cortex** — planned; see [OpenCortex](https://github.com/VanIseghemThomas/OpenCortex)
   (open-source QC preset format work) as a starting point for the preset format.
 
@@ -77,10 +60,7 @@ per-device backend supplies the model catalog and preset file format:
   `.mo` format and setup cards) and `internal/presetmap` (Gigboard ↔ Mooer
   model mapping).
 - **Waza Air backend** — `internal/waza` (amp/effect catalogs, the BOSS TONE
-  STUDIO `.tsl` backup format and setup cards).
-- **Yamaha THR backend** — `internal/thr` (the THR-II 8×3 amp-selector grid
-  with official descriptions, the cabinet/EFFECT/ECHO/REVERB lists, and partial
-  legacy THR10/THR10C/THR10X catalogs; setup cards only).
+  STUDIO `.tsl` liveset format and setup cards).
 - `internal/assets/data/blocks` — factory block definitions captured from the
   device backup, used as defaults for every effect module.
 - `internal/docs/agent-guide.md` — the agent-facing guide (signal-chain topology,
@@ -105,8 +85,17 @@ GitHub release artifacts when a `v*.*.*` tag is pushed:
 - Windows `amd64`
 - macOS universal (`amd64` + `arm64`)
 
-Each push to `main` also uploads fresh "latest" per-platform binaries as CI
-build artifacts (see `.github/workflows/ci.yml`).
+Each push to `main` also builds and uploads fresh "latest" per-platform
+binaries as CI build artifacts, served via [nightly.link](https://nightly.link/):
+
+| Platform        | Download |
+| --------------- | -------- |
+| Linux amd64     | [guitar-modeler-mcp-linux-amd64](https://nightly.link/d-led/guitar-modeler-mcp/workflows/ci/main/guitar-modeler-mcp-linux-amd64.zip) |
+| Linux arm64     | [guitar-modeler-mcp-linux-arm64](https://nightly.link/d-led/guitar-modeler-mcp/workflows/ci/main/guitar-modeler-mcp-linux-arm64.zip) |
+| Windows amd64   | [guitar-modeler-mcp-windows-amd64.exe](https://nightly.link/d-led/guitar-modeler-mcp/workflows/ci/main/guitar-modeler-mcp-windows-amd64.zip) |
+| macOS universal | [guitar-modeler-mcp-macos-universal](https://nightly.link/d-led/guitar-modeler-mcp/workflows/ci/main/guitar-modeler-mcp-macos-universal.zip) |
+
+Unzip, make executable (`chmod +x guitar-modeler-mcp`), then run it.
 
 ```sh
 git tag v1.0.0
@@ -219,13 +208,10 @@ guitar-modeler-mcp serve
 | `render_setup_card` | Render a setup card from an existing `.mo` |
 | `map_preset` | Convert a preset across devices: Gigboard `.rig` ↔ Mooer `.mo` |
 | `waza_catalog_list_amps` / `_fx` | List the Waza Air's amps and effects (with the real hardware each emulates) |
-| `waza_write_tsl` | Write a BOSS TONE STUDIO `.tsl` backup (template patch + name) for the Waza Air |
-| `waza_read_tsl` | Read a Waza Air `.tsl` backup and list its patch names |
+| `waza_write_tsl` | Write a BOSS TONE STUDIO `.tsl` liveset for the Waza Air from a tone description |
+| `waza_read_tsl` | Read a Waza Air `.tsl` and report the first patch's tone |
 | `waza_setup_card` | Write a printable HTML setup card for a Waza Air tone |
 | `waza_catalog_list_modes` | List the four AIRSTEP BW footswitch modes (channel memories + effect toggles) |
-| `thr_catalog_list_amps` | List a Yamaha THR model's amp-selector grid (type × mode) with descriptions |
-| `thr_catalog_list_fx` | List a Yamaha THR model's cabinets, EFFECT, ECHO and REVERB options |
-| `thr_setup_card` | Write a printable HTML setup card for a Yamaha THR tone |
 
 Example agent workflow: list amps → translate the song's amp → `design_rig` with
 effects → read the report → tweak by re-running `design_rig` with parameter

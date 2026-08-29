@@ -224,12 +224,23 @@ func TestIntegrationWazaTSLAndCard(t *testing.T) {
 		t.Fatalf("device_list missing wazaair/.tsl: %s", devices)
 	}
 
-	// Write a backup from the built-in template plus a name.
+	// Write a backup from the built-in template plus a full tone.
 	out := resultText(t, rpc(t, s, 2, "tools/call", map[string]any{
 		"name": "waza_write_tsl",
 		"arguments": map[string]any{
-			"name":       "Brown Practice",
-			"output_dir": dir,
+			"name":         "Brown Practice",
+			"output_dir":   dir,
+			"amp":          "BROWN",
+			"amp_gain":     55,
+			"amp_volume":   68,
+			"amp_bass":     42,
+			"amp_middle":   50,
+			"amp_treble":   60,
+			"booster":      "T-SCREAM",
+			"delay":        "TAPE ECHO",
+			"delay_time":   380,
+			"reverb":       "HALL REVERB",
+			"reverb_level": 45,
 		},
 	}))
 	if !strings.Contains(out, ".tsl") {
@@ -241,13 +252,21 @@ func TestIntegrationWazaTSLAndCard(t *testing.T) {
 		t.Fatalf("expected one .tsl in %s (got %v, err %v)", dir, tsls, err)
 	}
 
-	// Read it back: the patch name must round-trip.
+	// Read it back: the name and the applied parameter values must round-trip.
 	read := resultText(t, rpc(t, s, 3, "tools/call", map[string]any{
 		"name":      "waza_read_tsl",
 		"arguments": map[string]any{"input_file": tsls[0]},
 	}))
-	if !strings.Contains(read, "\"device\": \"WAZA-AIR\"") || !strings.Contains(read, "Brown Practice") {
-		t.Fatalf("waza_read_tsl missing device/patch name: %s", read)
+	for _, want := range []string{
+		"\"device\": \"WAZA-AIR\"", "Brown Practice",
+		"\"amp\": \"BROWN\"", "\"gain\": 55", "\"volume\": 68", "\"bass\": 42",
+		"\"middle\": 50", "\"treble\": 60",
+		"\"booster\": \"T-SCREAM\"", "\"delay\": \"TAPE ECHO\"", "\"delay_time_ms\": 380",
+		"\"reverb\": \"HALL REVERB\"", "\"reverb_level\": 45",
+	} {
+		if !strings.Contains(read, want) {
+			t.Fatalf("waza_read_tsl missing %q:\n%s", want, read)
+		}
 	}
 
 	// The setup card is still produced.

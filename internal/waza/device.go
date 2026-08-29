@@ -51,8 +51,8 @@ func Default() Device {
 		Amps: items(
 			[2]string{"CLEAN", "Roland JC-120 / Fender Twin Reverb"},
 			[2]string{"CRUNCH", "Marshall Plexi 1959 / Fender Tweed"},
-			[2]string{"LEAD", "Mesa Boogie Mark / Soldano SLO-100"},
-			[2]string{"BROWN", "Marshall Super Lead Plexi (EVH Brown)"},
+			[2]string{"LEAD", "EVH 5150 / Peavey 5150 lead channel"},
+			[2]string{"BROWN", "Soldano SLO-100 (EVH brown sound)"},
 			[2]string{"FLAT", "Studio DI / Acoustic Preamp"},
 		),
 		Boosters: items(

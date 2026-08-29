@@ -7,23 +7,34 @@ import (
 )
 
 // Spec is a tone to dial in on the Waza Air: the selected amp, effects and
-// spatial settings. Empty fields are left off the setup card; a zero Gain,
-// Volume or DelayTime means "leave to BOSS TONE STUDIO".
+// spatial settings. Empty fields are left off the setup card; a zero numeric
+// value means "leave to BOSS TONE STUDIO" (the knob is omitted from the card
+// and, on write, the template's byte is kept).
 type Spec struct {
-	Name         string
-	Amp          string
-	Booster      string
-	Mod          string
-	FX           string
-	Delay        string
-	Reverb       string
-	CabResonance string
-	Ambience     string
-	Position     string
-	Mode         string
-	Gain         int
-	Volume       int
-	DelayTime    int
+	Name          string
+	Amp           string
+	Booster       string
+	Mod           string
+	FX            string
+	Delay         string
+	Reverb        string
+	CabResonance  string
+	Ambience      string
+	Position      string
+	Mode          string
+	Gain          int
+	Volume        int
+	Bass          int
+	Middle        int
+	Treble        int
+	Presence      int
+	BoosterDrive  int
+	BoosterTone   int
+	BoosterLevel  int
+	DelayTime     int
+	DelayFeedback int
+	DelayLevel    int
+	ReverbLevel   int
 }
 
 // Resolve canonicalises the spec's selections to on-device names. Each field
@@ -153,17 +164,9 @@ td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;verti
 	writeSetting(&b, "POSITION", s.Position)
 	writeSetting(&b, "MODE", s.Mode)
 
-	if s.Gain > 0 {
-		writeSetting(&b, "AMP GAIN", fmt.Sprintf("%d", s.Gain))
-	}
-	if s.Volume > 0 {
-		writeSetting(&b, "AMP VOLUME", fmt.Sprintf("%d", s.Volume))
-	}
-	if s.DelayTime > 0 {
-		writeSetting(&b, "DELAY TIME", fmt.Sprintf("%d ms", s.DelayTime))
-	}
+	writeParams(&b, s)
 
-	b.WriteString("<p class=\"inspired\">Effect parameter values are set in BOSS TONE STUDIO.</p>")
+	b.WriteString("<p class=\"inspired\">Knob values are 0&ndash;100 unless noted (ms).</p>")
 
 	if mode != nil {
 		writeAirStepMode(&b, d, *mode)
@@ -171,6 +174,36 @@ td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;verti
 
 	b.WriteString("</body></html>")
 	return b.String()
+}
+
+// writeParams renders the specified knob values on the card. A zero value is
+// omitted (it means "not specified").
+func writeParams(b *strings.Builder, s Spec) {
+	var rows []struct{ name, value string }
+	add := func(name string, v int) {
+		if v > 0 {
+			rows = append(rows, struct{ name, value string }{name, fmt.Sprintf("%d", v)})
+		}
+	}
+	add("AMP GAIN", s.Gain)
+	add("AMP VOLUME", s.Volume)
+	add("AMP BASS", s.Bass)
+	add("AMP MIDDLE", s.Middle)
+	add("AMP TREBLE", s.Treble)
+	add("AMP PRESENCE", s.Presence)
+	add("BOOSTER DRIVE", s.BoosterDrive)
+	add("BOOSTER TONE", s.BoosterTone)
+	add("BOOSTER LEVEL", s.BoosterLevel)
+	if s.DelayTime > 0 {
+		rows = append(rows, struct{ name, value string }{"DELAY TIME", fmt.Sprintf("%d ms", s.DelayTime)})
+	}
+	add("DELAY FEEDBACK", s.DelayFeedback)
+	add("DELAY LEVEL", s.DelayLevel)
+	add("REVERB LEVEL", s.ReverbLevel)
+
+	for _, r := range rows {
+		writeSetting(b, r.name, r.value)
+	}
 }
 
 func writeAirStepMode(b *strings.Builder, d Device, m AirStepMode) {

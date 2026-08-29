@@ -17,11 +17,14 @@ are supported:
   keep the terse `<preset>.mo` / `.rig` / `.tsl` scheme.
 - **BOSS Waza Air** — a wireless headphone amp. Preset is a BOSS TONE STUDIO
   backup (`.tsl`): a named set of one or more patches, each a 2335-byte binary
-  record stored as hex under `data[0][].paramSet["User%Patch"]`. Browse models
-  with `waza_catalog_list_*`, design with `waza_write_tsl` (writes a backup
-  from the built-in template patch plus the chosen name — parameter-level
-  mapping is still set in the app) and `waza_setup_card` (a printable card),
-  and list a backup's patch names with `waza_read_tsl`. An **XSONIC AIRSTEP
+  record stored as hex under `data[0][].paramSet["User%Patch"]`. The record is
+  the Katana dense patch layout, so amp (type/gain/volume/bass/middle/treble/
+  presence), booster (type/drive/tone/level), mod/fx (type), delay (type/time/
+  feedback/level) and reverb (type/level) are read and written at their Katana
+  offsets. Browse models with `waza_catalog_list_*`, design with
+  `waza_write_tsl` (writes a backup from the built-in template patch with the
+  chosen tone applied) and `waza_setup_card` (a printable card), and read a
+  backup's decoded patches with `waza_read_tsl`. An **XSONIC AIRSTEP
   BW** foot controller turns the six channel memories (CH 1–6, the Waza Air's
   "scenes") and the effect blocks into hands-free footswitches; list its four
   layouts with `waza_catalog_list_modes` and print one on the card with

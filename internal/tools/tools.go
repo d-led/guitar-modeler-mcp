@@ -415,11 +415,8 @@ func (r *Registrar) Register(s *mcp.Server) {
 
 	s.Register(mcp.Tool{
 		Name:        "waza_write_tsl",
-		Description: "Write a BOSS TONE STUDIO backup (.tsl) for the Boss Waza Air. Starts from the built-in template patch and applies the chosen name; parameter-level mapping is set in the app.",
-		InputSchema: objectSchema(map[string]any{
-			"name":       stringSchema("Patch name (up to 16 characters)."),
-			"output_dir": stringSchema("Directory to write the .tsl into (default: current directory)."),
-		}),
+		Description: "Write a BOSS TONE STUDIO backup (.tsl) for the Boss Waza Air. Starts from the built-in template patch and applies the chosen amp/effect types and knob values (gain, volume, bass, middle, treble, presence, booster, delay, reverb); unspecified values keep the template's settings.",
+		InputSchema: objectSchema(wazaToneProps()),
 		Handler: func(_ context.Context, args map[string]any) (string, error) {
 			return r.wazaWriteTSL(args)
 		},
@@ -427,7 +424,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 
 	s.Register(mcp.Tool{
 		Name:        "waza_read_tsl",
-		Description: "Read a Boss Waza Air .tsl backup and report its name, device and the list of patch names.",
+		Description: "Read a Boss Waza Air .tsl backup and report its name, device and each patch's decoded amp/effect parameters.",
 		InputSchema: objectSchema(map[string]any{
 			"input_file": stringSchema("Path to the .tsl backup."),
 		}),
@@ -521,12 +518,22 @@ func wazaToneProps() map[string]any {
 		"amp":               stringSchema("Amp type: CLEAN, CRUNCH, LEAD, BROWN or FLAT (or a description, e.g. \"Twin Reverb\")."),
 		"amp_gain":          numberSchema("Optional amp gain (0-100)."),
 		"amp_volume":        numberSchema("Optional amp volume (0-100)."),
+		"amp_bass":          numberSchema("Optional amp bass (0-100)."),
+		"amp_middle":        numberSchema("Optional amp middle (0-100)."),
+		"amp_treble":        numberSchema("Optional amp treble (0-100)."),
+		"amp_presence":      numberSchema("Optional amp presence (0-100)."),
 		"booster":           stringSchema("Optional BOOSTER effect, e.g. \"T-SCREAM\" or \"TS-808\"."),
+		"booster_drive":     numberSchema("Optional booster drive (0-100)."),
+		"booster_tone":      numberSchema("Optional booster tone (0-100, 50 = neutral)."),
+		"booster_level":     numberSchema("Optional booster level (0-100)."),
 		"mod":               stringSchema("Optional MOD effect, e.g. \"CHORUS\"."),
 		"fx":                stringSchema("Optional FX effect (same list as MOD)."),
 		"delay":             stringSchema("Optional DELAY effect, e.g. \"TAPE ECHO\"."),
 		"delay_time":        numberSchema("Optional delay time in milliseconds."),
+		"delay_feedback":    numberSchema("Optional delay feedback (0-100)."),
+		"delay_level":       numberSchema("Optional delay level (0-100)."),
 		"reverb":            stringSchema("Optional REVERB effect, e.g. \"HALL REVERB\"."),
+		"reverb_level":      numberSchema("Optional reverb level (0-100)."),
 		"cabinet_resonance": stringSchema("Optional: VINTAGE, MODERN or DEEP."),
 		"ambience":          stringSchema("Optional: STUDIO or STAGE."),
 		"position":          stringSchema("Optional: SURROUND, STATIC or STAGE."),
@@ -1250,7 +1257,11 @@ func (r *Registrar) wazaSetupCard(args map[string]any) (string, error) {
 }
 
 func (r *Registrar) wazaWriteTSL(args map[string]any) (string, error) {
-	name := strings.TrimSpace(argString(args, "name"))
+	spec, err := r.wazaSpec(args)
+	if err != nil {
+		return "", err
+	}
+	name := strings.TrimSpace(spec.Name)
 	if name == "" {
 		name = "New Patch"
 	}
@@ -1258,8 +1269,30 @@ func (r *Registrar) wazaWriteTSL(args map[string]any) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	patch := tmpl.WriteParams(waza.Params{
+		AmpType:       spec.Amp,
+		AmpGain:       spec.Gain,
+		AmpVolume:     spec.Volume,
+		AmpBass:       spec.Bass,
+		AmpMiddle:     spec.Middle,
+		AmpTreble:     spec.Treble,
+		AmpPresence:   spec.Presence,
+		BoosterType:   spec.Booster,
+		BoosterDrive:  spec.BoosterDrive,
+		BoosterTone:   spec.BoosterTone,
+		BoosterLevel:  spec.BoosterLevel,
+		ModType:       spec.Mod,
+		FXType:        spec.FX,
+		DelayType:     spec.Delay,
+		DelayTime:     spec.DelayTime,
+		DelayFeedback: spec.DelayFeedback,
+		DelayLevel:    spec.DelayLevel,
+		ReverbType:    spec.Reverb,
+		ReverbLevel:   spec.ReverbLevel,
+	}).WithName(name)
+
 	backup := waza.NewBackup(name)
-	backup.SetPatches([]waza.Patch{tmpl.WithName(name)})
+	backup.SetPatches([]waza.Patch{patch})
 
 	outDir := argString(args, "output_dir")
 	if outDir == "" {
@@ -1281,15 +1314,38 @@ func (r *Registrar) wazaReadTSL(args map[string]any) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	names := make([]string, 0, len(b.Patches()))
-	for _, p := range b.Patches() {
-		names = append(names, p.Name)
+	patches := b.Patches()
+	decoded := make([]map[string]any, 0, len(patches))
+	for _, p := range patches {
+		params := p.ReadParams()
+		decoded = append(decoded, map[string]any{
+			"name":           p.Name,
+			"amp":            params.AmpType,
+			"gain":           params.AmpGain,
+			"volume":         params.AmpVolume,
+			"bass":           params.AmpBass,
+			"middle":         params.AmpMiddle,
+			"treble":         params.AmpTreble,
+			"presence":       params.AmpPresence,
+			"booster":        params.BoosterType,
+			"booster_drive":  params.BoosterDrive,
+			"booster_tone":   params.BoosterTone,
+			"booster_level":  params.BoosterLevel,
+			"mod":            params.ModType,
+			"fx":             params.FXType,
+			"delay":          params.DelayType,
+			"delay_time_ms":  params.DelayTime,
+			"delay_feedback": params.DelayFeedback,
+			"delay_level":    params.DelayLevel,
+			"reverb":         params.ReverbType,
+			"reverb_level":   params.ReverbLevel,
+		})
 	}
 	return marshal(map[string]any{
 		"name":       b.Name,
 		"device":     b.Device,
 		"format_rev": b.FormatRev,
-		"patches":    names,
+		"patches":    decoded,
 	})
 }
 
@@ -1297,20 +1353,30 @@ func (r *Registrar) wazaReadTSL(args map[string]any) (string, error) {
 func (r *Registrar) wazaSpec(args map[string]any) (waza.Spec, error) {
 	d := waza.Default()
 	return d.Resolve(waza.Spec{
-		Name:         argString(args, "name"),
-		Amp:          argString(args, "amp"),
-		Booster:      argString(args, "booster"),
-		Mod:          argString(args, "mod"),
-		FX:           argString(args, "fx"),
-		Delay:        argString(args, "delay"),
-		Reverb:       argString(args, "reverb"),
-		CabResonance: argString(args, "cabinet_resonance"),
-		Ambience:     argString(args, "ambience"),
-		Position:     argString(args, "position"),
-		Mode:         argString(args, "mode"),
-		Gain:         int(argFloat(args, "amp_gain")),
-		Volume:       int(argFloat(args, "amp_volume")),
-		DelayTime:    int(argFloat(args, "delay_time")),
+		Name:          argString(args, "name"),
+		Amp:           argString(args, "amp"),
+		Booster:       argString(args, "booster"),
+		Mod:           argString(args, "mod"),
+		FX:            argString(args, "fx"),
+		Delay:         argString(args, "delay"),
+		Reverb:        argString(args, "reverb"),
+		CabResonance:  argString(args, "cabinet_resonance"),
+		Ambience:      argString(args, "ambience"),
+		Position:      argString(args, "position"),
+		Mode:          argString(args, "mode"),
+		Gain:          int(argFloat(args, "amp_gain")),
+		Volume:        int(argFloat(args, "amp_volume")),
+		Bass:          int(argFloat(args, "amp_bass")),
+		Middle:        int(argFloat(args, "amp_middle")),
+		Treble:        int(argFloat(args, "amp_treble")),
+		Presence:      int(argFloat(args, "amp_presence")),
+		BoosterDrive:  int(argFloat(args, "booster_drive")),
+		BoosterTone:   int(argFloat(args, "booster_tone")),
+		BoosterLevel:  int(argFloat(args, "booster_level")),
+		DelayTime:     int(argFloat(args, "delay_time")),
+		DelayFeedback: int(argFloat(args, "delay_feedback")),
+		DelayLevel:    int(argFloat(args, "delay_level")),
+		ReverbLevel:   int(argFloat(args, "reverb_level")),
 	})
 }
 

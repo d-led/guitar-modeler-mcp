@@ -1,0 +1,182 @@
+package waza
+
+import (
+	"strings"
+	"testing"
+)
+
+// TestReadParamsTemplate decodes the built-in template patch and checks the
+// known values of the "Vai ballerina dl" factory export.
+func TestReadParamsTemplate(t *testing.T) {
+	tmpl, err := TemplatePatch()
+	if err != nil {
+		t.Fatalf("TemplatePatch: %v", err)
+	}
+	p := tmpl.ReadParams()
+
+	if p.AmpType != "CLEAN" {
+		t.Fatalf("amp type = %q, want CLEAN", p.AmpType)
+	}
+	want := map[string]int{
+		"gain": 64, "volume": 75, "bass": 40, "middle": 45, "treble": 50, "presence": 85,
+	}
+	got := map[string]int{
+		"gain": p.AmpGain, "volume": p.AmpVolume, "bass": p.AmpBass,
+		"middle": p.AmpMiddle, "treble": p.AmpTreble, "presence": p.AmpPresence,
+	}
+	for k, v := range want {
+		if got[k] != v {
+			t.Fatalf("%s = %d, want %d", k, got[k], v)
+		}
+	}
+
+	if p.BoosterType != "MID BOOST" || p.BoosterDrive != 105 || p.BoosterTone != 60 || p.BoosterLevel != 70 {
+		t.Fatalf("booster = %q/%d/%d/%d, want MID BOOST/105/60/70", p.BoosterType, p.BoosterDrive, p.BoosterTone, p.BoosterLevel)
+	}
+	if p.ModType != "PITCH SHIFTER" {
+		t.Fatalf("mod type = %q, want PITCH SHIFTER (the template's FX1)", p.ModType)
+	}
+	if p.ReverbType != "PLATE REVERB" {
+		t.Fatalf("reverb type = %q, want PLATE REVERB", p.ReverbType)
+	}
+	if p.DelayTime != 120 {
+		t.Fatalf("delay time = %d ms, want 120", p.DelayTime)
+	}
+}
+
+// TestWriteParamsRoundTrip writes a full set of parameters onto the template
+// and reads them back, proving the offsets agree for both directions.
+func TestWriteParamsRoundTrip(t *testing.T) {
+	tmpl, err := TemplatePatch()
+	if err != nil {
+		t.Fatalf("TemplatePatch: %v", err)
+	}
+
+	out := tmpl.WriteParams(Params{
+		AmpType:       "BROWN",
+		AmpGain:       55,
+		AmpVolume:     68,
+		AmpBass:       42,
+		AmpMiddle:     50,
+		AmpTreble:     60,
+		AmpPresence:   75,
+		BoosterType:   "T-SCREAM",
+		BoosterDrive:  30,
+		BoosterTone:   50,
+		BoosterLevel:  80,
+		ModType:       "CHORUS",
+		FXType:        "FLANGER",
+		DelayType:     "TAPE ECHO",
+		DelayTime:     380,
+		DelayFeedback: 32,
+		DelayLevel:    40,
+		ReverbType:    "HALL REVERB",
+		ReverbLevel:   45,
+	}).WithName("Round Trip")
+
+	got := out.ReadParams()
+	if got.AmpType != "BROWN" || got.AmpGain != 55 || got.AmpVolume != 68 || got.AmpBass != 42 ||
+		got.AmpMiddle != 50 || got.AmpTreble != 60 || got.AmpPresence != 75 {
+		t.Fatalf("amp params round-trip mismatch: %+v", got)
+	}
+	if got.BoosterType != "T-SCREAM" || got.BoosterDrive != 30 || got.BoosterTone != 50 || got.BoosterLevel != 80 {
+		t.Fatalf("booster params round-trip mismatch: %+v", got)
+	}
+	if got.ModType != "CHORUS" || got.FXType != "FLANGER" {
+		t.Fatalf("mod/fx round-trip mismatch: %q/%q", got.ModType, got.FXType)
+	}
+	if got.DelayType != "TAPE ECHO" || got.DelayTime != 380 || got.DelayFeedback != 32 || got.DelayLevel != 40 {
+		t.Fatalf("delay params round-trip mismatch: %+v", got)
+	}
+	if got.ReverbType != "HALL REVERB" || got.ReverbLevel != 45 {
+		t.Fatalf("reverb params round-trip mismatch: %+v", got)
+	}
+	if out.Name != "Round Trip" {
+		t.Fatalf("name = %q, want Round Trip", out.Name)
+	}
+}
+
+// TestWriteParamsLeavesUnsetUntouched verifies that unspecified values keep
+// the template's bytes rather than zeroing them.
+func TestWriteParamsLeavesUnsetUntouched(t *testing.T) {
+	tmpl, err := TemplatePatch()
+	if err != nil {
+		t.Fatalf("TemplatePatch: %v", err)
+	}
+
+	out := tmpl.WriteParams(Params{AmpType: "CRUNCH", AmpGain: 99})
+	got := out.ReadParams()
+
+	if got.AmpType != "CRUNCH" || got.AmpGain != 99 {
+		t.Fatalf("specified params not applied: %+v", got)
+	}
+	// Everything else must still be the template's values.
+	if got.AmpVolume != 75 || got.AmpBass != 40 || got.AmpPresence != 85 {
+		t.Fatalf("unspecified amp knobs were changed: %+v", got)
+	}
+	if got.BoosterType != "MID BOOST" || got.ReverbType != "PLATE REVERB" {
+		t.Fatalf("unspecified effect types were changed: %+v", got)
+	}
+}
+
+// TestTypeIndexMaps guards the amp type mapping against accidental edits; the
+// first three values are read back from real backups.
+func TestTypeIndexMaps(t *testing.T) {
+	if ampTypeIndex["FLAT"] != 1 || ampTypeIndex["CLEAN"] != 8 || ampTypeIndex["CRUNCH"] != 11 ||
+		ampTypeIndex["LEAD"] != 24 || ampTypeIndex["BROWN"] != 23 {
+		t.Fatalf("amp type indices wrong: %v", ampTypeIndex)
+	}
+	if boosterTypeIndex["T-SCREAM"] != 12 || boosterTypeIndex["BLUES DRIVE"] != 10 || boosterTypeIndex["MUFF FUZZ"] != 20 {
+		t.Fatalf("booster type indices wrong: %v", boosterTypeIndex)
+	}
+	if modFXTypeIndex["CHORUS"] != 29 || modFXTypeIndex["FLANGER"] != 20 || modFXTypeIndex["COMP"] != 3 {
+		t.Fatalf("mod/fx type indices wrong: %v", modFXTypeIndex)
+	}
+	if delayTypeIndex["DIGITAL DELAY"] != 0 || delayTypeIndex["ANALOG DELAY"] != 7 || delayTypeIndex["TAPE ECHO"] != 8 {
+		t.Fatalf("delay type indices wrong: %v", delayTypeIndex)
+	}
+	if reverbTypeIndex["PLATE REVERB"] != 4 || reverbTypeIndex["SPRING REVERB"] != 5 || reverbTypeIndex["HALL REVERB"] != 3 {
+		t.Fatalf("reverb type indices wrong: %v", reverbTypeIndex)
+	}
+}
+
+// TestSetupCardShowsValues ensures the card renders the new knob values.
+func TestSetupCardShowsValues(t *testing.T) {
+	d := Default()
+	s, err := d.Resolve(Spec{
+		Name:          "Brown Practice",
+		Amp:           "BROWN",
+		Booster:       "T-SCREAM",
+		Delay:         "TAPE ECHO",
+		Reverb:        "HALL REVERB",
+		Gain:          55,
+		Volume:        68,
+		Bass:          42,
+		Middle:        50,
+		Treble:        60,
+		Presence:      75,
+		BoosterDrive:  30,
+		DelayTime:     380,
+		DelayFeedback: 32,
+		ReverbLevel:   45,
+	})
+	if err != nil {
+		t.Fatalf("Resolve: %v", err)
+	}
+
+	html := d.SetupCardHTML(s)
+	for _, want := range []string{
+		"BROWN", "T-SCREAM", "TAPE ECHO", "HALL REVERB",
+		"AMP GAIN", "55", "AMP VOLUME", "68", "AMP BASS", "42",
+		"AMP MIDDLE", "50", "AMP TREBLE", "60", "AMP PRESENCE", "75",
+		"BOOSTER DRIVE", "30", "DELAY TIME", "380 ms", "DELAY FEEDBACK", "32", "REVERB LEVEL", "45",
+	} {
+		if !strings.Contains(html, want) {
+			t.Fatalf("setup card missing %q:\n%s", want, html)
+		}
+	}
+	// Unspecified knobs must not leak zeros.
+	if strings.Contains(html, "BOOSTER TONE") || strings.Contains(html, "DELAY LEVEL") {
+		t.Fatalf("setup card shows unspecified knobs:\n%s", html)
+	}
+}
