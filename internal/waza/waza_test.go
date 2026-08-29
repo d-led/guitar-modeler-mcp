@@ -10,8 +10,8 @@ func TestDefaultDeviceShape(t *testing.T) {
 	if d.Name != "wazaair" || d.Display != "BOSS Waza Air" {
 		t.Fatalf("device identity = %q/%q", d.Name, d.Display)
 	}
-	if d.FileExchange {
-		t.Fatal("wazaair should be card-only")
+	if !d.FileExchange || d.FileExt != ".tsl" {
+		t.Fatalf("wazaair should exchange .tsl files, got %v/%q", d.FileExchange, d.FileExt)
 	}
 	if len(d.Amps) != 5 {
 		t.Fatalf("amps = %d, want 5", len(d.Amps))
