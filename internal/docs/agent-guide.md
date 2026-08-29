@@ -118,6 +118,12 @@ pass a different `operation` to control a module-specific parameter instead.
 A module that is not in the chain is rejected, and you can never assign more
 than four switches.
 
+**Order matters: put the most important switches first.** The first two entries
+land on buttons 1 and 2 (FS5/FS6), which stay dedicated to the patch in every
+button mode. Buttons 3 and 4 (FS7/FS8) are repurposed for bank switching in the
+hybrid button mode, so a switch the player hits mid-song (a whammy toe switch,
+a solo boost) must be in the first two slots.
+
 ## Reading a rig (reverse-engineering)
 
 To analyze an existing `.rig` file, pass its path to `rig_decode`. It returns a
