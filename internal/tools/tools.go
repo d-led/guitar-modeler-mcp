@@ -20,6 +20,7 @@ import (
 	"github.com/d-led/guitar-modeler-mcp/internal/presetmap"
 	"github.com/d-led/guitar-modeler-mcp/internal/rig"
 	"github.com/d-led/guitar-modeler-mcp/internal/setlist"
+	"github.com/d-led/guitar-modeler-mcp/internal/thr"
 	"github.com/d-led/guitar-modeler-mcp/internal/waza"
 )
 
@@ -429,6 +430,48 @@ func (r *Registrar) Register(s *mcp.Server) {
 		}),
 		Handler: func(_ context.Context, args map[string]any) (string, error) {
 			return r.wazaReadTSL(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "thr_catalog_list_amps",
+		Description: "List a Yamaha THR model's amp-selector positions (type x mode) with Yamaha's official description and the community-inferred real amplifier.",
+		InputSchema: objectSchema(map[string]any{
+			"model": stringSchema("THR model: thr (THR-II, default), thr10, thr10c or thr10x."),
+			"query": stringSchema("Optional case-insensitive filter over name, type, mode, description or inspired_by."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.thrListAmps(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "thr_catalog_list_fx",
+		Description: "List a Yamaha THR model's effects: the EFFECT knob (chorus/flanger/phaser/tremolo) and the ECHO/REV knob (echo, echo+rev, spring reverb, hall reverb).",
+		InputSchema: objectSchema(map[string]any{
+			"model": stringSchema("THR model (default: thr)."),
+			"query": stringSchema("Optional case-insensitive filter."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.thrListFX(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "thr_setup_card",
+		Description: "Write a printable HTML setup card for a Yamaha THR tone. The THR has no preset file format, so the card is the only output.",
+		InputSchema: objectSchema(map[string]any{
+			"name":       stringSchema("Patch name."),
+			"model":      stringSchema("THR model: thr (default), thr10, thr10c or thr10x."),
+			"amp":        stringSchema("Amp: CLEAN/CRUNCH/LEAD/HI GAIN/SPECIAL/BASS/ACOUSTIC/FLAT, optionally with CLASSIC/BOUTIQUE/MODERN (e.g. \"CLEAN BOUTIQUE\" or \"Twin Reverb\")."),
+			"mod":        stringSchema("Optional EFFECT knob: CHORUS, FLANGER, PHASER or TREMOLO."),
+			"echo_rev":   stringSchema("Optional ECHO/REV knob: ECHO, ECHO/REV, SPRING REVERB or HALL REVERB."),
+			"compressor": map[string]any{"type": "boolean", "description": "Optional app-only compressor on/off."},
+			"noise_gate": map[string]any{"type": "boolean", "description": "Optional app-only noise gate on/off."},
+			"output_dir": stringSchema("Directory to write the HTML card into (default: current directory)."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.thrSetupCard(args)
 		},
 	})
 }
@@ -852,6 +895,9 @@ func deviceList() []deviceInfo {
 	}
 	w := waza.Default()
 	list = append(list, deviceInfo{Name: w.Name, Description: w.Display, FileExchange: w.FileExchange, FileExt: w.FileExt})
+	for _, t := range thr.Models() {
+		list = append(list, deviceInfo{Name: t.Name, Description: t.Display, FileExchange: t.FileExchange, FileExt: t.FileExt})
+	}
 	return list
 }
 
@@ -1204,6 +1250,97 @@ func filterWazaItems(items []waza.Item, query string) []catalogItem {
 			continue
 		}
 		out = append(out, catalogItem{Index: i, Name: it.Name, InspiredBy: it.InspiredBy})
+	}
+	return out
+}
+
+// ---- Yamaha THR device tools ----
+
+func thrModelName(args map[string]any) string {
+	if name := argString(args, "model"); name != "" {
+		return name
+	}
+	return "thr"
+}
+
+func thrModel(args map[string]any) (thr.Device, error) {
+	d, ok := thr.ModelByName(thrModelName(args))
+	if !ok {
+		return thr.Device{}, fmt.Errorf("unknown THR model %q; see device_list", thrModelName(args))
+	}
+	return d, nil
+}
+
+func (r *Registrar) thrListAmps(args map[string]any) (string, error) {
+	d, err := thrModel(args)
+	if err != nil {
+		return "", err
+	}
+	return marshal(filterThrAmps(d.Amps, argString(args, "query")))
+}
+
+func (r *Registrar) thrListFX(args map[string]any) (string, error) {
+	d, err := thrModel(args)
+	if err != nil {
+		return "", err
+	}
+	query := argString(args, "query")
+	return marshal(map[string]any{
+		"modulation": filterThrItems(d.Modulation, query),
+		"echo_rev":   filterThrItems(d.EchoRev, query),
+	})
+}
+
+func (r *Registrar) thrSetupCard(args map[string]any) (string, error) {
+	d, err := thrModel(args)
+	if err != nil {
+		return "", err
+	}
+	spec, err := d.Resolve(thr.Spec{
+		Name:       argString(args, "name"),
+		Amp:        argString(args, "amp"),
+		Mod:        argString(args, "mod"),
+		EchoRev:    argString(args, "echo_rev"),
+		Compressor: argBool(args, "compressor", false),
+		NoiseGate:  argBool(args, "noise_gate", false),
+	})
+	if err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(spec.Name) == "" {
+		spec.Name = "New Patch"
+	}
+	outDir := argString(args, "output_dir")
+	if outDir == "" {
+		outDir = "."
+	}
+	path := filepath.Join(outDir, sanitizeFileBase(spec.Name)+"."+d.Name+".html")
+	if err := os.WriteFile(path, []byte(d.SetupCardHTML(spec)), 0o644); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("Wrote %s setup card to %s", d.Display, path), nil
+}
+
+func filterThrAmps(cells []thr.AmpCell, query string) []thr.AmpCell {
+	q := strings.ToLower(strings.TrimSpace(query))
+	out := make([]thr.AmpCell, 0, len(cells))
+	for _, c := range cells {
+		if q != "" && !strings.Contains(strings.ToLower(c.Name+" "+c.Type+" "+c.Mode+" "+c.InspiredBy+" "+c.Description), q) {
+			continue
+		}
+		out = append(out, c)
+	}
+	return out
+}
+
+func filterThrItems(items []thr.Item, query string) []thr.Item {
+	q := strings.ToLower(strings.TrimSpace(query))
+	out := make([]thr.Item, 0, len(items))
+	for _, it := range items {
+		if q != "" && !strings.Contains(strings.ToLower(it.Name+" "+it.InspiredBy), q) {
+			continue
+		}
+		out = append(out, it)
 	}
 	return out
 }

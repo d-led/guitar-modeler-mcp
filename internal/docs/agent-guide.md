@@ -1,6 +1,6 @@
 # guitar-modeler-mcp — agent guide
 
-You are designing guitar presets for hardware modelers. Three device families
+You are designing guitar presets for hardware modelers. Four device families
 are supported:
 
 - **HeadRush Gigboard** — preset is a `.rig` file (JSON). Design with
@@ -25,23 +25,34 @@ are supported:
   "scenes") and the effect blocks into hands-free footswitches; list its four
   layouts with `waza_catalog_list_modes` and print one on the card with
   `waza_setup_card`'s `airstep_mode` (1–4).
+- **Yamaha THR** (THR-II, THR10, THR10C, THR10X) — a desktop practice amp with
+  no preset file format, so the only output is a printable setup card. The
+  THR-II amp selector is a grid of eight types (CLEAN, CRUNCH, LEAD, HI GAIN,
+  SPECIAL, BASS, ACOUSTIC, FLAT) × three modes (CLASSIC, BOUTIQUE, MODERN) —
+  24 positions, each with Yamaha's official description plus a
+  community-sourced "inspired by" real amp. The effects are the EFFECT knob
+  (CHORUS, FLANGER, PHASER, TREMOLO) and the ECHO/REV knob (ECHO, ECHO/REV,
+  SPRING REVERB, HALL REVERB), plus app-only COMPRESSOR and NOISE GATE. Browse
+  with `thr_catalog_list_*` and design with `thr_setup_card`. The legacy
+  THR10/THR10C/THR10X amp lists are partial (community reference).
 
 Every parameter you pass is validated before a file is written, so an invalid
 preset is never produced. `design_rig` is Gigboard-only; Mooer presets go
-through `mooer_design`, Waza Air presets through `waza_write_tsl`, and
-cross-device conversion through `map_preset`.
+through `mooer_design`, Waza Air presets through `waza_write_tsl`, THR cards
+through `thr_setup_card`, and cross-device conversion through `map_preset`.
 
 ## Tool contract
 
 - **Writing tools.** `design_rig` (Gigboard `.rig` + `.html` report),
   `mooer_design` (Mooer `.mo` + setup card), `waza_write_tsl` (Waza Air
-  `.tsl`), `waza_setup_card` (Waza Air `.html` card), `render_setup_card`
-  (card from a `.mo`) and `map_preset` (cross-device conversion) write files.
-  Every catalog/translate tool (`search_catalog`, `catalog_list_*`,
-  `translate_amp/cab/mic`, `get_guide`, `get_fx_placement`,
-  `catalog_list_module_params`, `mooer_catalog_list_*`, `waza_catalog_list_*`,
-  `device_list`, `waza_read_tsl`) returns its answer inline as JSON text —
-  there are no files to open afterwards.
+  `.tsl`), `waza_setup_card` (Waza Air `.html` card), `thr_setup_card` (THR
+  `.html` card), `render_setup_card` (card from a `.mo`) and `map_preset`
+  (cross-device conversion) write files. Every catalog/translate tool
+  (`search_catalog`, `catalog_list_*`, `translate_amp/cab/mic`, `get_guide`,
+  `get_fx_placement`, `catalog_list_module_params`, `mooer_catalog_list_*`,
+  `waza_catalog_list_*`, `thr_catalog_list_*`, `device_list`, `waza_read_tsl`)
+  returns its answer inline as JSON text — there are no files to open
+  afterwards.
 - **Never read source code** (this project's, the MCP's, or the desktop app's).
   The catalog tools are the complete interface to the device's models and
   their parameters; digging into `.go`/`.ts` files is a dead end.

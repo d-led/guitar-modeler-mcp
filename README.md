@@ -11,6 +11,8 @@ Supported devices:
   models) plus a printable setup card for every model.
 - **BOSS Waza Air** — BOSS TONE STUDIO livesets (`.tsl`) plus a printable setup
   card.
+- **Yamaha THR** (THR-II, THR10, THR10C, THR10X) — printable setup cards (no
+  preset file format).
 
 ## Trademarks & disclaimer
 
@@ -34,6 +36,10 @@ sponsored by HeadRush or any of the referenced brands.
   The **XSONIC AIRSTEP BW** foot controller's four footswitch modes (channel
   memories CH 1–6 + effect toggles) are modelled and printable on the setup
   card.
+- **Yamaha THR** — implemented (setup cards only). The THR-II amp selector is
+  an 8-type × 3-mode grid (24 positions, including three FLAT variants) with
+  Yamaha's official descriptions plus community-sourced "inspired by" amps;
+  the legacy THR10/THR10C/THR10X amp lists are partial.
 - **Quad Cortex** — planned; see [OpenCortex](https://github.com/VanIseghemThomas/OpenCortex)
   (open-source QC preset format work) as a starting point for the preset format.
 
@@ -61,6 +67,9 @@ per-device backend supplies the model catalog and preset file format:
   model mapping).
 - **Waza Air backend** — `internal/waza` (amp/effect catalogs, the BOSS TONE
   STUDIO `.tsl` liveset format and setup cards).
+- **Yamaha THR backend** — `internal/thr` (the THR-II 8×3 amp-selector grid
+  with official descriptions, the EFFECT/ECHO-REV effect lists, and partial
+  legacy THR10/THR10C/THR10X catalogs; setup cards only).
 - `internal/assets/data/blocks` — factory block definitions captured from the
   device backup, used as defaults for every effect module.
 - `internal/docs/agent-guide.md` — the agent-facing guide (signal-chain topology,
@@ -203,6 +212,9 @@ guitar-modeler-mcp serve
 | `waza_read_tsl` | Read a Waza Air `.tsl` and report the first patch's tone |
 | `waza_setup_card` | Write a printable HTML setup card for a Waza Air tone |
 | `waza_catalog_list_modes` | List the four AIRSTEP BW footswitch modes (channel memories + effect toggles) |
+| `thr_catalog_list_amps` | List a Yamaha THR model's amp-selector grid (type × mode) with descriptions |
+| `thr_catalog_list_fx` | List a Yamaha THR model's EFFECT and ECHO/REV knob effects |
+| `thr_setup_card` | Write a printable HTML setup card for a Yamaha THR tone |
 
 Example agent workflow: list amps → translate the song's amp → `design_rig` with
 effects → read the report → tweak by re-running `design_rig` with parameter

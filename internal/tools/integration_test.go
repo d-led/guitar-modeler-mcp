@@ -97,6 +97,7 @@ func TestIntegrationInitializeAndToolList(t *testing.T) {
 		"mooer_design", "render_setup_card", "map_preset",
 		"waza_catalog_list_amps", "waza_catalog_list_fx", "waza_setup_card", "waza_write_tsl", "waza_read_tsl",
 		"waza_catalog_list_modes",
+		"thr_catalog_list_amps", "thr_catalog_list_fx", "thr_setup_card",
 	} {
 		if !names[want] {
 			t.Errorf("missing tool %q in tools/list", want)
@@ -297,6 +298,48 @@ func TestIntegrationWazaTSLAndCard(t *testing.T) {
 	}))
 	if !strings.Contains(bad, "unknown AIRSTEP BW mode 9") {
 		t.Fatalf("airstep_mode 9 should be rejected, got %q", bad)
+	}
+}
+
+func TestIntegrationThrSetupCard(t *testing.T) {
+	s := newIntegrationServer(t)
+	dir := t.TempDir()
+
+	// THR is card-only, listed alongside the other devices.
+	devices := resultText(t, rpc(t, s, 1, "tools/call", map[string]any{
+		"name":      "device_list",
+		"arguments": map[string]any{},
+	}))
+	if !strings.Contains(devices, "Yamaha THR-II") || !strings.Contains(devices, "thr10") {
+		t.Fatalf("device_list missing THR models: %s", devices)
+	}
+
+	// The amp catalog exposes the official 24-cell grid with descriptions.
+	amps := resultText(t, rpc(t, s, 2, "tools/call", map[string]any{
+		"name":      "thr_catalog_list_amps",
+		"arguments": map[string]any{"query": "twin"},
+	}))
+	if !strings.Contains(amps, "CLEAN CLASSIC") || !strings.Contains(amps, "Fender Twin Reverb") {
+		t.Fatalf("thr_catalog_list_amps missing CLEAN CLASSIC/Twin: %s", amps)
+	}
+
+	// The setup card resolves a description to an amp and writes the file.
+	card := resultText(t, rpc(t, s, 3, "tools/call", map[string]any{
+		"name": "thr_setup_card",
+		"arguments": map[string]any{
+			"name":       "THR Clean",
+			"amp":        "Twin Reverb",
+			"mod":        "CHORUS",
+			"echo_rev":   "HALL REVERB",
+			"compressor": true,
+			"output_dir": dir,
+		},
+	}))
+	if !strings.Contains(card, ".thr.html") {
+		t.Fatalf("thr_setup_card output missing .thr.html: %s", card)
+	}
+	if cards, _ := filepath.Glob(filepath.Join(dir, "*.html")); len(cards) != 1 {
+		t.Fatalf("expected one .html card in %s, got %v", dir, cards)
 	}
 }
 
