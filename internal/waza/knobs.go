@@ -260,10 +260,16 @@ func applyKnobs(raw []byte, effect string, fx bool, values map[string]float64) {
 	if fx {
 		delta = ek.delta
 	}
-	// Look up each supplied key against the table, writing in table order so
-	// the chorus rate/depth/effect_level aliases win over the low_* names.
+	// Normalise the supplied keys once (e.g. "EFFECT LEVEL" -> "effect_level")
+	// so agents can use either the on-device label or the canonical key.
+	norm := make(map[string]float64, len(values))
+	for k, v := range values {
+		norm[canonicalKey(k)] = v
+	}
+	// Write in table order so the chorus rate/depth/effect_level aliases win
+	// over the low_* names.
 	for _, k := range ek.knobs {
-		v, present := values[k.name]
+		v, present := norm[k.name]
 		if !present {
 			continue
 		}
