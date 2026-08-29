@@ -132,7 +132,7 @@ func applyParams(m *ModelSpec, block BlockSpec, model *Model) error {
 		}
 	}
 	for name, v := range block.EncodedParams {
-		spec, index, ok := m.Param(name)
+		_, index, ok := m.Param(name)
 		if !ok {
 			return fmt.Errorf("unknown parameter %q", name)
 		}
