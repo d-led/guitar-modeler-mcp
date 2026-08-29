@@ -61,6 +61,9 @@ headrush-gigboard-mcp translate mic "SM57"
 headrush-gigboard-mcp search "JCM800"
 headrush-gigboard-mcp search "tube screamer" --kind fx
 
+# Where each effect category goes in each chain layout
+headrush-gigboard-mcp fx-placement
+
 # Dial in a tone and write the patch + HTML report
 headrush-gigboard-mcp design \
   --name "Brown Sound" --song "Van Halen - Panama" \
@@ -114,6 +117,7 @@ headrush-gigboard-mcp serve
 | Tool | Purpose |
 | --- | --- |
 | `get_guide` | Return the embedded agent guide (chain topology, routing constraints, categories, workflow) |
+| `get_fx_placement` | Where each effect category goes (pre/post amp) and the slot budget per chain layout |
 | `search_catalog` | Fuzzy-search amps/cabs/mics/effects by name or the real hardware they emulate (both directions) |
 | `catalog_list_amps` | List amps with the real hardware each emulates (`modeled_after`), a `gain` character (clean/edge of breakup/crunch/high gain/bass) and capabilities |
 | `catalog_list_cabs` | List cabinet models |

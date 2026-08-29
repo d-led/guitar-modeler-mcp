@@ -83,7 +83,7 @@ func TestIntegrationInitializeAndToolList(t *testing.T) {
 		names[tool.(map[string]any)["name"].(string)] = true
 	}
 	for _, want := range []string{
-		"get_guide", "search_catalog",
+		"get_guide", "get_fx_placement", "search_catalog",
 		"catalog_list_amps", "catalog_list_cabs", "catalog_list_mics", "catalog_list_fx",
 		"catalog_list_fx_categories", "catalog_list_fx_by_category",
 		"catalog_list_block_presets", "catalog_list_module_params",

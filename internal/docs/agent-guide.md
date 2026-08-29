@@ -25,9 +25,11 @@ is written, so an invalid preset is never produced.
 5. `catalog_list_module_params` — read a module's editable parameters, ranges
    and enum options before setting them. Pass a `types` list to describe several
    modules in one call.
-6. `design_rig` — resolve everything and write the `.rig` + an HTML report.
-7. `rig_decode` / `render_report` — inspect or re-report an existing preset.
-8. `estimate_rig_level` — check a rig's output level (the default amp master of
+6. `get_fx_placement` — where each effect category goes (before vs after the
+   amp) and how many slots each chain layout offers, so you know what fits.
+7. `design_rig` — resolve everything and write the `.rig` + an HTML report.
+8. `rig_decode` / `render_report` — inspect or re-report an existing preset.
+9. `estimate_rig_level` — check a rig's output level (the default amp master of
    50% is −6 dB, so a fresh rig is usually ~6 dB quiet). Set `output_level` on
    `design_rig` (or the recommended RigVolume) to compensate.
 

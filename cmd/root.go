@@ -50,6 +50,7 @@ func newRootCmd() *cobra.Command {
 		newCatalogCmd(),
 		newTranslateCmd(),
 		newSearchCmd(),
+		newFxPlacementCmd(),
 		newDesignCmd(),
 		newReportCmd(),
 		newDecodeCmd(),

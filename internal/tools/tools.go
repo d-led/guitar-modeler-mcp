@@ -42,6 +42,14 @@ func (r *Registrar) Register(s *mcp.Server) {
 		},
 	})
 	s.Register(mcp.Tool{
+		Name:        "get_fx_placement",
+		Description: "Return the effect-placement guidance: which effect categories go before vs after the amp, and how each routing topology's sections map onto the available slots (so you know how many effects fit where).",
+		InputSchema: objectSchema(map[string]any{}),
+		Handler: func(_ context.Context, _ map[string]any) (string, error) {
+			return marshal(design.PlacementGuide())
+		},
+	})
+	s.Register(mcp.Tool{
 		Name:        "search_catalog",
 		Description: "Fuzzy-search every amp, cab, mic and effect by device name, the real hardware it emulates (modeled_after), category or description. Works in both directions: \"JCM800\" finds \"82 Lead 800 100W\" and vice versa. Use kind to restrict to amp/cab/mic/fx.",
 		InputSchema: objectSchema(map[string]any{

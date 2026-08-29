@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"unicode"
 )
 
 // Name returns the rig's display name from the Patch's Rig node.
@@ -45,12 +44,15 @@ func (f *RigFile) Write(dir string) (string, error) {
 	return path, nil
 }
 
-// sanitizeFileName keeps only filesystem-safe characters.
+// sanitizeFileName keeps only printable ASCII filesystem-safe characters;
+// anything else (accented letters, emoji, control characters) becomes an
+// underscore, so the file name is portable across machines and file systems.
 func sanitizeFileName(name string) string {
 	var b strings.Builder
 	for _, r := range name {
 		switch {
-		case unicode.IsLetter(r), unicode.IsDigit(r), r == ' ', r == '-', r == '_', r == '.':
+		case (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9'),
+			r == ' ', r == '-', r == '_', r == '.':
 			b.WriteRune(r)
 		default:
 			b.WriteRune('_')
