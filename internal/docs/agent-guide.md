@@ -2,7 +2,7 @@
 
 You are designing sound presets for the **HeadRush Gigboard**. A preset is a
 `.rig` file: one line of JSON whose `content` field is a second JSON document
-describing the signal chain (the `Patch`). Use the MCP tools to discover models
+describing the signal chain (the `Patch`). Use these tools to discover models
 and to write `.rig` files; every parameter you pass is validated before a file
 is written, so an invalid preset is never produced.
 
@@ -21,10 +21,10 @@ is written, so an invalid preset is never produced.
 
 ## Effect categories
 
-Effects are grouped into eight categories, mirroring the Gigboard Hints
-reference: `distortion`, `dynamics`, `eq`, `expression`, `modulation`, `delay`,
-`reverb`, `utility`. List them with `catalog_list_fx_categories` and the modules
-of one with `catalog_list_fx_by_category`.
+Effects are grouped into eight categories, mirroring the standard HeadRush
+effect grouping: `distortion`, `dynamics`, `eq`, `expression`, `modulation`,
+`delay`, `reverb`, `utility`. List them with `catalog_list_fx_categories` and
+the modules of one with `catalog_list_fx_by_category`.
 
 ## Signal chain & parallel routing
 
@@ -54,17 +54,16 @@ Constraints:
 - **Path mixer.** `Para1Level`/`Para2Level` (dB, default −6),
   `Para1Pan`/`Para2Pan` (−100…100, default 0) and `ParaDelay` (ms, default 0)
   balance the two paths; pan −100/+100 hard-pans paths A/B for wet/dry/wet.
-- **Slot budget.** 11 slots total; the builder rejects any section that exceeds
-  its budget rather than silently overflowing.
+- **Slot budget.** 11 slots total; a section that exceeds its budget is
+  rejected rather than silently overflowing.
 
 In `design_rig`, pass `routing: "SPS-1"` with `amp2` (and optional `cab2`,
 `mic2`) for a dual-amp rig, or `routing: "SPS-1"` without `amp2` and
-`path_a_fx`/`path_b_fx` for a shared-amp split. The same is on the CLI via
-`--routing`, `--amp2`, `--cab2`, `--mic2`, `--path-a-fx`, `--path-b-fx`.
+`path_a_fx`/`path_b_fx` for a shared-amp split.
 
 ## Validation
 
-The builder validates **every parameter** against the device's specifications:
+Every parameter you set is validated against the device's specifications:
 unknown parameter names, out-of-range numbers, invalid enum options and unknown
 amp/cab/mic models are rejected with a clear message.
 

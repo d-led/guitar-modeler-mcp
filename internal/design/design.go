@@ -44,6 +44,14 @@ type Request struct {
 	// respectively (used for a shared-amp split, e.g. wet/dry/wet).
 	PathAFX []FXBlock `json:"path_a_fx,omitempty"`
 	PathBFX []FXBlock `json:"path_b_fx,omitempty"`
+
+	// Parallel-path mixer controls. Levels are dB (default -6), pans -100..100
+	// (default 0; -100/+100 hard-pans the two paths), delay ms (default 0).
+	Para1Level *float64 `json:"para1_level,omitempty"`
+	Para2Level *float64 `json:"para2_level,omitempty"`
+	Para1Pan   *float64 `json:"para1_pan,omitempty"`
+	Para2Pan   *float64 `json:"para2_pan,omitempty"`
+	ParaDelay  *float64 `json:"para_delay,omitempty"`
 }
 
 // Result carries the resolved spec plus human-readable decisions.
@@ -85,10 +93,15 @@ func (d *Designer) Design(req Request) (*Result, error) {
 	}
 
 	spec := rig.Spec{
-		Name:      req.Name,
-		Tempo:     tempo,
-		InputGain: req.InputGain,
-		Routing:   req.Routing,
+		Name:       req.Name,
+		Tempo:      tempo,
+		InputGain:  req.InputGain,
+		Routing:    req.Routing,
+		Para1Level: req.Para1Level,
+		Para2Level: req.Para2Level,
+		Para1Pan:   req.Para1Pan,
+		Para2Pan:   req.Para2Pan,
+		ParaDelay:  req.ParaDelay,
 	}
 
 	switch {

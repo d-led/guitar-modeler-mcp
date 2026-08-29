@@ -9,9 +9,9 @@ import (
 // real-world hardware description, together with a relevance score and a short
 // human readable reason for the match.
 type Match struct {
-	Amp    Amp
-	Score  int
-	Reason string
+	Amp    Amp    `json:"amp"`
+	Score  int    `json:"score"`
+	Reason string `json:"reason"`
 }
 
 // ampSynonyms maps common ways of describing real amplifiers to canonical
@@ -166,7 +166,7 @@ func (c *Catalog) TranslateAmp(query string) []Match {
 
 		reason := strings.Join(reasons, ", ")
 		if reason == "" {
-			reason = "text similarity"
+			reason = "close match"
 		}
 		matches = append(matches, Match{Amp: a, Score: score, Reason: reason})
 	}

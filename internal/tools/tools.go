@@ -35,7 +35,7 @@ func NewRegistrar(cat *catalog.Catalog, b *rig.Builder, d *design.Designer) *Reg
 func (r *Registrar) Register(s *mcp.Server) {
 	s.Register(mcp.Tool{
 		Name:        "get_guide",
-		Description: "Return the embedded agent guide: how the device's signal chain works, the parallel routing topologies and constraints, the effect categories, and the recommended workflow. Read this first when the task is unfamiliar.",
+		Description: "Return the agent guide: how the device's signal chain works, the parallel routing topologies and constraints, the effect categories, and the recommended workflow. Read this first when the task is unfamiliar.",
 		InputSchema: objectSchema(map[string]any{}),
 		Handler: func(_ context.Context, _ map[string]any) (string, error) {
 			return docs.Guide(), nil
@@ -78,7 +78,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 	})
 	s.Register(mcp.Tool{
 		Name:        "catalog_list_fx_categories",
-		Description: "List the effect categories (distortion, dynamics, eq, expression, modulation, delay, reverb, utility) with module counts, so the agent can pick a category before listing its effects.",
+		Description: "List the effect categories (distortion, dynamics, eq, expression, modulation, delay, reverb, utility) with module counts, so you can pick a category before listing its effects.",
 		InputSchema: objectSchema(map[string]any{}),
 		Handler: func(_ context.Context, _ map[string]any) (string, error) {
 			return marshal(params.FXCategories(r.cat))
@@ -181,6 +181,11 @@ func (r *Registrar) Register(s *mcp.Server) {
 			"fx":         arraySchema("Optional effects, in any order; they will be placed sensibly.", fxItemSchema()),
 			"path_a_fx":  arraySchema("Optional effects for parallel path A (shared-amp SPS-1).", fxItemSchema()),
 			"path_b_fx":  arraySchema("Optional effects for parallel path B (shared-amp SPS-1).", fxItemSchema()),
+			"para1_level": numberSchema("Optional level of path A in dB (default -6)."),
+			"para2_level": numberSchema("Optional level of path B in dB (default -6)."),
+			"para1_pan":   numberSchema("Optional pan of path A, -100..100 (default 0; -100 = hard left)."),
+			"para2_pan":   numberSchema("Optional pan of path B, -100..100 (default 0; 100 = hard right)."),
+			"para_delay":  numberSchema("Optional delay of path B in ms (default 0)."),
 		}),
 		Handler: func(_ context.Context, args map[string]any) (string, error) {
 			return r.designRig(args)
@@ -214,20 +219,25 @@ func (r *Registrar) Register(s *mcp.Server) {
 
 func (r *Registrar) designRig(args map[string]any) (string, error) {
 	req := design.Request{
-		Name:      argString(args, "name"),
-		Song:      argString(args, "song"),
-		Amp:       argString(args, "amp"),
-		Cab:       argString(args, "cab"),
-		Mic:       argString(args, "mic"),
-		Routing:   rig.Routing(argString(args, "routing")),
-		Amp2:      argString(args, "amp2"),
-		Cab2:      argString(args, "cab2"),
-		Mic2:      argString(args, "mic2"),
-		Tempo:     argFloat(args, "tempo"),
-		InputGain: argFloat(args, "input_gain"),
-		FX:        parseFX(args["fx"]),
-		PathAFX:   parseFX(args["path_a_fx"]),
-		PathBFX:   parseFX(args["path_b_fx"]),
+		Name:       argString(args, "name"),
+		Song:       argString(args, "song"),
+		Amp:        argString(args, "amp"),
+		Cab:        argString(args, "cab"),
+		Mic:        argString(args, "mic"),
+		Routing:    rig.Routing(argString(args, "routing")),
+		Amp2:       argString(args, "amp2"),
+		Cab2:       argString(args, "cab2"),
+		Mic2:       argString(args, "mic2"),
+		Tempo:      argFloat(args, "tempo"),
+		InputGain:  argFloat(args, "input_gain"),
+		FX:         parseFX(args["fx"]),
+		PathAFX:    parseFX(args["path_a_fx"]),
+		PathBFX:    parseFX(args["path_b_fx"]),
+		Para1Level: argFloatPtr(args, "para1_level"),
+		Para2Level: argFloatPtr(args, "para2_level"),
+		Para1Pan:   argFloatPtr(args, "para1_pan"),
+		Para2Pan:   argFloatPtr(args, "para2_pan"),
+		ParaDelay:  argFloatPtr(args, "para_delay"),
 	}
 	res, err := r.design.Design(req)
 	if err != nil {
@@ -374,6 +384,27 @@ func argFloat(args map[string]any, key string) float64 {
 		}
 	}
 	return 0
+}
+
+// argFloatPtr returns the numeric value as a pointer, or nil when the argument
+// is absent or not a number. Used for optional parameters where nil means
+// "keep the default".
+func argFloatPtr(args map[string]any, key string) *float64 {
+	v, ok := args[key]
+	if !ok {
+		return nil
+	}
+	switch n := v.(type) {
+	case float64:
+		return &n
+	case int:
+		f := float64(n)
+		return &f
+	case int64:
+		f := float64(n)
+		return &f
+	}
+	return nil
 }
 
 func argBool(args map[string]any, key string, def bool) bool {
