@@ -59,7 +59,7 @@ func TestBuildPresetEncodesGainLinearly(t *testing.T) {
 	amp := preset.Chains[0].Models[0]
 	byName := map[string]float64{}
 	for _, p := range amp.Params {
-		byName[paramName(cat, 1001, p.GetIndex())] = p.ParamValues[0].GetFloatValue()
+		byName[paramName(cat, 1001, p.GetIndex())] = float64(p.ParamValues[0].GetFloatValue())
 	}
 	if got := byName["GAIN"]; math.Abs(got-0.5) > 1e-9 {
 		t.Fatalf("GAIN 5 on a 0..10 knob = wire %g, want 0.5", got)
