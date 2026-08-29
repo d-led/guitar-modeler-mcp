@@ -6,6 +6,22 @@ describing the signal chain (the `Patch`). Use these tools to discover models
 and to write `.rig` files; every parameter you pass is validated before a file
 is written, so an invalid preset is never produced.
 
+## Tool contract
+
+- **Nothing writes files except `design_rig` and `render_report`.** Every
+  catalog/translate tool (`search_catalog`, `catalog_list_*`,
+  `translate_amp/cab/mic`, `get_guide`, `get_fx_placement`,
+  `catalog_list_module_params`) returns its answer inline as JSON text — there
+  are no files to open afterwards. `design_rig`'s reply tells you the `.rig`
+  and `.html` paths it wrote.
+- **Never read source code** (this project's, the MCP's, or the desktop app's).
+  The catalog tools are the complete interface to the device's models and
+  their parameters; digging into `.go`/`.ts` files is a dead end.
+- **One concept per query.** `translate_*` and `search_catalog` match one
+  description at a time; "Marshall Plexi clean edge of breakup tweed" mixes
+  four amp characters and returns noise. Run separate queries (or filter
+  `catalog_list_amps` by one keyword) and pick from the results.
+
 ## Tools and workflow
 
 1. `search_catalog` — fuzzy-search every amp, cab, mic and effect by device name
@@ -101,6 +117,59 @@ the chain (`Wham`, `Green JRC-OD`, `Amp`, `Amp 2` — repeated modules get a
 pass a different `operation` to control a module-specific parameter instead.
 A module that is not in the chain is rejected, and you can never assign more
 than four switches.
+
+## Reading a rig (reverse-engineering)
+
+To analyze an existing `.rig` file, pass its path to `rig_decode`. It returns a
+structured summary instead of raw JSON:
+
+- `routing` + `slots` — the topology and the full 11-slot layout (including
+  `Empty Slot` placeholders), so you can see exactly where the split/merge
+  points are.
+- `mixer` — the parallel-path balance (`para1_level`, `para2_level`,
+  `para1_pan`, `para2_pan`, `para_delay`).
+- `modules` — every module in chain order with its `name`, `on` state and
+  effective `params` (amp/cab models, pedal settings).
+- `footswitches` — the FS5..FS8 assignments, if any.
+
+Workflow to reproduce or tweak a preset:
+
+1. `rig_decode` the file and note the amp/cab/mic models and each effect with
+   the params that matter.
+2. Rebuild it with `design_rig`, passing those models/params (and the same
+   `routing`, `footswitches` and mixer values) — or adjust them deliberately.
+3. `render_report` turns any `.rig` into a readable HTML report of the chain,
+   params and switches, if you want a human-facing view.
+4. `estimate_rig_level` on the existing file reports its net output level —
+   useful before changing gain staging.
+
+A `.rig` is plain JSON whose `content` field is an escaped second JSON document
+(`{FootSwitch, Pedal1, Pedal2, data:{Patch}, info:{version}}`). Prefer
+`rig_decode` over hand-parsing the raw JSON — it already resolves the
+instance names, mixer and footswitches.
+
+## Optimizing a rig
+
+Once you have decoded a rig, improve it in this order:
+
+1. **Level first.** `estimate_rig_level` with a target (default 0 dB) tells you
+   how far off the rig is. Fix it with `output_level` (RigVolume), amp
+   `Master`, or cab `OutGain` — but keep the summed level within −60…+20 dB or
+   the build is refused.
+2. **Match the amp to the part.** Compare the amp's `gain` character
+   (`clean` → `high gain`) with the song. A lead-channel amp on a clean song is
+   the most common mismatch — swap it and keep the cab/mic if they fit.
+3. **Check placement.** Verify each effect sits on the right side of the amp
+   (`get_fx_placement`): wah/boost/compressor before, time-based effects after.
+   A delay in front of the amp muddies the tone.
+4. **Wire the controls.** If the rig has a wah, whammy or boost but
+   `footswitches` is empty, assign it (see Footswitches) — an unswitched
+   whammy is unplayable.
+5. **Trim or fill the chain.** Drop modules that fight the tone (two stacked
+   drives where one suffices), add what's missing (a reverb for a spacey part,
+   a boost for a solo).
+6. **Rebuild through `design_rig`** with the corrected values. It re-validates
+   every parameter, so a bad edit is rejected rather than written.
 
 ## Validation
 
