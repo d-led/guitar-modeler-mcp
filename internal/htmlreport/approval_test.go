@@ -4,9 +4,9 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/catalog"
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/golden"
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/rig"
+	"github.com/d-led/guitar-modeler-mcp/internal/catalog"
+	"github.com/d-led/guitar-modeler-mcp/internal/golden"
+	"github.com/d-led/guitar-modeler-mcp/internal/rig"
 )
 
 // TestReportSnapshot approves the HTML report for a representative rig. The

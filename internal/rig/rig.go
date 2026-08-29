@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/catalog"
+	"github.com/d-led/guitar-modeler-mcp/internal/catalog"
 )
 
 // Item is a single parameter value inside a module node. Exactly one of

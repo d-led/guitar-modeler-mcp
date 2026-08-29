@@ -9,10 +9,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/catalog"
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/design"
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/mcp"
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/rig"
+	"github.com/d-led/guitar-modeler-mcp/internal/catalog"
+	"github.com/d-led/guitar-modeler-mcp/internal/design"
+	"github.com/d-led/guitar-modeler-mcp/internal/mcp"
+	"github.com/d-led/guitar-modeler-mcp/internal/rig"
 )
 
 // newIntegrationServer builds the fully wired server exactly as the CLI does.

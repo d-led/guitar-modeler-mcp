@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/catalog"
+	"github.com/d-led/guitar-modeler-mcp/internal/catalog"
 )
 
 func newTestBuilder(t *testing.T) *Builder {

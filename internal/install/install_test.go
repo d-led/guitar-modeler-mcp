@@ -6,7 +6,7 @@ import (
 )
 
 func server() Server {
-	return Server{Name: "headrush-gigboard-mcp", Command: "/opt/bin/hg", Args: []string{"serve"}}
+	return Server{Name: "guitar-modeler-mcp", Command: "/opt/bin/hg", Args: []string{"serve"}}
 }
 
 func TestApplyInstallOnEmpty(t *testing.T) {
@@ -22,7 +22,7 @@ func TestApplyInstallOnEmpty(t *testing.T) {
 		t.Fatalf("result is not valid JSON: %v", err)
 	}
 	servers := root["servers"].(map[string]any)
-	entry := servers["headrush-gigboard-mcp"].(map[string]any)
+	entry := servers["guitar-modeler-mcp"].(map[string]any)
 	if entry["type"] != "stdio" {
 		t.Fatalf("entry type = %v, want stdio", entry["type"])
 	}
@@ -59,14 +59,14 @@ func TestApplyInstallPreservesOtherServers(t *testing.T) {
 	if _, ok := servers["other"]; !ok {
 		t.Fatal("other server was dropped")
 	}
-	if _, ok := servers["headrush-gigboard-mcp"]; !ok {
+	if _, ok := servers["guitar-modeler-mcp"]; !ok {
 		t.Fatal("new server was not added")
 	}
 }
 
 func TestApplyUninstall(t *testing.T) {
-	existing := []byte(`{"servers":{"a":{},"headrush-gigboard-mcp":{}}}`)
-	out, changed, err := applyUninstall(existing, "servers", "headrush-gigboard-mcp")
+	existing := []byte(`{"servers":{"a":{},"guitar-modeler-mcp":{}}}`)
+	out, changed, err := applyUninstall(existing, "servers", "guitar-modeler-mcp")
 	if err != nil {
 		t.Fatalf("applyUninstall: %v", err)
 	}
@@ -78,7 +78,7 @@ func TestApplyUninstall(t *testing.T) {
 		t.Fatalf("invalid JSON: %v", err)
 	}
 	servers := root["servers"].(map[string]any)
-	if _, ok := servers["headrush-gigboard-mcp"]; ok {
+	if _, ok := servers["guitar-modeler-mcp"]; ok {
 		t.Fatal("entry not removed")
 	}
 	if _, ok := servers["a"]; !ok {

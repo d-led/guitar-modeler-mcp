@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"testing"
 
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/catalog"
+	"github.com/d-led/guitar-modeler-mcp/internal/catalog"
 )
 
 func sceneSlotNames(t *testing.T, file *RigFile) []string {

@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/catalog"
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/rig"
+	"github.com/d-led/guitar-modeler-mcp/internal/catalog"
+	"github.com/d-led/guitar-modeler-mcp/internal/rig"
 )
 
 type paramKV struct {

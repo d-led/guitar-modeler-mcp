@@ -1,4 +1,4 @@
-module github.com/dmitryledentsov/headrush-gigboard-mcp
+module github.com/d-led/guitar-modeler-mcp
 
 go 1.27
 

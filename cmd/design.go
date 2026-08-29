@@ -8,9 +8,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/design"
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/htmlreport"
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/rig"
+	"github.com/d-led/guitar-modeler-mcp/internal/design"
+	"github.com/d-led/guitar-modeler-mcp/internal/htmlreport"
+	"github.com/d-led/guitar-modeler-mcp/internal/rig"
 )
 
 func newDesignCmd() *cobra.Command {

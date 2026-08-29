@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/install"
+	"github.com/d-led/guitar-modeler-mcp/internal/install"
 )
 
 const serverName = "guitar-modeler-mcp"

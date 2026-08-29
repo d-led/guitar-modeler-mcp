@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/assets"
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/catalog"
+	"github.com/d-led/guitar-modeler-mcp/internal/assets"
+	"github.com/d-led/guitar-modeler-mcp/internal/catalog"
 )
 
 // RigFile is the outer JSON document of a .rig file.

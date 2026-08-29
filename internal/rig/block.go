@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/assets"
+	"github.com/d-led/guitar-modeler-mcp/internal/assets"
 )
 
 // blockEnvelope mirrors the outer JSON of a .block file: the actual module

@@ -7,8 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/assets"
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/params"
+	"github.com/d-led/guitar-modeler-mcp/internal/assets"
+	"github.com/d-led/guitar-modeler-mcp/internal/params"
 )
 
 func newCatalogCmd() *cobra.Command {

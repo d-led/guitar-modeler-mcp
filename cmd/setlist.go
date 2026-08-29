@@ -7,8 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/rig"
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/setlist"
+	"github.com/d-led/guitar-modeler-mcp/internal/rig"
+	"github.com/d-led/guitar-modeler-mcp/internal/setlist"
 )
 
 func newSetlistCmd() *cobra.Command {

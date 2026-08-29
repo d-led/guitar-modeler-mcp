@@ -3,7 +3,7 @@ package params
 import (
 	"strings"
 
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/catalog"
+	"github.com/d-led/guitar-modeler-mcp/internal/catalog"
 )
 
 // AmpListing enriches an amp with its capability keywords.

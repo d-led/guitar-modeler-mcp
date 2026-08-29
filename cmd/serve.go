@@ -6,8 +6,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/mcp"
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/tools"
+	"github.com/d-led/guitar-modeler-mcp/internal/mcp"
+	"github.com/d-led/guitar-modeler-mcp/internal/tools"
 )
 
 func newServeCmd() *cobra.Command {

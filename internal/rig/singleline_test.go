@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/catalog"
+	"github.com/d-led/guitar-modeler-mcp/internal/catalog"
 )
 
 // TestMarshalIsSingleLineJSON guards the on-disk format: the device writes

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/assets"
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/modspec"
+	"github.com/d-led/guitar-modeler-mcp/internal/assets"
+	"github.com/d-led/guitar-modeler-mcp/internal/modspec"
 )
 
 // structuralParams are rig-level fields that the builder sets itself; they are

@@ -6,6 +6,14 @@ multiple hardware devices, written in Go. The first supported device is the
 device-agnostic design core with per-device backends, so Quad Cortex, Mooer
 GE100 Pro and others can be added as new backends.
 
+## Roadmap
+
+- **Gigboard** — implemented (the only backend today).
+- **Quad Cortex** — planned; see [OpenCortex](https://github.com/VanIseghemThomas/OpenCortex)
+  (open-source QC preset format work) as a starting point for the preset format.
+- **Mooer GE100 Pro and others** — planned, pending a sample preset dump to
+  reverse-engineer each format.
+
 Give it a song and a tone description, and it will:
 
 1. translate real-world hardware (amps, cabs, mics) into the models the device

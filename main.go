@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/cmd"
+	"github.com/d-led/guitar-modeler-mcp/cmd"
 )
 
 func main() {

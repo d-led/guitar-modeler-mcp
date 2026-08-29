@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/golden"
+	"github.com/d-led/guitar-modeler-mcp/internal/golden"
 )
 
 // TestCatalogSnapshot approves the full device catalog: every model with its

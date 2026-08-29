@@ -9,15 +9,15 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/assets"
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/catalog"
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/design"
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/docs"
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/htmlreport"
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/mcp"
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/params"
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/rig"
-	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/setlist"
+	"github.com/d-led/guitar-modeler-mcp/internal/assets"
+	"github.com/d-led/guitar-modeler-mcp/internal/catalog"
+	"github.com/d-led/guitar-modeler-mcp/internal/design"
+	"github.com/d-led/guitar-modeler-mcp/internal/docs"
+	"github.com/d-led/guitar-modeler-mcp/internal/htmlreport"
+	"github.com/d-led/guitar-modeler-mcp/internal/mcp"
+	"github.com/d-led/guitar-modeler-mcp/internal/params"
+	"github.com/d-led/guitar-modeler-mcp/internal/rig"
+	"github.com/d-led/guitar-modeler-mcp/internal/setlist"
 )
 
 // Registrar binds the catalog, rig builder and designer to the MCP server.
