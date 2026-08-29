@@ -69,6 +69,58 @@ func (c *Catalog) FXByName(name string) (FX, bool) {
 	return f, ok
 }
 
+// categoryOrder is the canonical, stable presentation order of the effect
+// categories, mirroring the Gigboard Hints reference subdivision.
+var categoryOrder = []string{
+	"distortion", "dynamics", "eq", "expression", "modulation", "delay", "reverb", "utility",
+}
+
+// Categories returns every effect category with its module count, in a stable
+// order.
+func (c *Catalog) Categories() []Category {
+	counts := make(map[string]int, len(categoryOrder))
+	for _, f := range fx {
+		counts[f.Category]++
+	}
+	out := make([]Category, 0, len(categoryOrder))
+	for _, name := range categoryOrder {
+		out = append(out, Category{Name: name, Count: counts[name]})
+	}
+	return out
+}
+
+// FXByCategory returns the effects in the given category. Matching is
+// case-insensitive and accepts either the canonical name or its natural
+// singular/plural form ("delay", "delays", "reverb", "reverbs", ...).
+func (c *Catalog) FXByCategory(category string) []FX {
+	canon, ok := normalizeCategory(category)
+	if !ok {
+		return nil
+	}
+	out := make([]FX, 0)
+	for _, f := range fx {
+		if f.Category == canon {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
+// normalizeCategory resolves a free-form category string to the canonical name.
+func normalizeCategory(category string) (string, bool) {
+	q := strings.ToLower(strings.TrimSpace(category))
+	if q == "" {
+		return "", false
+	}
+	q = strings.TrimSuffix(q, "s") // "delays" → "delay"
+	for _, name := range categoryOrder {
+		if q == name || q == strings.ReplaceAll(name, "/", " ") {
+			return name, true
+		}
+	}
+	return "", false
+}
+
 // AmpsMatching filters amps by a case-insensitive substring query across all
 // searchable fields. An empty query returns the full list.
 func (c *Catalog) AmpsMatching(query string) []Amp {

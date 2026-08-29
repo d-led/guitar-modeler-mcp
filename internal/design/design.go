@@ -154,9 +154,9 @@ func (d *Designer) classifyFX(fx []FXBlock) (pre, post, last []rig.Block, err er
 			continue
 		}
 		switch def.Category {
-		case "drive", "dynamics/eq", "filter/wah", "pitch":
+		case "distortion", "dynamics", "eq", "expression":
 			pre = append(pre, block)
-		default: // modulation, delay/reverb, utility
+		default: // modulation, delay, reverb, utility
 			post = append(post, block)
 		}
 	}

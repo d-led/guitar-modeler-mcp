@@ -16,6 +16,24 @@ func newCatalogCmd() *cobra.Command {
 		Use:   "catalog",
 		Short: "List the models available on the device",
 	}
+
+	fxCmd := &cobra.Command{
+		Use:   "fx",
+		Short: "List effect modules",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			a, err := newApp()
+			if err != nil {
+				return err
+			}
+			category, _ := cmd.Flags().GetString("category")
+			if category != "" {
+				return printJSON(params.FXListingsByCategory(a.cat, category))
+			}
+			return printJSON(params.FXListings(a.cat))
+		},
+	}
+	fxCmd.Flags().String("category", "", "only list effects in this category (see `catalog fx-categories`)")
+
 	cmd.AddCommand(
 		&cobra.Command{
 			Use:   "amps [query]",
@@ -53,15 +71,16 @@ func newCatalogCmd() *cobra.Command {
 				return printJSON(a.cat.MicsMatching(firstArg(args)))
 			},
 		},
+		fxCmd,
 		&cobra.Command{
-			Use:   "fx",
-			Short: "List effect modules",
+			Use:   "fx-categories",
+			Short: "List effect categories with module counts",
 			RunE: func(_ *cobra.Command, _ []string) error {
 				a, err := newApp()
 				if err != nil {
 					return err
 				}
-				return printJSON(params.FXListings(a.cat))
+				return printJSON(params.FXCategories(a.cat))
 			},
 		},
 		&cobra.Command{

@@ -66,7 +66,7 @@
   
   <div class="module">
     <h2>Spring Reverb</h2>
-    <div class="cat">delay/reverb</div>
+    <div class="cat">reverb</div>
     <div class="desc">Spring tank reverb.</div>
     <div class="params">
       <div class="param"><span class="k">Decay</span><span class="v">1.5</span></div><div class="param"><span class="k">Tone</span><span class="v">6</span></div><div class="param"><span class="k">Mix</span><span class="v">40</span></div><div class="param"><span class="k">DiffusionOn</span><span class="v">on</span></div><div class="param"><span class="k">Width</span><span class="v">0</span></div><div class="param"><span class="k">On</span><span class="v">on</span></div><div class="param"><span class="k">Colour</span><span class="v">Green</span></div>

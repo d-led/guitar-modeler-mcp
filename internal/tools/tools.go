@@ -12,6 +12,7 @@ import (
 	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/assets"
 	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/catalog"
 	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/design"
+	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/docs"
 	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/htmlreport"
 	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/mcp"
 	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/params"
@@ -32,6 +33,14 @@ func NewRegistrar(cat *catalog.Catalog, b *rig.Builder, d *design.Designer) *Reg
 
 // Register adds all tools to the server.
 func (r *Registrar) Register(s *mcp.Server) {
+	s.Register(mcp.Tool{
+		Name:        "get_guide",
+		Description: "Return the embedded agent guide: how the device's signal chain works, the parallel routing topologies and constraints, the effect categories, and the recommended workflow. Read this first when the task is unfamiliar.",
+		InputSchema: objectSchema(map[string]any{}),
+		Handler: func(_ context.Context, _ map[string]any) (string, error) {
+			return docs.Guide(), nil
+		},
+	})
 	s.Register(mcp.Tool{
 		Name:        "catalog_list_amps",
 		Description: "List every amp model available on the HeadRush Gigboard, with the real hardware each emulates. Use the optional query to filter.",
@@ -61,10 +70,34 @@ func (r *Registrar) Register(s *mcp.Server) {
 	})
 	s.Register(mcp.Tool{
 		Name:        "catalog_list_fx",
-		Description: "List every effect module that can be placed in a rig chain, grouped by category.",
+		Description: "List every effect module that can be placed in a rig chain.",
 		InputSchema: objectSchema(map[string]any{}),
 		Handler: func(_ context.Context, _ map[string]any) (string, error) {
 			return marshal(params.FXListings(r.cat))
+		},
+	})
+	s.Register(mcp.Tool{
+		Name:        "catalog_list_fx_categories",
+		Description: "List the effect categories (distortion, dynamics, eq, expression, modulation, delay, reverb, utility) with module counts, so the agent can pick a category before listing its effects.",
+		InputSchema: objectSchema(map[string]any{}),
+		Handler: func(_ context.Context, _ map[string]any) (string, error) {
+			return marshal(params.FXCategories(r.cat))
+		},
+	})
+	s.Register(mcp.Tool{
+		Name:        "catalog_list_fx_by_category",
+		Description: "List the effect modules in one category (e.g. category=\"delay\" or \"reverb\"). See catalog_list_fx_categories for the valid category names.",
+		InputSchema: objectSchema(map[string]any{"category": stringSchema("Effect category, e.g. \"delay\", \"reverb\", \"distortion\", \"modulation\", \"dynamics\", \"eq\", \"expression\", \"utility\".")}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			category := argString(args, "category")
+			if category == "" {
+				return "", fmt.Errorf("a \"category\" is required; see catalog_list_fx_categories")
+			}
+			matches := params.FXListingsByCategory(r.cat, category)
+			if len(matches) == 0 {
+				return "", fmt.Errorf("unknown effect category %q; see catalog_list_fx_categories", category)
+			}
+			return marshal(matches)
 		},
 	})
 	s.Register(mcp.Tool{

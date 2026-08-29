@@ -60,3 +60,12 @@ type FX struct {
 	ModeledAfter string `json:"modeled_after,omitempty"`
 	Confirmed    bool   `json:"confirmed"`
 }
+
+// Category is one effect category, e.g. "delay" or "reverb". Categories mirror
+// the subdivision used by the Gigboard Hints reference (distortion, dynamics,
+// eq, expression, modulation, delay, reverb) plus a utility group for
+// IR/FX-loop/acoustic simulation modules.
+type Category struct {
+	Name  string `json:"name"`
+	Count int    `json:"count"`
+}

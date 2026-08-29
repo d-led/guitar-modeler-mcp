@@ -33,3 +33,18 @@ func FXListings(cat *catalog.Catalog) []FXListing {
 	}
 	return out
 }
+
+// FXCategories returns every effect category with its module count.
+func FXCategories(cat *catalog.Catalog) []catalog.Category {
+	return cat.Categories()
+}
+
+// FXListingsByCategory returns the effects in one category, annotated with
+// capabilities. An empty result means the category name was not recognised.
+func FXListingsByCategory(cat *catalog.Catalog, category string) []FXListing {
+	out := make([]FXListing, 0)
+	for _, f := range cat.FXByCategory(category) {
+		out = append(out, FXListing{FX: f, Capabilities: Capabilities(cat, f.Name)})
+	}
+	return out
+}

@@ -83,7 +83,9 @@ func TestIntegrationInitializeAndToolList(t *testing.T) {
 		names[tool.(map[string]any)["name"].(string)] = true
 	}
 	for _, want := range []string{
+		"get_guide",
 		"catalog_list_amps", "catalog_list_cabs", "catalog_list_mics", "catalog_list_fx",
+		"catalog_list_fx_categories", "catalog_list_fx_by_category",
 		"catalog_list_block_presets", "catalog_list_module_params",
 		"translate_amp", "translate_cab", "translate_mic",
 		"design_rig", "render_report", "rig_decode",
@@ -217,5 +219,48 @@ func TestIntegrationDesignDualAmpParallel(t *testing.T) {
 	}
 	if !strings.Contains(decoded, `"Amp 2"`) {
 		t.Fatalf("rig_decode missing Amp 2 module: %s", decoded)
+	}
+}
+
+func TestIntegrationGuideAndFxCategories(t *testing.T) {
+	s := newIntegrationServer(t)
+
+	guide := resultText(t, rpc(t, s, 1, "tools/call", map[string]any{
+		"name":      "get_guide",
+		"arguments": map[string]any{},
+	}))
+	if !strings.Contains(guide, "SPS-1") || !strings.Contains(guide, "parallel") {
+		t.Fatalf("get_guide missing routing guidance: %s", guide)
+	}
+
+	categories := resultText(t, rpc(t, s, 2, "tools/call", map[string]any{
+		"name":      "catalog_list_fx_categories",
+		"arguments": map[string]any{},
+	}))
+	for _, cat := range []string{"distortion", "delay", "reverb", "modulation", "utility"} {
+		if !strings.Contains(categories, cat) {
+			t.Fatalf("catalog_list_fx_categories missing %q: %s", cat, categories)
+		}
+	}
+
+	delays := resultText(t, rpc(t, s, 3, "tools/call", map[string]any{
+		"name":      "catalog_list_fx_by_category",
+		"arguments": map[string]any{"category": "delay"},
+	}))
+	if !strings.Contains(delays, "Tape Echo") || !strings.Contains(delays, "BBD Delay") {
+		t.Fatalf("delay category missing Tape Echo/BBD Delay: %s", delays)
+	}
+	if strings.Contains(delays, "Spring Reverb") {
+		t.Fatalf("delay category should not contain Spring Reverb: %s", delays)
+	}
+
+	// An unknown category is an error, not a silent empty list.
+	resp := rpc(t, s, 4, "tools/call", map[string]any{
+		"name":      "catalog_list_fx_by_category",
+		"arguments": map[string]any{"category": "bogus"},
+	})
+	result := resp["result"].(map[string]any)
+	if isErr, _ := result["isError"].(bool); !isErr {
+		t.Fatalf("expected isError for unknown category, got: %v", resp)
 	}
 }
