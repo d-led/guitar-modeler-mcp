@@ -98,6 +98,9 @@ func TestIntegrationInitializeAndToolList(t *testing.T) {
 		"waza_catalog_list_amps", "waza_catalog_list_fx", "waza_setup_card", "waza_write_tsl", "waza_read_tsl",
 		"waza_catalog_list_modes",
 		"thr_catalog_list_amps", "thr_catalog_list_fx", "thr_setup_card",
+		"qc_catalog_list_amps", "qc_catalog_list_cabs", "qc_catalog_list_fx",
+		"qc_translate_amp", "qc_translate_cab", "qc_list_model_params",
+		"qc_decode_preset", "qc_design",
 	} {
 		if !names[want] {
 			t.Errorf("missing tool %q in tools/list", want)
@@ -708,5 +711,75 @@ func TestIntegrationGuideAndFxCategories(t *testing.T) {
 	result := resp["result"].(map[string]any)
 	if isErr, _ := result["isError"].(bool); !isErr {
 		t.Fatalf("expected isError for unknown category, got: %v", resp)
+	}
+}
+
+func TestIntegrationQuadCortexDesignAndDecode(t *testing.T) {
+	s := newIntegrationServer(t)
+
+	// Translate a real amp description to the exact QC model and its wire id.
+	amp := resultText(t, rpc(t, s, 1, "tools/call", map[string]any{
+		"name":      "qc_translate_amp",
+		"arguments": map[string]any{"query": "JCM800"},
+	}))
+	if !strings.Contains(amp, "Marshall JCM800") || !strings.Contains(amp, `"id": 1001`) {
+		t.Fatalf("qc_translate_amp(JCM800) = %s, want Marshall JCM800 id 1001", amp)
+	}
+
+	// The model's parameters expose the screen scale for the design step.
+	params := resultText(t, rpc(t, s, 2, "tools/call", map[string]any{
+		"name":      "qc_list_model_params",
+		"arguments": map[string]any{"model": "JCM800"},
+	}))
+	if !strings.Contains(params, "GAIN") {
+		t.Fatalf("qc_list_model_params(JCM800) missing GAIN: %s", params)
+	}
+
+	// Design a serial preset and read it back.
+	dir := t.TempDir()
+	design := resultText(t, rpc(t, s, 3, "tools/call", map[string]any{
+		"name": "qc_design",
+		"arguments": map[string]any{
+			"name":       "QC Integration Tone",
+			"serial":     "QA00XXXXX",
+			"amp":        "JCM800",
+			"amp_params": map[string]any{"GAIN": 5},
+			"cab":        "Mesa Rectifier",
+			"fx": []any{
+				map[string]any{"type": "TS808", "params": map[string]any{"OVERDRIVE": 4}},
+			},
+			"output_dir": dir,
+		},
+	}))
+	var designed map[string]any
+	if err := json.Unmarshal([]byte(design), &designed); err != nil {
+		t.Fatalf("qc_design output not JSON: %v", design)
+	}
+	path, _ := designed["path"].(string)
+	if path == "" {
+		t.Fatalf("qc_design returned no path: %s", design)
+	}
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("qc_design file missing: %v", err)
+	}
+
+	decoded := resultText(t, rpc(t, s, 4, "tools/call", map[string]any{
+		"name":      "qc_decode_preset",
+		"arguments": map[string]any{"path": path, "serial": "QA00XXXXX"},
+	}))
+	for _, want := range []string{"QC Integration Tone", "Marshall JCM800", "TS808", "GAIN"} {
+		if !strings.Contains(decoded, want) {
+			t.Fatalf("qc_decode_preset missing %q: %s", want, decoded)
+		}
+	}
+
+	// A wrong serial must refuse to decode.
+	resp := rpc(t, s, 5, "tools/call", map[string]any{
+		"name":      "qc_decode_preset",
+		"arguments": map[string]any{"path": path, "serial": "QB99YYYYY"},
+	})
+	result := resp["result"].(map[string]any)
+	if isErr, _ := result["isError"].(bool); !isErr {
+		t.Fatalf("expected isError for wrong serial, got: %v", resp)
 	}
 }

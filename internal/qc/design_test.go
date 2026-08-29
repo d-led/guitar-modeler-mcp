@@ -87,7 +87,7 @@ func TestBuildPresetEncodesAndDecodesRoundTrip(t *testing.T) {
 		Name: "Round Trip",
 		Blocks: []BlockSpec{
 			{Model: "JCM800", Params: map[string]float64{"GAIN": 7, "MASTER": 6}},
-			{Model: "Tape Delay", Params: map[string]float64{"MIX": 35}},
+			{Model: "Tape Delay (M)", Params: map[string]float64{"MIX": 35}},
 		},
 	})
 	if err != nil {

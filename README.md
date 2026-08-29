@@ -57,16 +57,20 @@ sponsored by HeadRush or any of the referenced brands.
   The **XSONIC AIRSTEP BW** foot controller's four footswitch modes
   (channel memories CH 1–6 + effect toggles) are modelled and printable on the
   setup card.
-- **Quad Cortex** — catalog + translation implemented (`qc_catalog_list_*`,
-  `qc_translate_*`): the full amp/cab/effect model list with what each is
-  "based on", so a real amp can be mapped to its QC model and a preset
-  recommended from standard components. **`.qpreset` file exchange is not
-  implemented yet** — QC presets are AES-encrypted protobufs, so writing a
-  loadable file would require re-implementing the encryption rather than using
-  a public key. See [OpenCortex](https://github.com/VanIseghemThomas/OpenCortex)
-  (which has documented the format) and [pyquadcortex](https://github.com/stokes-audio/pyquadcortex)
-  (USB device control) as the two practical paths to file-level or live preset
-  editing.
+- **Quad Cortex** — full model catalog (`qc_catalog_list_*`), translation
+  (`qc_translate_*`), per-model parameter listing (`qc_list_model_params`) and
+  **preset file exchange** (`qc_design`, `qc_decode_preset`). The catalog is
+  parsed from the device's own `ModelRepo.xml`, so every model carries its wire
+  id and every knob its real scale (min/max/skew) — `qc_design` places a
+  serial chain (amp → cab → effects) and writes a loadable `.pb` file, and
+  `qc_decode_preset` reads one back with model and parameter names resolved.
+  The file format is a `BinaryPreset` protobuf encrypted with the device's own
+  symmetric scheme (public `KEY_MATERIAL` + serial, AES-128-CTR — no private
+  key). The parameter scale law and firmware constants are attributed to
+  [pyquadcortex](https://github.com/stokes-audio/pyquadcortex) (MIT); the
+  catalog and preset schema come from
+  [OpenCortex](https://github.com/VanIseghemThomas/OpenCortex) — see
+  `internal/qc/NOTICE.md`.
 
 Give it a song and a tone description, and it will:
 
@@ -243,6 +247,11 @@ guitar-modeler-mcp serve
 | `waza_read_tsl` | Read a Waza Air `.tsl` and report the first patch's tone |
 | `waza_setup_card` | Write a printable HTML setup card for a Waza Air tone |
 | `waza_catalog_list_modes` | List the four AIRSTEP BW footswitch modes (channel memories + effect toggles) |
+| `qc_catalog_list_amps` / `_cabs` / `_fx` | List the Quad Cortex amps, cabs and effects (with wire ids and the real hardware each is based on) |
+| `qc_translate_amp` / `qc_translate_cab` | Real hardware → the exact Quad Cortex model |
+| `qc_list_model_params` | Describe one Quad Cortex model's parameters (min/max/default/steps, so values are set on the screen's own line) |
+| `qc_design` | Build a serial Quad Cortex preset and write an encrypted `.pb` file |
+| `qc_decode_preset` | Decrypt and decode a `.pb` preset into a readable summary |
 
 Example agent workflow: list amps → translate the song's amp → `design_rig` with
 effects → read the report → tweak by re-running `design_rig` with parameter

@@ -487,7 +487,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 
 	s.Register(mcp.Tool{
 		Name:        "qc_catalog_list_amps",
-		Description: "List the Neural DSP Quad Cortex guitar amp models (and bass amps) with the real hardware each is based on. Preset file exchange is not implemented yet, so these models are for tone translation and recommendation.",
+		Description: "List the Neural DSP Quad Cortex guitar amp models (and bass amps) with the real hardware each is based on.",
 		InputSchema: objectSchema(map[string]any{
 			"query": stringSchema("Optional case-insensitive filter over name or based-on."),
 		}),
@@ -538,6 +538,51 @@ func (r *Registrar) Register(s *mcp.Server) {
 		}),
 		Handler: func(_ context.Context, args map[string]any) (string, error) {
 			return r.qcTranslateCab(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "qc_list_model_params",
+		Description: "List one Quad Cortex model's editable parameters with their scale (min, max, default, steps and option names), so a value can be set on the screen's own line. Resolves the model by name or \"based on\" description.",
+		InputSchema: objectSchema(map[string]any{
+			"model": stringSchema("Model name or \"based on\" description, e.g. \"JCM800\" or \"Mesa Rectifier\"."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.qcListModelParams(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "qc_decode_preset",
+		Description: "Decrypt and decode a Quad Cortex .pb preset file into a readable summary: the grid rows, each block's model name and each parameter's name with its real (screen) value. The serial is the unit's 9-character serial (empty for cloud files).",
+		InputSchema: objectSchema(map[string]any{
+			"path":   stringSchema("Path to the encrypted .pb preset file."),
+			"serial": stringSchema("The unit's 9-character serial number, or empty for cloud files."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.qcDecodePreset(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "qc_design",
+		Description: "Build a serial Quad Cortex preset — amp, then cab, then the effects in the order given — and write an encrypted .pb file. Parameter values are on the screen's own line (GAIN 5 on a 0..10 knob, a dB or % value); list parameters take the option index. The serial is the unit's 9-character serial (empty for cloud).",
+		InputSchema: objectSchema(map[string]any{
+			"name":               stringSchema("Preset name (becomes the file name)."),
+			"serial":             stringSchema("The unit's 9-character serial number, or empty for cloud files."),
+			"amp":                stringSchema("Amp model: device name or \"based on\" description, e.g. \"Marshall JCM800\"."),
+			"cab":                stringSchema("Optional cab model name or description."),
+			"amp_params":         floatMapSchema("Amp knob values in screen units (e.g. {\"GAIN\": 5, \"OUTPUT\": 0})."),
+			"amp_encoded_params": floatMapSchema("Amp knob values already on the device's 0..1 line."),
+			"cab_params":         floatMapSchema("Cab knob values in screen units."),
+			"cab_encoded_params": floatMapSchema("Cab knob values already on the device's 0..1 line."),
+			"fx":                 arraySchema("Effects after the cab, in signal order.", qcFXItemSchema()),
+			"author":             stringSchema("Optional author name."),
+			"volume":             numberSchema("Optional preset output level (default 1.0 = unity)."),
+			"output_dir":         stringSchema("Directory to write the .pb into (default: current directory)."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.qcDesign(args)
 		},
 	})
 }
@@ -1063,6 +1108,25 @@ func arraySchema(desc string, items map[string]any) map[string]any {
 	return map[string]any{"type": "array", "description": desc, "items": items}
 }
 
+// floatMapSchema describes an object whose values are all numbers (named
+// parameter settings).
+func floatMapSchema(desc string) map[string]any {
+	return map[string]any{
+		"type":                 "object",
+		"description":          desc,
+		"additionalProperties": map[string]any{"type": "number"},
+	}
+}
+
+// qcFXItemSchema describes one Quad Cortex effect block in qc_design.
+func qcFXItemSchema() map[string]any {
+	return objectSchema(map[string]any{
+		"type":           stringSchema("Effect model name or \"based on\" description, e.g. \"TS808\" or \"Tape Delay\"."),
+		"params":         floatMapSchema("Knob values in screen units (option index for list parameters)."),
+		"encoded_params": floatMapSchema("Knob values already on the device's 0..1 line."),
+	})
+}
+
 // mergeMaps returns a new map with the entries of all the given maps. Later
 // maps win on key collisions.
 func mergeMaps(maps ...map[string]any) map[string]any {
@@ -1128,6 +1192,7 @@ func deviceList() []deviceInfo {
 // catalogItem is one catalog row for the listing tools.
 type catalogItem struct {
 	Index      int    `json:"index"`
+	ID         int    `json:"id,omitempty"`
 	Name       string `json:"name"`
 	InspiredBy string `json:"inspired_by,omitempty"`
 }
@@ -1638,7 +1703,7 @@ func filterQCItems(items []qc.Item, query string) []catalogItem {
 		if q != "" && !strings.Contains(strings.ToLower(it.Name+" "+it.InspiredBy), q) {
 			continue
 		}
-		out = append(out, catalogItem{Index: i, Name: it.Name, InspiredBy: it.InspiredBy})
+		out = append(out, catalogItem{Index: i, ID: it.ID, Name: it.Name, InspiredBy: it.InspiredBy})
 	}
 	return out
 }
@@ -1679,7 +1744,7 @@ func (r *Registrar) qcTranslateAmp(args map[string]any) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return marshal(map[string]any{"name": item.Name, "based_on": item.InspiredBy})
+	return marshal(map[string]any{"id": item.ID, "name": item.Name, "based_on": item.InspiredBy})
 }
 
 func (r *Registrar) qcTranslateCab(args map[string]any) (string, error) {
@@ -1687,7 +1752,165 @@ func (r *Registrar) qcTranslateCab(args map[string]any) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return marshal(map[string]any{"name": item.Name, "based_on": item.InspiredBy})
+	return marshal(map[string]any{"id": item.ID, "name": item.Name, "based_on": item.InspiredBy})
+}
+
+// qcParamJSON is one parameter row for qc_list_model_params.
+type qcParamJSON struct {
+	Index     int      `json:"index"`
+	Name      string   `json:"name"`
+	Type      string   `json:"type"`
+	Units     string   `json:"units,omitempty"`
+	Min       float64  `json:"min,omitempty"`
+	Max       float64  `json:"max,omitempty"`
+	Default   float64  `json:"default,omitempty"`
+	Steps     int      `json:"steps,omitempty"`
+	StepNames []string `json:"step_names,omitempty"`
+}
+
+func (r *Registrar) qcListModelParams(args map[string]any) (string, error) {
+	d := qc.Default()
+	m, ok := d.Catalog.Find(argString(args, "model"))
+	if !ok {
+		return "", fmt.Errorf("no Quad Cortex model matches %q", argString(args, "model"))
+	}
+	params := make([]qcParamJSON, 0, len(m.Params))
+	for i, p := range m.Params {
+		params = append(params, qcParamJSON{
+			Index: i, Name: p.Name, Type: p.Type, Units: p.Units,
+			Min: p.Min, Max: p.Max, Default: p.Default,
+			Steps: p.Steps, StepNames: p.StepNames,
+		})
+	}
+	return marshal(map[string]any{
+		"id":       m.ID,
+		"name":     m.Name,
+		"category": m.Category,
+		"based_on": m.BasedOn,
+		"params":   params,
+	})
+}
+
+// qcDecodePreset decrypts and decodes a .pb preset file, then renders it as a
+// readable summary with model names and parameter names resolved.
+func (r *Registrar) qcDecodePreset(args map[string]any) (string, error) {
+	path := argString(args, "path")
+	if path == "" {
+		return "", fmt.Errorf("a preset file path is required")
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", fmt.Errorf("read preset: %w", err)
+	}
+	preset, err := qc.DecodePreset(argString(args, "serial"), data)
+	if err != nil {
+		return "", err
+	}
+	d := qc.Default()
+	chains := make([]map[string]any, 0, len(preset.Chains))
+	for _, c := range preset.Chains {
+		models := make([]map[string]any, 0, len(c.Models))
+		for _, model := range c.Models {
+			name, id := "?", model.GetHash()
+			if m, ok := d.Catalog.Model(int(model.GetHash())); ok {
+				name, id = m.Name, uint32(m.ID)
+			}
+			params := make([]map[string]any, 0, len(model.Params))
+			for _, p := range model.Params {
+				pname := fmt.Sprintf("param %d", p.GetIndex())
+				var val any
+				if len(p.ParamValues) > 0 {
+					val = p.ParamValues[0].GetFloatValue()
+				}
+				if m, ok := d.Catalog.Model(int(model.GetHash())); ok && int(p.GetIndex()) < len(m.Params) {
+					spec := m.Params[p.GetIndex()]
+					pname = spec.Name
+					if f, ok := val.(float32); ok {
+						if real, err := spec.Denormalize(float64(f)); err == nil {
+							val = map[string]any{"wire": f, "real": real, "units": spec.Units}
+						}
+					}
+				}
+				params = append(params, map[string]any{"index": p.GetIndex(), "name": pname, "value": val})
+			}
+			models = append(models, map[string]any{"id": id, "name": name, "column": model.GetColumn(), "params": params})
+		}
+		chains = append(chains, map[string]any{
+			"row":      c.GetRow(),
+			"in_port":  c.GetInPortid(),
+			"out_port": c.GetOutPortid(),
+			"models":   models,
+		})
+	}
+	return marshal(map[string]any{
+		"name":         preset.Name,
+		"author":       preset.AuthorName,
+		"volume":       preset.Volume,
+		"pan":          preset.Pan,
+		"date":         preset.Date,
+		"tempo":        preset.Tempo,
+		"scene_labels": preset.SceneLabels,
+		"chains":       chains,
+	})
+}
+
+// qcDesign builds a serial preset (amp, then cab, then the effects in the
+// order given) and writes an encrypted .pb file.
+func (r *Registrar) qcDesign(args map[string]any) (string, error) {
+	spec := qc.DesignSpec{
+		Name:   argString(args, "name"),
+		Author: argString(args, "author"),
+		Volume: argFloat(args, "volume"),
+	}
+	blocks := []qc.BlockSpec{}
+	for _, kind := range []string{"amp", "cab"} {
+		if model := argString(args, kind); model != "" {
+			blocks = append(blocks, qc.BlockSpec{
+				Model:         model,
+				Params:        argFloatMap(args, kind+"_params"),
+				EncodedParams: argFloatMap(args, kind+"_encoded_params"),
+			})
+		}
+	}
+	for _, raw := range argList(args, "fx") {
+		item, ok := raw.(map[string]any)
+		if !ok {
+			return "", fmt.Errorf("fx entries must be objects")
+		}
+		model := argString(item, "type")
+		if model == "" {
+			return "", fmt.Errorf("an fx entry needs a \"type\"")
+		}
+		blocks = append(blocks, qc.BlockSpec{
+			Model:         model,
+			Params:        argFloatMap(item, "params"),
+			EncodedParams: argFloatMap(item, "encoded_params"),
+		})
+	}
+	spec.Blocks = blocks
+
+	outDir := argString(args, "output_dir")
+	if outDir == "" {
+		outDir = "."
+	}
+	path, err := qc.WritePreset(argString(args, "serial"), spec, outDir)
+	if err != nil {
+		return "", err
+	}
+	return marshal(map[string]any{"path": path, "name": spec.Name, "blocks": len(blocks)})
+}
+
+// argList returns the array value of an argument, or nil.
+func argList(args map[string]any, key string) []any {
+	v, ok := args[key]
+	if !ok {
+		return nil
+	}
+	list, ok := v.([]any)
+	if !ok {
+		return nil
+	}
+	return list
 }
 
 // ---- Yamaha THR device tools ----

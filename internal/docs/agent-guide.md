@@ -67,19 +67,28 @@ are supported:
   `thr_setup_card`. The legacy
   THR10/THR10C/THR10X amp lists are partial (community reference) and have no
   cabinet list.
-- **Neural DSP Quad Cortex** — catalog and translation only, no file exchange.
-  QC presets are AES-encrypted protobufs, so there is no `qc_design` yet. Use
-  `qc_catalog_list_amps`/`qc_catalog_list_cabs`/`qc_catalog_list_fx` to browse
-  the model list (each model carries what real hardware it is "based on"), and
-  `qc_translate_amp`/`qc_translate_cab` to map a real amp/cab description to
-  the exact QC model name. To *write* a preset, either recommend a standard
-  component chain for the user to dial in by hand, or route through USB control
-  (e.g. pyquadcortex) — never attempt to write a `.qpreset` file directly.
+- **Neural DSP Quad Cortex** — full catalog + preset file exchange. The model
+  list and every knob's scale come from the device's own `ModelRepo.xml`, so
+  each model carries a wire id and each parameter its real min/max and taper
+  (`skew`). Browse with `qc_catalog_list_amps`/`_cabs`/`_fx` (names carry their
+  ids and "based on" hardware), translate with `qc_translate_amp`/`_cab`, and
+  inspect one model's knobs with `qc_list_model_params` (use the **screen
+  units** it reports — GAIN 5 on a 0..10 knob, dB and % values as shown).
+  `qc_design` places a **serial chain** — amp, then cab, then the effects in
+  the order you give — and writes an encrypted `.pb`; `qc_decode_preset` reads
+  one back. The wire is free-form (4 lanes that split and merge), but
+  `qc_design` covers the common single-lane case; for parallel/dual-amp rigs,
+  place the blocks yourself across `qc_design` calls or describe the routing
+  to the user. The `.pb` is encrypted with the unit's serial (9 characters) —
+  pass `serial` (or `""` for cloud files). There is no private key: the scheme
+  is the device's public `KEY_MATERIAL` + serial, so files round-trip through
+  `qc_design` → `qc_decode_preset` offline.
 
 Every parameter you pass is validated before a file is written, so an invalid
 preset is never produced. `design_rig` is Gigboard-only; Mooer presets go
 through `mooer_design`, Waza Air presets through `waza_write_tsl`, THR cards
-through `thr_setup_card`, and cross-device conversion through `map_preset`.
+through `thr_setup_card`, Quad Cortex presets through `qc_design`, and
+cross-device conversion through `map_preset`.
 
 ## Tool contract
 
