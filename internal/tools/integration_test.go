@@ -100,7 +100,7 @@ func TestIntegrationInitializeAndToolList(t *testing.T) {
 		"thr_catalog_list_amps", "thr_catalog_list_fx", "thr_setup_card",
 		"qc_catalog_list_amps", "qc_catalog_list_cabs", "qc_catalog_list_fx",
 		"qc_translate_amp", "qc_translate_cab", "qc_list_model_params",
-		"qc_decode_preset", "qc_design",
+		"qc_decode_preset", "qc_design", "qc_render_setup_card",
 	} {
 		if !names[want] {
 			t.Errorf("missing tool %q in tools/list", want)
@@ -762,6 +762,16 @@ func TestIntegrationQuadCortexDesignAndDecode(t *testing.T) {
 	if _, err := os.Stat(path); err != nil {
 		t.Fatalf("qc_design file missing: %v", err)
 	}
+	card, _ := designed["card"].(string)
+	if card == "" {
+		t.Fatalf("qc_design returned no setup card: %s", design)
+	}
+	if b, err := os.ReadFile(card); err != nil || !strings.Contains(string(b), "QC Integration Tone") {
+		t.Fatalf("qc_design setup card missing or empty: %v", err)
+	}
+	if caveat, _ := designed["caveat"].(string); !strings.Contains(caveat, "not yet confirmed on hardware") {
+		t.Fatalf("qc_design caveat missing the hardware note: %v", caveat)
+	}
 
 	decoded := resultText(t, rpc(t, s, 4, "tools/call", map[string]any{
 		"name":      "qc_decode_preset",
@@ -773,8 +783,17 @@ func TestIntegrationQuadCortexDesignAndDecode(t *testing.T) {
 		}
 	}
 
+	// Rendering a card from the written file works too.
+	rendered := resultText(t, rpc(t, s, 5, "tools/call", map[string]any{
+		"name":      "qc_render_setup_card",
+		"arguments": map[string]any{"path": path, "serial": "QA00XXXXX", "output_dir": dir},
+	}))
+	if !strings.Contains(rendered, "QC Integration Tone") {
+		t.Fatalf("qc_render_setup_card missing preset name: %s", rendered)
+	}
+
 	// A wrong serial must refuse to decode.
-	resp := rpc(t, s, 5, "tools/call", map[string]any{
+	resp := rpc(t, s, 6, "tools/call", map[string]any{
 		"name":      "qc_decode_preset",
 		"arguments": map[string]any{"path": path, "serial": "QB99YYYYY"},
 	})

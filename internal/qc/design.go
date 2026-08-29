@@ -183,28 +183,32 @@ func encodeValue(spec ParamSpec, value any) (float64, error) {
 	return spec.Normalize(real)
 }
 
-// WritePreset renders and encrypts a preset for the given serial and writes it
-// to <outputDir>/<name>.pb. The file is an AES-encrypted BinaryPreset, the
-// device's own preset format (see crypto.go).
-func WritePreset(serial string, spec DesignSpec, outputDir string) (string, error) {
+// WritePresetWithCard renders and encrypts a preset for the given serial and
+// writes it to <outputDir>/<name>.pb together with a printable HTML setup card
+// <outputDir>/<name>.html. It returns both paths.
+func WritePresetWithCard(serial string, spec DesignSpec, outputDir string) (pbPath, cardPath string, err error) {
 	cat, err := defaultCatalog()
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	preset, err := BuildPreset(cat, spec)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	data, err := EncodePreset(serial, preset)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
-	name := sanitizeName(spec.Name) + ".pb"
-	path := filepath.Join(outputDir, name)
-	if err := os.WriteFile(path, data, 0o644); err != nil {
-		return "", fmt.Errorf("write preset: %w", err)
+	stem := sanitizeName(spec.Name)
+	pbPath = filepath.Join(outputDir, stem+".pb")
+	if err := os.WriteFile(pbPath, data, 0o644); err != nil {
+		return "", "", fmt.Errorf("write preset: %w", err)
 	}
-	return path, nil
+	cardPath = filepath.Join(outputDir, stem+".html")
+	if err := os.WriteFile(cardPath, []byte(SetupCardHTML(cat, preset)), 0o644); err != nil {
+		return "", "", fmt.Errorf("write setup card: %w", err)
+	}
+	return pbPath, cardPath, nil
 }
 
 func sanitizeName(name string) string {

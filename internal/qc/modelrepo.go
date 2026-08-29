@@ -133,6 +133,25 @@ func (p ParamSpec) OptionName(name string) (int, error) {
 	return 0, fmt.Errorf("%s has no option %q (options: %s)", p.Name, name, strings.Join(p.StepNames, ", "))
 }
 
+// ValueToOption maps a wire value back to the option it selects. The value is
+// stored as option/(steps-1), so this rounds back to the nearest index.
+func (p ParamSpec) ValueToOption(wire float64) (int, error) {
+	if p.Steps <= 0 {
+		return 0, fmt.Errorf("%s is not a list parameter", p.Name)
+	}
+	if p.Steps == 1 {
+		return 0, nil
+	}
+	idx := int(math.Round(wire * float64(p.Steps-1)))
+	if idx < 0 {
+		idx = 0
+	}
+	if idx >= p.Steps {
+		idx = p.Steps - 1
+	}
+	return idx, nil
+}
+
 // ModelSpec is one block type: an amp, a pedal, a cab or a capture. It is
 // named ModelSpec because the protobuf package already owns the name Model.
 type ModelSpec struct {

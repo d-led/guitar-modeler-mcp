@@ -554,7 +554,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 
 	s.Register(mcp.Tool{
 		Name:        "qc_decode_preset",
-		Description: "Decrypt and decode a Quad Cortex .pb preset file into a readable summary: the grid rows, each block's model name and each parameter's name with its real (screen) value. The serial is the unit's 9-character serial (empty for cloud files).",
+		Description: "Decrypt and decode a Quad Cortex .pb preset file into a readable summary: the grid rows, each block's model name and each parameter's name with its real (screen) value. The serial is the unit's 9-character serial (empty for cloud files). Note: the crypto and schema are verified, but loading a file onto a unit by copy is not yet confirmed on hardware.",
 		InputSchema: objectSchema(map[string]any{
 			"path":   stringSchema("Path to the encrypted .pb preset file."),
 			"serial": stringSchema("The unit's 9-character serial number, or empty for cloud files."),
@@ -566,7 +566,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 
 	s.Register(mcp.Tool{
 		Name:        "qc_design",
-		Description: "Build a serial Quad Cortex preset — amp, then cab, then the effects in the order given — and write an encrypted .pb file. Parameter values are on the screen's own line (GAIN 5 on a 0..10 knob, a dB or % value); list parameters take the option index. The serial is the unit's 9-character serial (empty for cloud).",
+		Description: "Build a serial Quad Cortex preset — amp, then cab, then the effects in the order given — and write an encrypted .pb file plus a printable HTML setup card. Parameter values are on the screen's own line (GAIN 5 on a 0..10 knob, a dB or % value); list parameters take the option index. The serial is the unit's 9-character serial (empty for cloud). Caveat: the .pb is a valid encrypted BinaryPreset and round-trips through qc_decode_preset, but loading it onto a unit by file copy is not yet confirmed on hardware, and only a single-lane serial chain is modelled.",
 		InputSchema: objectSchema(map[string]any{
 			"name":               stringSchema("Preset name (becomes the file name)."),
 			"serial":             stringSchema("The unit's 9-character serial number, or empty for cloud files."),
@@ -583,6 +583,19 @@ func (r *Registrar) Register(s *mcp.Server) {
 		}),
 		Handler: func(_ context.Context, args map[string]any) (string, error) {
 			return r.qcDesign(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "qc_render_setup_card",
+		Description: "Decode an existing Quad Cortex .pb preset and write a printable HTML setup card next to it. The serial is the unit's 9-character serial (empty for cloud files).",
+		InputSchema: objectSchema(map[string]any{
+			"path":       stringSchema("Path to the encrypted .pb preset file."),
+			"serial":     stringSchema("The unit's 9-character serial number, or empty for cloud files."),
+			"output_dir": stringSchema("Directory to write the card into (default: next to the preset)."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.qcRenderSetupCard(args)
 		},
 	})
 }
@@ -1854,8 +1867,36 @@ func (r *Registrar) qcDecodePreset(args map[string]any) (string, error) {
 	})
 }
 
+// qcRenderSetupCard decodes an existing .pb preset and writes a printable HTML
+// setup card next to it.
+func (r *Registrar) qcRenderSetupCard(args map[string]any) (string, error) {
+	path := argString(args, "path")
+	if path == "" {
+		return "", fmt.Errorf("a preset file path is required")
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", fmt.Errorf("read preset: %w", err)
+	}
+	preset, err := qc.DecodePreset(argString(args, "serial"), data)
+	if err != nil {
+		return "", err
+	}
+	d := qc.Default()
+	outDir := argString(args, "output_dir")
+	if outDir == "" {
+		outDir = filepath.Dir(path)
+	}
+	stem := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+	cardPath := filepath.Join(outDir, stem+".html")
+	if err := os.WriteFile(cardPath, []byte(qc.SetupCardHTML(d.Catalog, preset)), 0o644); err != nil {
+		return "", fmt.Errorf("write setup card: %w", err)
+	}
+	return marshal(map[string]any{"card": cardPath, "name": preset.Name, "caveat": qc.Caveat})
+}
+
 // qcDesign builds a serial preset (amp, then cab, then the effects in the
-// order given) and writes an encrypted .pb file.
+// order given) and writes an encrypted .pb file plus a setup card.
 func (r *Registrar) qcDesign(args map[string]any) (string, error) {
 	spec := qc.DesignSpec{
 		Name:   argString(args, "name"),
@@ -1893,11 +1934,17 @@ func (r *Registrar) qcDesign(args map[string]any) (string, error) {
 	if outDir == "" {
 		outDir = "."
 	}
-	path, err := qc.WritePreset(argString(args, "serial"), spec, outDir)
+	pbPath, cardPath, err := qc.WritePresetWithCard(argString(args, "serial"), spec, outDir)
 	if err != nil {
 		return "", err
 	}
-	return marshal(map[string]any{"path": path, "name": spec.Name, "blocks": len(blocks)})
+	return marshal(map[string]any{
+		"path":   pbPath,
+		"card":   cardPath,
+		"name":   spec.Name,
+		"blocks": len(blocks),
+		"caveat": qc.Caveat,
+	})
 }
 
 // argList returns the array value of an argument, or nil.
