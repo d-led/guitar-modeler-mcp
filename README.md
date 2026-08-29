@@ -250,8 +250,9 @@ guitar-modeler-mcp serve
 | `qc_catalog_list_amps` / `_cabs` / `_fx` | List the Quad Cortex amps, cabs and effects (with wire ids and the real hardware each is based on) |
 | `qc_translate_amp` / `qc_translate_cab` | Real hardware → the exact Quad Cortex model |
 | `qc_list_model_params` | Describe one Quad Cortex model's parameters (min/max/default/steps, so values are set on the screen's own line) |
-| `qc_design` | Build a serial Quad Cortex preset and write an encrypted `.pb` file |
+| `qc_design` | Build a serial Quad Cortex preset and write an encrypted `.pb` + a printable HTML setup card |
 | `qc_decode_preset` | Decrypt and decode a `.pb` preset into a readable summary |
+| `qc_render_setup_card` | Decode a `.pb` preset and write a printable HTML setup card |
 
 Example agent workflow: list amps → translate the song's amp → `design_rig` with
 effects → read the report → tweak by re-running `design_rig` with parameter
