@@ -6,6 +6,7 @@ import (
 
 	"github.com/d-led/guitar-modeler-mcp/internal/catalog"
 	"github.com/d-led/guitar-modeler-mcp/internal/design"
+	"github.com/d-led/guitar-modeler-mcp/internal/presetmap"
 	"github.com/d-led/guitar-modeler-mcp/internal/rig"
 )
 
@@ -17,6 +18,7 @@ type app struct {
 	cat     *catalog.Catalog
 	builder *rig.Builder
 	design  *design.Designer
+	table   *presetmap.Table
 }
 
 func newApp() (*app, error) {
@@ -29,6 +31,7 @@ func newApp() (*app, error) {
 		cat:     cat,
 		builder: builder,
 		design:  design.NewDesigner(cat),
+		table:   presetmap.NewTable(cat),
 	}, nil
 }
 
@@ -57,6 +60,8 @@ func newRootCmd() *cobra.Command {
 		newLevelCmd(),
 		newSetlistCmd(),
 		newMcpCmd(),
+		newDeviceCmd(),
+		newMapCmd(),
 	)
 	return root
 }
