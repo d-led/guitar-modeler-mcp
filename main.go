@@ -12,8 +12,16 @@ import (
 )
 
 func main() {
-	if err := cmd.Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, "error:", err)
-		os.Exit(1)
+	err := cmd.Execute()
+	if err == nil {
+		return
 	}
+	fmt.Fprintln(os.Stderr, "error:", err)
+	if cmd.IsUsageError(err) {
+		// A wrong command or flag should be self-explanatory: print the help
+		// so the correct invocation is discoverable.
+		fmt.Fprintln(os.Stderr)
+		cmd.PrintHelp(os.Stderr)
+	}
+	os.Exit(1)
 }

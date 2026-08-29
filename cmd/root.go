@@ -2,6 +2,9 @@
 package cmd
 
 import (
+	"io"
+	"strings"
+
 	"github.com/spf13/cobra"
 
 	"github.com/d-led/guitar-modeler-mcp/internal/catalog"
@@ -42,14 +45,37 @@ func Execute() error {
 	return newRootCmd().Execute()
 }
 
+// IsUsageError reports whether err is a command-line usage error (an unknown
+// command or flag), for which showing the help is the useful response rather
+// than a bare error line.
+func IsUsageError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "unknown command") ||
+		strings.Contains(msg, "unknown flag") ||
+		strings.Contains(msg, "unknown shorthand flag") ||
+		strings.Contains(msg, "flag needs an argument") ||
+		strings.Contains(msg, "invalid argument")
+}
+
+// PrintHelp writes the root command's help to w.
+func PrintHelp(w io.Writer) {
+	root := newRootCmd()
+	root.SetOut(w)
+	_ = root.Help()
+}
+
 func newRootCmd() *cobra.Command {
 	root := &cobra.Command{
-		Use:           "guitar-modeler-mcp",
-		Short:         "Design and write guitar-modeler presets",
-		Long:          "guitar-modeler-mcp exposes an MCP server and CLI for designing guitar presets: translate real-world hardware into device models and write preset files. The first supported device is the HeadRush Gigboard.",
-		Version:       version,
-		SilenceUsage:  true,
-		SilenceErrors: true,
+		Use:                        "guitar-modeler-mcp",
+		Short:                      "Design and write guitar-modeler presets",
+		Long:                       "guitar-modeler-mcp exposes an MCP server and CLI for designing guitar presets: translate real-world hardware into device models and write preset files. The first supported device is the HeadRush Gigboard.",
+		Version:                    version,
+		SilenceUsage:               true,
+		SilenceErrors:              true,
+		SuggestionsMinimumDistance: 2,
 	}
 	root.AddCommand(
 		newServeCmd(),
