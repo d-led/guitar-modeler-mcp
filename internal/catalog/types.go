@@ -23,6 +23,9 @@ type Amp struct {
 	Style []string `json:"style,omitempty"`
 	// Bass marks bass-oriented models.
 	Bass bool `json:"bass,omitempty"`
+	// Gain classifies the amp's drive character: "bass", "clean",
+	// "edge of breakup", "crunch" or "high gain".
+	Gain string `json:"gain,omitempty"`
 	// Description is a one sentence, human readable summary.
 	Description string `json:"description"`
 	// ModeledAfter is the real amplifier the model emulates, e.g.

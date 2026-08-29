@@ -8,9 +8,12 @@ is written, so an invalid preset is never produced.
 
 ## Tools and workflow
 
-1. `catalog_list_amps` / `translate_amp` — find the amp model for the tone (each
-   amp lists the real hardware it emulates, `modeled_after`, and its
-   `capabilities`).
+1. `catalog_list_amps` / `translate_amp` — find the amp model for the tone. Each
+   amp lists the real hardware it emulates (`modeled_after`) and a `gain`
+   character (`clean`, `edge of breakup`, `crunch`, `high gain`, `bass`). Match
+   the character to the song: a clean song needs a `clean` amp (search
+   `query: "clean"`), a lead song a `crunch`/`high gain` one — don't use a lead
+   channel for a clean part.
 2. `catalog_list_cabs`, `catalog_list_mics` — pick a cabinet and microphone.
 3. `catalog_list_fx_categories` then `catalog_list_fx_by_category` — browse
    effects by category (see below) and their `capabilities`. To find an effect

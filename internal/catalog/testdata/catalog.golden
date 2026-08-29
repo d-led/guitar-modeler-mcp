@@ -11,6 +11,7 @@
         "indie",
         "classic rock"
       ],
+      "gain": "edge of breakup",
       "description": "Class A British twin-channel 30W head, channel 1.",
       "modeled_after": "Orange AD30 Twin Channel",
       "confirmed": false
@@ -26,6 +27,7 @@
         "indie",
         "classic rock"
       ],
+      "gain": "edge of breakup",
       "description": "Class A British twin-channel 30W head, channel 2.",
       "modeled_after": "Orange AD30 Twin Channel",
       "confirmed": false
@@ -40,6 +42,7 @@
         "metal",
         "high-gain"
       ],
+      "gain": "clean",
       "description": "Engl Powerball II clean channel.",
       "modeled_after": "Engl Powerball II",
       "confirmed": false
@@ -54,6 +57,7 @@
         "metal",
         "high-gain"
       ],
+      "gain": "crunch",
       "description": "Engl Powerball II crunch channel.",
       "modeled_after": "Engl Powerball II",
       "confirmed": false
@@ -68,6 +72,7 @@
         "metal",
         "high-gain"
       ],
+      "gain": "high gain",
       "description": "Engl Powerball II high-gain lead channel.",
       "modeled_after": "Engl Powerball II",
       "confirmed": false
@@ -82,6 +87,7 @@
         "metal",
         "high-gain"
       ],
+      "gain": "high gain",
       "description": "Engl Powerball II low-gain lead channel.",
       "modeled_after": "Engl Powerball II",
       "confirmed": false
@@ -95,6 +101,7 @@
         "bass"
       ],
       "bass": true,
+      "gain": "bass",
       "description": "Trace Elliot ELF micro bass head.",
       "modeled_after": "Trace Elliot ELF",
       "confirmed": false
@@ -108,6 +115,7 @@
         "bass"
       ],
       "bass": true,
+      "gain": "bass",
       "description": "Flip-top portaflex tube bass amp.",
       "modeled_after": "Ampeg B-15 Portaflex",
       "confirmed": false
@@ -122,6 +130,7 @@
         "rock"
       ],
       "bass": true,
+      "gain": "bass",
       "description": "Ampeg SVT 300W all-tube bass head.",
       "modeled_after": "Ampeg SVT 300W Bass Head",
       "confirmed": false
@@ -136,6 +145,7 @@
         "rock"
       ],
       "bass": true,
+      "gain": "bass",
       "description": "Ampeg SVT voicing with a scooped midrange.",
       "modeled_after": "Ampeg SVT (scooped)",
       "confirmed": false
@@ -150,6 +160,7 @@
         "rock",
         "country"
       ],
+      "gain": "edge of breakup",
       "description": "Modded 5E3 Tweed Deluxe with extra gain.",
       "modeled_after": "Fender",
       "confirmed": false
@@ -164,6 +175,7 @@
         "rock",
         "country"
       ],
+      "gain": "edge of breakup",
       "description": "Fender 5F6-A Tweed Bassman.",
       "modeled_after": "Fender Bassman",
       "confirmed": true
@@ -177,6 +189,7 @@
         "blues",
         "country"
       ],
+      "gain": "edge of breakup",
       "description": "Fender 5E3 Tweed Deluxe combo.",
       "modeled_after": "Fender Tweed Deluxe",
       "confirmed": false
@@ -190,6 +203,7 @@
         "blues",
         "country"
       ],
+      "gain": "edge of breakup",
       "description": "Fender 5F2-A Tweed Princeton.",
       "modeled_after": "Fender",
       "confirmed": false
@@ -205,6 +219,7 @@
         "blues",
         "country"
       ],
+      "gain": "clean",
       "description": "Blackface Deluxe Reverb, normal channel.",
       "modeled_after": "Fender Delux Reverb",
       "confirmed": false
@@ -220,6 +235,7 @@
         "blues",
         "country"
       ],
+      "gain": "clean",
       "description": "Blackface Deluxe Reverb, vibrato channel.",
       "modeled_after": "Fender Delux Reverb",
       "confirmed": false
@@ -233,6 +249,7 @@
         "blues",
         "surf"
       ],
+      "gain": "edge of breakup",
       "description": "Blackface Vibroverb combo.",
       "modeled_after": "Fender Vibroverb Combo",
       "confirmed": false
@@ -246,6 +263,7 @@
         "blues",
         "classic rock"
       ],
+      "gain": "edge of breakup",
       "description": "Blackface Champ practice combo.",
       "modeled_after": "Fender Champ Combo",
       "confirmed": false
@@ -259,6 +277,7 @@
         "clean",
         "country"
       ],
+      "gain": "clean",
       "description": "Blackface Princeton combo.",
       "modeled_after": "Fender",
       "confirmed": false
@@ -273,6 +292,7 @@
         "country",
         "blues"
       ],
+      "gain": "clean",
       "description": "Blackface Princeton Reverb combo.",
       "modeled_after": "Fender",
       "confirmed": false
@@ -287,6 +307,7 @@
         "clean",
         "country"
       ],
+      "gain": "clean",
       "description": "Blackface Super Reverb 4x10 combo.",
       "modeled_after": "Fender Super Reverb Blackface Combo",
       "confirmed": false
@@ -299,6 +320,7 @@
       "style": [
         "clean"
       ],
+      "gain": "clean",
       "description": "Blackface Twin Reverb combo.",
       "modeled_after": "Fender Twin Reverb Blackface Combo",
       "confirmed": false
@@ -312,6 +334,7 @@
         "clean",
         "ambient"
       ],
+      "gain": "clean",
       "description": "Blackface Twin Reverb voicing with added shimmer.",
       "modeled_after": "Fender Twin Reverb (shimmer)",
       "confirmed": false
@@ -325,6 +348,7 @@
         "blues",
         "rock"
       ],
+      "gain": "crunch",
       "description": "Marshall JTM45 head.",
       "modeled_after": "Marshall JTM45 Head",
       "confirmed": false
@@ -338,6 +362,7 @@
         "blues",
         "rock"
       ],
+      "gain": "crunch",
       "description": "Marshall Super Lead Plexi head, variac mod.",
       "modeled_after": "Marshall Super Lead Plexi Head (Varic mod)",
       "confirmed": false
@@ -351,6 +376,7 @@
         "rock",
         "crunch"
       ],
+      "gain": "crunch",
       "description": "Marshall Plexi voiced for EL84 power tubes.",
       "modeled_after": "Marshall Super Lead (EL84 mod)",
       "confirmed": false
@@ -365,6 +391,7 @@
         "rock",
         "blues"
       ],
+      "gain": "crunch",
       "description": "Marshall 1987 50W Super Lead Plexi head.",
       "modeled_after": "Marshall Super Lead Head",
       "confirmed": false
@@ -378,6 +405,7 @@
         "rock",
         "blues"
       ],
+      "gain": "crunch",
       "description": "Marshall 1959 100W Super Lead Plexi head.",
       "modeled_after": "Marshall Super Lead",
       "confirmed": false
@@ -391,6 +419,7 @@
         "rock",
         "hard rock"
       ],
+      "gain": "high gain",
       "description": "Marshall JCM800 2204 50W head.",
       "modeled_after": "Marshall JCM800 2204",
       "confirmed": false
@@ -404,6 +433,7 @@
         "rock",
         "hard rock"
       ],
+      "gain": "high gain",
       "description": "Marshall JCM800 2203 100W head.",
       "modeled_after": "Marshall JCM800 2203 Head",
       "confirmed": false
@@ -417,6 +447,7 @@
         "rock",
         "hard rock"
       ],
+      "gain": "high gain",
       "description": "Marshall JCM800 voicing with a brighter top end.",
       "modeled_after": "Marshall JCM800 (bright)",
       "confirmed": false
@@ -429,6 +460,7 @@
       "style": [
         "rock"
       ],
+      "gain": "high gain",
       "description": "Marshall JCM800 voicing with extended low end.",
       "modeled_after": "Marshall JCM800 (bass mod)",
       "confirmed": false
@@ -442,6 +474,7 @@
         "rock",
         "metal"
       ],
+      "gain": "high gain",
       "description": "Marshall JCM800 voicing with a tube-screamer style mid boost.",
       "modeled_after": "Marshall JCM800 (TS mod)",
       "confirmed": false
@@ -456,6 +489,7 @@
         "rock",
         "metal"
       ],
+      "gain": "high gain",
       "description": "Mesa Boogie Mark IIC+ drive channel.",
       "modeled_after": "Mesa Boogie Mark IIc+ Drive Channel",
       "confirmed": false
@@ -470,6 +504,7 @@
         "rock",
         "metal"
       ],
+      "gain": "high gain",
       "description": "Mesa Boogie Mark IIC+ with the capacitor mod.",
       "modeled_after": "Mesa Boogie Mark IIc+ Cap Mod",
       "confirmed": false
@@ -484,6 +519,7 @@
         "metal",
         "hard rock"
       ],
+      "gain": "high gain",
       "description": "Mesa Boogie Dual Rectifier, red/modern channel.",
       "modeled_after": "Mesa Boogie Dual Rectifier (Red Channel)",
       "confirmed": false
@@ -498,6 +534,7 @@
         "metal",
         "hard rock"
       ],
+      "gain": "crunch",
       "description": "Mesa Boogie Dual Rectifier, raw voicing.",
       "modeled_after": "Mesa Boogie",
       "confirmed": false
@@ -512,6 +549,7 @@
         "metal",
         "hard rock"
       ],
+      "gain": "crunch",
       "description": "Mesa Boogie Dual Rectifier, orange/vintage channel.",
       "modeled_after": "Mesa Boogie Dual Rectifier (Orange Channel)",
       "confirmed": false
@@ -526,6 +564,7 @@
         "rock",
         "hard rock"
       ],
+      "gain": "clean",
       "description": "Soldano SLO-100 clean channel.",
       "modeled_after": "Soldano SLO-100",
       "confirmed": false
@@ -540,6 +579,7 @@
         "rock",
         "hard rock"
       ],
+      "gain": "crunch",
       "description": "Soldano SLO-100 crunch channel.",
       "modeled_after": "Soldano SLO-100",
       "confirmed": false
@@ -555,6 +595,7 @@
         "hard rock",
         "metal"
       ],
+      "gain": "high gain",
       "description": "Soldano SLO-100 super lead overdrive channel.",
       "modeled_after": "Soldano SLO-100 Super Lead Overdrive",
       "confirmed": false
@@ -569,6 +610,7 @@
         "rock",
         "metal"
       ],
+      "gain": "high gain",
       "description": "Soldano SLO-100 with extended frequency range.",
       "modeled_after": "Soldano",
       "confirmed": false
@@ -583,6 +625,7 @@
         "country",
         "rock"
       ],
+      "gain": "clean",
       "description": "Class A boutique 30W combo voiced after the Matchless DC30.",
       "modeled_after": "Matchless DC30",
       "confirmed": false
@@ -597,6 +640,7 @@
         "rock",
         "blues"
       ],
+      "gain": "crunch",
       "description": "Bogner Ecstasy 101B blue channel.",
       "modeled_after": "Bogner Exstasy 101B Head (Blue Channel)",
       "confirmed": false
@@ -611,6 +655,7 @@
         "rock",
         "hard rock"
       ],
+      "gain": "crunch",
       "description": "Bogner Ecstasy 101B green channel.",
       "modeled_after": "Bogner Ecstasy 101B Head (Green Channel)",
       "confirmed": false
@@ -626,6 +671,7 @@
         "hard rock",
         "metal"
       ],
+      "gain": "high gain",
       "description": "Bogner Ecstasy 101B red channel.",
       "modeled_after": "Bogner Ecstasy 101B Head (Red Channel)",
       "confirmed": false
@@ -640,6 +686,7 @@
         "metal",
         "hard rock"
       ],
+      "gain": "clean",
       "description": "Peavey 5150 II clean channel.",
       "modeled_after": "Peavey 5150 II",
       "confirmed": false
@@ -654,6 +701,7 @@
         "metal",
         "hard rock"
       ],
+      "gain": "crunch",
       "description": "Peavey 5150 II crunch channel.",
       "modeled_after": "Peavey 5150 II",
       "confirmed": false
@@ -668,6 +716,7 @@
         "metal",
         "hard rock"
       ],
+      "gain": "high gain",
       "description": "Peavey 5150 II lead channel.",
       "modeled_after": "Peavey 5150 II",
       "confirmed": false
@@ -678,6 +727,7 @@
       "style": [
         "rock"
       ],
+      "gain": "high gain",
       "description": "High-gain British-style head.",
       "modeled_after": "400R",
       "confirmed": false
@@ -688,6 +738,7 @@
       "style": [
         "rock"
       ],
+      "gain": "edge of breakup",
       "description": "120W British-style head.",
       "modeled_after": "J-120H",
       "confirmed": false

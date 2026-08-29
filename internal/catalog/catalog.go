@@ -130,7 +130,7 @@ func (c *Catalog) AmpsMatching(query string) []Amp {
 	q := strings.ToLower(query)
 	var out []Amp
 	for _, a := range amps {
-		hay := strings.ToLower(a.Model + " " + a.Brand + " " + a.RealModel + " " + a.Channel + " " + a.Wattage + " " + strings.Join(a.Style, " ") + " " + a.Description)
+		hay := strings.ToLower(a.Model + " " + a.Brand + " " + a.RealModel + " " + a.Channel + " " + a.Wattage + " " + a.Gain + " " + strings.Join(a.Style, " ") + " " + a.Description)
 		if strings.Contains(hay, q) {
 			out = append(out, a)
 		}
