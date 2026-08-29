@@ -206,14 +206,15 @@ func (r *Registrar) Register(s *mcp.Server) {
 			"mic2":       stringSchema("Optional mic for the second amp path."),
 			"tempo":      numberSchema("Optional tempo in BPM."),
 			"input_gain": numberSchema("Optional input gain in dB."), "output_level": numberSchema("Optional overall rig output level in dB (RigVolume, 0 = unity)."), "output_dir": stringSchema("Directory to write the files into (default: current directory)."),
-			"fx":          arraySchema("Optional effects, in any order; they will be placed sensibly.", fxItemSchema()),
-			"path_a_fx":   arraySchema("Optional effects for parallel path A (shared-amp SPS-1).", fxItemSchema()),
-			"path_b_fx":   arraySchema("Optional effects for parallel path B (shared-amp SPS-1).", fxItemSchema()),
-			"para1_level": numberSchema("Optional level of path A in dB (default -6)."),
-			"para2_level": numberSchema("Optional level of path B in dB (default -6)."),
-			"para1_pan":   numberSchema("Optional pan of path A, -100..100 (default 0; -100 = hard left)."),
-			"para2_pan":   numberSchema("Optional pan of path B, -100..100 (default 0; 100 = hard right)."),
-			"para_delay":  numberSchema("Optional delay of path B in ms (default 0)."),
+			"fx":           arraySchema("Optional effects, in any order; they will be placed sensibly.", fxItemSchema()),
+			"path_a_fx":    arraySchema("Optional effects for parallel path A (shared-amp SPS-1).", fxItemSchema()),
+			"path_b_fx":    arraySchema("Optional effects for parallel path B (shared-amp SPS-1).", fxItemSchema()),
+			"para1_level":  numberSchema("Optional level of path A in dB (default -6)."),
+			"para2_level":  numberSchema("Optional level of path B in dB (default -6)."),
+			"para1_pan":    numberSchema("Optional pan of path A, -100..100 (default 0; -100 = hard left)."),
+			"para2_pan":    numberSchema("Optional pan of path B, -100..100 (default 0; 100 = hard right)."),
+			"para_delay":   numberSchema("Optional delay of path B in ms (default 0)."),
+			"footswitches": arraySchema("Optional assignments for the 4 stomp switches (FS5..FS8), in order. Each toggles a module on/off, e.g. [{\"module\":\"Wham\"}] puts the whammy on switch 5.", footswitchItemSchema()),
 		}),
 		Handler: func(_ context.Context, args map[string]any) (string, error) {
 			return r.designRig(args)
@@ -271,26 +272,27 @@ func (r *Registrar) Register(s *mcp.Server) {
 
 func (r *Registrar) designRig(args map[string]any) (string, error) {
 	req := design.Request{
-		Name:        argString(args, "name"),
-		Song:        argString(args, "song"),
-		Amp:         argString(args, "amp"),
-		Cab:         argString(args, "cab"),
-		Mic:         argString(args, "mic"),
-		Routing:     rig.Routing(argString(args, "routing")),
-		Amp2:        argString(args, "amp2"),
-		Cab2:        argString(args, "cab2"),
-		Mic2:        argString(args, "mic2"),
-		Tempo:       argFloat(args, "tempo"),
-		InputGain:   argFloat(args, "input_gain"),
-		OutputLevel: argFloat(args, "output_level"),
-		FX:          parseFX(args["fx"]),
-		PathAFX:     parseFX(args["path_a_fx"]),
-		PathBFX:     parseFX(args["path_b_fx"]),
-		Para1Level:  argFloatPtr(args, "para1_level"),
-		Para2Level:  argFloatPtr(args, "para2_level"),
-		Para1Pan:    argFloatPtr(args, "para1_pan"),
-		Para2Pan:    argFloatPtr(args, "para2_pan"),
-		ParaDelay:   argFloatPtr(args, "para_delay"),
+		Name:         argString(args, "name"),
+		Song:         argString(args, "song"),
+		Amp:          argString(args, "amp"),
+		Cab:          argString(args, "cab"),
+		Mic:          argString(args, "mic"),
+		Routing:      rig.Routing(argString(args, "routing")),
+		Amp2:         argString(args, "amp2"),
+		Cab2:         argString(args, "cab2"),
+		Mic2:         argString(args, "mic2"),
+		Tempo:        argFloat(args, "tempo"),
+		InputGain:    argFloat(args, "input_gain"),
+		OutputLevel:  argFloat(args, "output_level"),
+		FX:           parseFX(args["fx"]),
+		PathAFX:      parseFX(args["path_a_fx"]),
+		PathBFX:      parseFX(args["path_b_fx"]),
+		Para1Level:   argFloatPtr(args, "para1_level"),
+		Para2Level:   argFloatPtr(args, "para2_level"),
+		Para1Pan:     argFloatPtr(args, "para1_pan"),
+		Para2Pan:     argFloatPtr(args, "para2_pan"),
+		ParaDelay:    argFloatPtr(args, "para_delay"),
+		Footswitches: parseFootswitches(args["footswitches"]),
 	}
 	res, err := r.design.Design(req)
 	if err != nil {
@@ -422,6 +424,36 @@ func parseFX(raw any) []design.FXBlock {
 	return out
 }
 
+// parseFootswitches reads the footswitches array argument. Entries may be
+// objects ({"module":"Wham"}) or plain strings ("Wham").
+func parseFootswitches(raw any) []rig.Footswitch {
+	arr, ok := raw.([]any)
+	if !ok {
+		return nil
+	}
+	out := make([]rig.Footswitch, 0, len(arr))
+	for _, item := range arr {
+		if s, ok := item.(string); ok {
+			if s = strings.TrimSpace(s); s != "" {
+				out = append(out, rig.Footswitch{Module: s})
+			}
+			continue
+		}
+		m, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		sw := rig.Footswitch{
+			Module:    argString(m, "module"),
+			Operation: argString(m, "operation"),
+		}
+		if sw.Module != "" {
+			out = append(out, sw)
+		}
+	}
+	return out
+}
+
 // ---- argument helpers ----
 
 func argString(args map[string]any, key string) string {
@@ -527,5 +559,12 @@ func fxItemSchema() map[string]any {
 		"type":    stringSchema("Effect module display name, e.g. \"Tape Echo\"."),
 		"enabled": map[string]any{"type": "boolean", "description": "Whether the effect is on."},
 		"params":  map[string]any{"type": "object", "description": "Parameter overrides; values are numbers, booleans or strings."},
+	})
+}
+
+func footswitchItemSchema() map[string]any {
+	return objectSchema(map[string]any{
+		"module":    stringSchema("Module instance name to control, e.g. \"Wham\" or \"Amp 2\"."),
+		"operation": stringSchema("What the switch controls; \"On\" toggles the module on/off (default)."),
 	})
 }

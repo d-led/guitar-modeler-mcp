@@ -161,7 +161,11 @@ func (b *Builder) Build(spec Spec) (*RigFile, error) {
 		return nil, err
 	}
 
-	footSwitch, err := footSwitchFor(b.footSwitch, c.slots())
+	switches, err := resolveFootswitches(spec.Footswitches, moduleNames)
+	if err != nil {
+		return nil, err
+	}
+	footSwitch, err := footSwitchFor(b.footSwitch, c.slots(), switches)
 	if err != nil {
 		return nil, err
 	}

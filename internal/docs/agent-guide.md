@@ -78,6 +78,25 @@ In `design_rig`, pass `routing: "SPS-1"` with `amp2` (and optional `cab2`,
 `path_a_fx`/`path_b_fx` for a shared-amp split. Balance and pan the two paths
 with `para1_level`/`para2_level`, `para1_pan`/`para2_pan` and `para_delay`.
 
+## Footswitches
+
+The Gigboard has four stomp switches (FS5–FS8) that can each turn a module on
+and off (or control a module-specific parameter). When a rig needs a switch —
+for example a **whammy toe switch** or a **boost on/off** — assign it with
+`design_rig`'s `footswitches` argument, an ordered list of up to four entries
+mapping to FS5, FS6, FS7 and FS8:
+
+```json
+"footswitches": [{"module": "Wham"}, {"module": "Green JRC-OD"}]
+```
+
+Each entry's `module` is the module **instance name** exactly as it appears in
+the chain (`Wham`, `Green JRC-OD`, `Amp`, `Amp 2` — repeated modules get a
+`" N"` suffix). The default `operation` is `"On"` (toggle the module on/off);
+pass a different `operation` to control a module-specific parameter instead.
+A module that is not in the chain is rejected, and you can never assign more
+than four switches.
+
 ## Validation
 
 Every parameter you set is validated against the device's specifications:

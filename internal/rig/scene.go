@@ -30,9 +30,9 @@ func sceneBlob(moduleNames []string) string {
 }
 
 // footSwitchFor rewires the template FootSwitch to the given chain: the scene
-// snapshots encode the new slots and the stomp switches are reset to
-// "Unassigned" so they never reference modules that are not in the chain.
-func footSwitchFor(template []byte, moduleNames []string) (map[string]any, error) {
+// snapshots encode the new slots, the stomp switches (FS5..FS8) are reset to
+// "Unassigned", and the requested switches are assigned to the first slots.
+func footSwitchFor(template []byte, moduleNames []string, switches []Footswitch) (map[string]any, error) {
 	fs, err := decodeObject(template)
 	if err != nil {
 		return nil, fmt.Errorf("parse FootSwitch template: %w", err)
@@ -49,6 +49,11 @@ func footSwitchFor(template []byte, moduleNames []string) (map[string]any, error
 	for _, n := range []string{"5", "6", "7", "8"} {
 		children["Module"+n] = map[string]any{"string": "Unassigned", "type": 8}
 		children["Operation"+n] = map[string]any{"string": "", "type": 8}
+	}
+	for i, sw := range switches {
+		n := fmt.Sprintf("%d", 5+i)
+		children["Module"+n] = map[string]any{"string": sw.Module, "type": 8}
+		children["Operation"+n] = map[string]any{"string": sw.Operation, "type": 8}
 	}
 	return fs, nil
 }

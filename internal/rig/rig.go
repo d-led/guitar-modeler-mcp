@@ -93,6 +93,18 @@ const (
 	psPathBSlots = 5 // PS-1: second parallel path (observed 4..5 slots)
 )
 
+// Footswitch assigns one of the Gigboard's four stomp switches (FS5..FS8) to
+// control a module in the chain.
+type Footswitch struct {
+	// Module is the module instance name to control ("Wham", "Amp", "Amp 2",
+	// "Green JRC-OD"). It must match a module in the chain.
+	Module string `json:"module"`
+	// Operation is what the switch controls. "On" toggles the module on/off
+	// (the default). Other values are module-specific parameters (e.g.
+	// "Vibrato" for a tremolo's speed).
+	Operation string `json:"operation,omitempty"`
+}
+
 // Spec describes the rig to build.
 //
 // For a serial rig (Routing ""), Blocks holds the whole chain in signal order.
@@ -129,6 +141,11 @@ type Spec struct {
 	Para1Pan   *float64
 	Para2Pan   *float64
 	ParaDelay  *float64
+
+	// Footswitches assigns the four stomp switches (FS5..FS8) to control
+	// modules, in order. Each entry's Module must name a module in the chain;
+	// at most four are allowed.
+	Footswitches []Footswitch
 }
 
 // applyParams merges user overrides onto a node's children, preserving the
@@ -199,6 +216,43 @@ func instanceName(canon string, seen map[string]int) string {
 		return canon
 	}
 	return fmt.Sprintf("%s %d", canon, seen[canon])
+}
+
+// resolveFootswitches validates the spec's footswitch assignments and resolves
+// each module reference to its device instance name. At most four switches fit
+// the Gigboard's FS5..FS8 stomp buttons.
+func resolveFootswitches(spec []Footswitch, modules []string) ([]Footswitch, error) {
+	if len(spec) > 4 {
+		return nil, fmt.Errorf("the Gigboard has 4 footswitches, got %d", len(spec))
+	}
+	out := make([]Footswitch, 0, len(spec))
+	for i, sw := range spec {
+		module := strings.TrimSpace(sw.Module)
+		if module == "" {
+			return nil, fmt.Errorf("footswitch %d: module is required", i+1)
+		}
+		name, ok := matchInstance(module, modules)
+		if !ok {
+			return nil, fmt.Errorf("footswitch %d: %q is not in the chain (modules: %s)", i+1, module, strings.Join(modules, ", "))
+		}
+		operation := strings.TrimSpace(sw.Operation)
+		if operation == "" {
+			operation = "On"
+		}
+		out = append(out, Footswitch{Module: name, Operation: operation})
+	}
+	return out, nil
+}
+
+// matchInstance resolves a module reference to its device instance name with
+// a case-insensitive exact match ("amp" → "Amp", "amp 2" → "Amp 2").
+func matchInstance(ref string, modules []string) (string, bool) {
+	for _, m := range modules {
+		if strings.EqualFold(m, ref) {
+			return m, true
+		}
+	}
+	return "", false
 }
 
 // paraBounds are the parameter ranges measured from the device backups.

@@ -5,16 +5,24 @@ import "strconv"
 // Summary is a structured, agent-friendly description of a rig file: the chain
 // order, the parallel-path mixer and every module's effective parameter values.
 type Summary struct {
-	Name      string          `json:"name"`
-	ID        string          `json:"id"`
-	Color     int             `json:"color"`
-	CreatedAt int64           `json:"created_at"`
-	Version   string          `json:"version"`
-	Tempo     float64         `json:"tempo"`
-	Routing   string          `json:"routing"`
-	Mixer     MixerSummary    `json:"mixer"`
-	Slots     []string        `json:"slots"`
-	Modules   []SummaryModule `json:"modules"`
+	Name         string              `json:"name"`
+	ID           string              `json:"id"`
+	Color        int                 `json:"color"`
+	CreatedAt    int64               `json:"created_at"`
+	Version      string              `json:"version"`
+	Tempo        float64             `json:"tempo"`
+	Routing      string              `json:"routing"`
+	Mixer        MixerSummary        `json:"mixer"`
+	Slots        []string            `json:"slots"`
+	Modules      []SummaryModule     `json:"modules"`
+	Footswitches []FootswitchSummary `json:"footswitches,omitempty"`
+}
+
+// FootswitchSummary is one assigned stomp switch.
+type FootswitchSummary struct {
+	Switch    string `json:"switch"` // FS5..FS8
+	Module    string `json:"module"`
+	Operation string `json:"operation"`
 }
 
 // MixerSummary is the parallel-path mixer: the per-path level, pan and delay
@@ -51,6 +59,8 @@ func Describe(file *RigFile) (Summary, error) {
 		Version:   content.Info.Version,
 		Slots:     chainSlots(patch),
 	}
+
+	s.Footswitches = footswitchAssignments(content)
 
 	if chain, ok := patch.Children["Chain"]; ok {
 		if item, ok := chain.Children["Routing"]; ok && item.Str != nil {
@@ -110,6 +120,48 @@ func mixerSummary(chain *Node) MixerSummary {
 	m.Para2Pan = num("Para2Pan")
 	m.ParaDelay = num("ParaDelay")
 	return m
+}
+
+// footswitchAssignments lists the stomp switches that are assigned to a
+// module, in FS5..FS8 order. Unassigned switches are omitted.
+func footswitchAssignments(content *Content) []FootswitchSummary {
+	fs, ok := content.FootSwitch.(map[string]any)
+	if !ok {
+		return nil
+	}
+	data, ok := fs["data"].(map[string]any)
+	if !ok {
+		return nil
+	}
+	fsw, ok := data["FootSwitch"].(map[string]any)
+	if !ok {
+		return nil
+	}
+	children, ok := fsw["children"].(map[string]any)
+	if !ok {
+		return nil
+	}
+	childString := func(key string) string {
+		item, ok := children[key].(map[string]any)
+		if !ok {
+			return ""
+		}
+		s, _ := item["string"].(string)
+		return s
+	}
+	var out []FootswitchSummary
+	for _, n := range []string{"5", "6", "7", "8"} {
+		module := childString("Module" + n)
+		if module == "" || module == "Unassigned" {
+			continue
+		}
+		out = append(out, FootswitchSummary{
+			Switch:    "FS" + n,
+			Module:    module,
+			Operation: childString("Operation" + n),
+		})
+	}
+	return out
 }
 
 // chainSlots returns the ModuleType1..ModuleType11 values of the Chain node,

@@ -128,7 +128,7 @@ headrush-gigboard-mcp serve
 | `catalog_list_block_presets` | List factory presets for one effect |
 | `catalog_list_module_params` | Describe a module's parameters (kind, range, unit, options) |
 | `translate_amp` / `translate_cab` / `translate_mic` | Hardware → device model |
-| `design_rig` | Translate, order, write `.rig` + HTML report (serial or parallel chain) |
+| `design_rig` | Translate, order, write `.rig` + HTML report (serial or parallel chain); assign the 4 stomp switches with `footswitches` |
 | `render_report` | HTML report for an existing `.rig` |
 | `rig_decode` | Decode a `.rig` into chain + mixer (levels/pans/delay) + parameter values |
 | `estimate_rig_level` | Estimate a rig's output level and recommend a RigVolume for a target level |
@@ -156,6 +156,22 @@ Key constraints: **`SPS-1`** has fixed split/merge points (3 shared slots,
 prefix feeds both paths (wet/dry/wet). Each section has a hard slot budget the
 builder enforces. In `design_rig` pass `routing`, `amp2`, `cab2`, `mic2`,
 `path_a_fx`, `path_b_fx` (CLI: `--routing`, `--amp2`, …).
+
+### Footswitches
+
+The four stomp switches (FS5–FS8) can each turn a module on/off. Assign them
+with `design_rig`'s `footswitches` argument (CLI: `--footswitches`), an ordered
+list of up to four `{"module": "...", "operation": "On"}` entries mapped to
+FS5, FS6, FS7 and FS8. `module` is the module **instance name** exactly as it
+appears in the chain (`Wham`, `Green JRC-OD`, `Amp 2`); `operation` defaults to
+`"On"` (toggle on/off). A module not in the chain — or a fifth switch — is
+rejected:
+
+```sh
+headrush-gigboard-mcp design --name "Whammy" --amp "65 Black SR" \
+  --fx '[{"type":"Wham","enabled":true}]' \
+  --footswitches '[{"module":"Wham"}]'
+```
 
 The builder **validates every parameter** against the device's specifications
 (extracted from `headrush-desktop/renderer/config/modules/*.ts` plus the

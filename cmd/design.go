@@ -15,27 +15,28 @@ import (
 
 func newDesignCmd() *cobra.Command {
 	var (
-		name        string
-		song        string
-		amp         string
-		cab         string
-		mic         string
-		routing     string
-		amp2        string
-		cab2        string
-		mic2        string
-		tempo       float64
-		inputGain   float64
-		outputLevel float64
-		out         string
-		fxJSON      string
-		pathAFX     string
-		pathBFX     string
-		para1Level  float64
-		para2Level  float64
-		para1Pan    float64
-		para2Pan    float64
-		paraDelay   float64
+		name         string
+		song         string
+		amp          string
+		cab          string
+		mic          string
+		routing      string
+		amp2         string
+		cab2         string
+		mic2         string
+		tempo        float64
+		inputGain    float64
+		outputLevel  float64
+		out          string
+		fxJSON       string
+		pathAFX      string
+		pathBFX      string
+		para1Level   float64
+		para2Level   float64
+		para1Pan     float64
+		para2Pan     float64
+		paraDelay    float64
+		footswitches string
 	)
 	cmd := &cobra.Command{
 		Use:   "design",
@@ -59,27 +60,32 @@ func newDesignCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			footswitches, err := parseFootswitchFlags(footswitches)
+			if err != nil {
+				return err
+			}
 			res, err := a.design.Design(design.Request{
-				Name:        name,
-				Song:        song,
-				Amp:         amp,
-				Cab:         cab,
-				Mic:         mic,
-				Routing:     rig.Routing(routing),
-				Amp2:        amp2,
-				Cab2:        cab2,
-				Mic2:        mic2,
-				Tempo:       tempo,
-				InputGain:   inputGain,
-				OutputLevel: outputLevel,
-				FX:          fx,
-				PathAFX:     pathAFXBlocks,
-				PathBFX:     pathBFXBlocks,
-				Para1Level:  floatPtr(cmd, "para1-level", para1Level),
-				Para2Level:  floatPtr(cmd, "para2-level", para2Level),
-				Para1Pan:    floatPtr(cmd, "para1-pan", para1Pan),
-				Para2Pan:    floatPtr(cmd, "para2-pan", para2Pan),
-				ParaDelay:   floatPtr(cmd, "para-delay", paraDelay),
+				Name:         name,
+				Song:         song,
+				Amp:          amp,
+				Cab:          cab,
+				Mic:          mic,
+				Routing:      rig.Routing(routing),
+				Amp2:         amp2,
+				Cab2:         cab2,
+				Mic2:         mic2,
+				Tempo:        tempo,
+				InputGain:    inputGain,
+				OutputLevel:  outputLevel,
+				FX:           fx,
+				PathAFX:      pathAFXBlocks,
+				PathBFX:      pathBFXBlocks,
+				Para1Level:   floatPtr(cmd, "para1-level", para1Level),
+				Para2Level:   floatPtr(cmd, "para2-level", para2Level),
+				Para1Pan:     floatPtr(cmd, "para1-pan", para1Pan),
+				Para2Pan:     floatPtr(cmd, "para2-pan", para2Pan),
+				ParaDelay:    floatPtr(cmd, "para-delay", paraDelay),
+				Footswitches: footswitches,
 			})
 			if err != nil {
 				return err
@@ -131,6 +137,7 @@ func newDesignCmd() *cobra.Command {
 	cmd.Flags().Float64Var(&para1Pan, "para1-pan", 0, "pan of path A, -100..100 (default 0)")
 	cmd.Flags().Float64Var(&para2Pan, "para2-pan", 0, "pan of path B, -100..100 (default 0)")
 	cmd.Flags().Float64Var(&paraDelay, "para-delay", 0, "delay of path B in ms (default 0)")
+	cmd.Flags().StringVar(&footswitches, "footswitches", "", "footswitch assignments as a JSON array, e.g. '[{\"module\":\"Wham\"}]'")
 	_ = cmd.MarkFlagRequired("amp")
 	return cmd
 }
@@ -153,4 +160,15 @@ func parseFXFlags(fxJSON string) ([]design.FXBlock, error) {
 		return nil, fmt.Errorf("parse --fx: %w", err)
 	}
 	return fx, nil
+}
+
+func parseFootswitchFlags(jsonValue string) ([]rig.Footswitch, error) {
+	if jsonValue == "" {
+		return nil, nil
+	}
+	var switches []rig.Footswitch
+	if err := json.Unmarshal([]byte(jsonValue), &switches); err != nil {
+		return nil, fmt.Errorf("parse --footswitches: %w", err)
+	}
+	return switches, nil
 }

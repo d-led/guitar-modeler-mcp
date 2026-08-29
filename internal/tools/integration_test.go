@@ -222,6 +222,67 @@ func TestIntegrationDesignDualAmpParallel(t *testing.T) {
 	}
 }
 
+func TestIntegrationDesignFootswitches(t *testing.T) {
+	s := newIntegrationServer(t)
+	dir := t.TempDir()
+
+	out := resultText(t, rpc(t, s, 1, "tools/call", map[string]any{
+		"name": "design_rig",
+		"arguments": map[string]any{
+			"name":       "Whammy Toe",
+			"amp":        "65 Black SR",
+			"output_dir": dir,
+			"fx": []any{
+				map[string]any{"type": "Wham", "enabled": true},
+			},
+			"footswitches": []any{
+				map[string]any{"module": "Wham"},
+			},
+		},
+	}))
+	if !strings.Contains(out, "Rig file:") {
+		t.Fatalf("design_rig output missing rig path: %s", out)
+	}
+
+	rigs, err := filepath.Glob(filepath.Join(dir, "*.rig"))
+	if err != nil || len(rigs) != 1 {
+		t.Fatalf("expected one .rig, got %v (%v)", rigs, err)
+	}
+
+	decoded := resultText(t, rpc(t, s, 2, "tools/call", map[string]any{
+		"name":      "rig_decode",
+		"arguments": map[string]any{"rig_file": rigs[0]},
+	}))
+	if !strings.Contains(decoded, `"switch": "FS5"`) || !strings.Contains(decoded, `"module": "Wham"`) {
+		t.Fatalf("rig_decode missing FS5/Wham footswitch: %s", decoded)
+	}
+	if !strings.Contains(decoded, `"operation": "On"`) {
+		t.Fatalf("rig_decode missing default On operation: %s", decoded)
+	}
+}
+
+func TestIntegrationDesignFootswitchRejectsUnknownModule(t *testing.T) {
+	s := newIntegrationServer(t)
+	dir := t.TempDir()
+
+	resp := rpc(t, s, 1, "tools/call", map[string]any{
+		"name": "design_rig",
+		"arguments": map[string]any{
+			"name":         "Bad Switch",
+			"amp":          "65 Black SR",
+			"output_dir":   dir,
+			"footswitches": []any{map[string]any{"module": "Not In Chain"}},
+		},
+	})
+	result, ok := resp["result"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected a result with isError, got: %v", resp)
+	}
+	if isErr, _ := result["isError"].(bool); !isErr {
+		t.Fatalf("expected isError for an unknown footswitch module, got: %v", resp)
+	}
+}
+
 func TestIntegrationGuideAndFxCategories(t *testing.T) {
 	s := newIntegrationServer(t)
 

@@ -54,6 +54,11 @@ type Request struct {
 	Para1Pan   *float64 `json:"para1_pan,omitempty"`
 	Para2Pan   *float64 `json:"para2_pan,omitempty"`
 	ParaDelay  *float64 `json:"para_delay,omitempty"`
+
+	// Footswitches assigns the four stomp switches (FS5..FS8) to control
+	// modules, e.g. [{"module":"Wham"}] toggles the whammy on/off. Module must
+	// be a module in the chain.
+	Footswitches []rig.Footswitch `json:"footswitches,omitempty"`
 }
 
 // Result carries the resolved spec plus human-readable decisions.
@@ -105,6 +110,7 @@ func (d *Designer) Design(req Request) (*Result, error) {
 		Para1Pan:     req.Para1Pan,
 		Para2Pan:     req.Para2Pan,
 		ParaDelay:    req.ParaDelay,
+		Footswitches: req.Footswitches,
 	}
 
 	switch {
