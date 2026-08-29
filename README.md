@@ -48,6 +48,23 @@ go test ./...
 
 Requires Go 1.27+.
 
+## Releases
+
+Binaries are built with [GoReleaser](https://goreleaser.com) and published as
+GitHub release artifacts when a `v*.*.*` tag is pushed:
+
+- Linux `amd64` / `arm64`
+- Windows `amd64`
+- macOS universal (`amd64` + `arm64`)
+
+Each push to `main` also uploads fresh "latest" per-platform binaries as CI
+build artifacts (see `.github/workflows/ci.yml`).
+
+```sh
+git tag v1.0.0
+git push origin v1.0.0   # goreleaser publishes the release
+```
+
 ## CLI
 
 ```sh
