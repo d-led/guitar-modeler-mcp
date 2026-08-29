@@ -9,8 +9,8 @@ Supported devices:
 - **HeadRush Gigboard** — `.rig` patch files.
 - **Mooer** GE150 Pro Li, GE200, GE150, GE100 Pro — `.mo` files (file-capable
   models) plus a printable setup card for every model.
-- **BOSS Waza Air** — BOSS TONE STUDIO livesets (`.tsl`) plus a printable setup
-  card.
+- **BOSS Waza Air** — BOSS TONE STUDIO backups (`.tsl`, one or more patches)
+  plus a printable setup card.
 - **Yamaha THR** (THR-II, THR10, THR10C, THR10X) — printable setup cards (no
   preset file format).
 
@@ -30,12 +30,13 @@ sponsored by HeadRush or any of the referenced brands.
   the classic **GE150 is card-only**. The cross-device `map_preset` tool maps
   Gigboard rigs to and from Mooer presets; mapped parameter values are neutral
   defaults (128 = noon) rather than copied knob positions.
-- **BOSS Waza Air** — implemented (`.tsl` livesets and setup cards). The
-  `.tsl` reader/writer is based on the observed `liveset → patches → param`
-  variant; spatial-setting IDs (ambience, position, mode) are not yet written.
-  The **XSONIC AIRSTEP BW** foot controller's four footswitch modes (channel
-  memories CH 1–6 + effect toggles) are modelled and printable on the setup
-  card.
+- **BOSS Waza Air** — implemented (`.tsl` backups and setup cards). The
+  `.tsl` reader/writer round-trips the real backup format — a named set of one
+  or more 2335-byte hex-encoded patches under `data[0][].paramSet["User%Patch"]`
+  — losslessly; new patches start from the built-in template with a new name
+  (parameter-level mapping is still set in the app). The **XSONIC AIRSTEP BW**
+  foot controller's four footswitch modes (channel memories CH 1–6 + effect
+  toggles) are modelled and printable on the setup card.
 - **Yamaha THR** — implemented (setup cards only). The THR-II amp selector is
   an 8-type × 3-mode grid (24 positions, including three FLAT variants) with
   Yamaha's official descriptions plus community-sourced "inspired by" amps;
@@ -66,7 +67,7 @@ per-device backend supplies the model catalog and preset file format:
   `.mo` format and setup cards) and `internal/presetmap` (Gigboard ↔ Mooer
   model mapping).
 - **Waza Air backend** — `internal/waza` (amp/effect catalogs, the BOSS TONE
-  STUDIO `.tsl` liveset format and setup cards).
+  STUDIO `.tsl` backup format and setup cards).
 - **Yamaha THR backend** — `internal/thr` (the THR-II 8×3 amp-selector grid
   with official descriptions, the EFFECT/ECHO-REV effect lists, and partial
   legacy THR10/THR10C/THR10X catalogs; setup cards only).
@@ -208,8 +209,8 @@ guitar-modeler-mcp serve
 | `render_setup_card` | Render a setup card from an existing `.mo` |
 | `map_preset` | Convert a preset across devices: Gigboard `.rig` ↔ Mooer `.mo` |
 | `waza_catalog_list_amps` / `_fx` | List the Waza Air's amps and effects (with the real hardware each emulates) |
-| `waza_write_tsl` | Write a BOSS TONE STUDIO `.tsl` liveset for the Waza Air from a tone description |
-| `waza_read_tsl` | Read a Waza Air `.tsl` and report the first patch's tone |
+| `waza_write_tsl` | Write a BOSS TONE STUDIO `.tsl` backup (template patch + name) for the Waza Air |
+| `waza_read_tsl` | Read a Waza Air `.tsl` backup and list its patch names |
 | `waza_setup_card` | Write a printable HTML setup card for a Waza Air tone |
 | `waza_catalog_list_modes` | List the four AIRSTEP BW footswitch modes (channel memories + effect toggles) |
 | `thr_catalog_list_amps` | List a Yamaha THR model's amp-selector grid (type × mode) with descriptions |

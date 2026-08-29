@@ -224,15 +224,11 @@ func TestIntegrationWazaTSLAndCard(t *testing.T) {
 		t.Fatalf("device_list missing wazaair/.tsl: %s", devices)
 	}
 
-	// Write a liveset from a tone description.
+	// Write a backup from the built-in template plus a name.
 	out := resultText(t, rpc(t, s, 2, "tools/call", map[string]any{
 		"name": "waza_write_tsl",
 		"arguments": map[string]any{
 			"name":       "Brown Practice",
-			"amp":        "BROWN",
-			"booster":    "TS-808",
-			"amp_gain":   85,
-			"amp_volume": 50,
 			"output_dir": dir,
 		},
 	}))
@@ -245,13 +241,13 @@ func TestIntegrationWazaTSLAndCard(t *testing.T) {
 		t.Fatalf("expected one .tsl in %s (got %v, err %v)", dir, tsls, err)
 	}
 
-	// Read it back: booster and reverb mapping must round-trip.
+	// Read it back: the patch name must round-trip.
 	read := resultText(t, rpc(t, s, 3, "tools/call", map[string]any{
 		"name":      "waza_read_tsl",
 		"arguments": map[string]any{"input_file": tsls[0]},
 	}))
-	if !strings.Contains(read, "\"Amp\": \"BROWN\"") || !strings.Contains(read, "\"Booster\": \"T-SCREAM\"") {
-		t.Fatalf("waza_read_tsl missing resolved amp/booster: %s", read)
+	if !strings.Contains(read, "\"device\": \"WAZA-AIR\"") || !strings.Contains(read, "Brown Practice") {
+		t.Fatalf("waza_read_tsl missing device/patch name: %s", read)
 	}
 
 	// The setup card is still produced.

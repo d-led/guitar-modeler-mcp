@@ -1,61 +1,66 @@
 package waza
 
 import (
+	_ "embed"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 )
 
-// WazaAirDeviceID is the device identifier stored inside a Waza Air liveset.
+// WazaAirDeviceID is the device identifier stored inside a Waza Air backup.
 const WazaAirDeviceID = "WAZA-AIR"
 
-// Param is one key/value pair in a patch's parameter list.
-type Param struct {
-	ID    string `json:"id"`
-	Value any    `json:"value"`
-}
+// patchNameSize is the fixed width of the patch name field, space-padded.
+const patchNameSize = 16
 
-// Patch is one preset inside a liveset.
-type Patch struct {
-	Name  string  `json:"name"`
-	Param []Param `json:"param"`
-}
-
-// Liveset is a named collection of patches.
-type Liveset struct {
-	Name    string  `json:"name"`
-	Patches []Patch `json:"patches"`
-}
-
-// TSLFile is a BOSS TONE STUDIO liveset file (.tsl) for the Waza Air.
+// defaultPatchTSL is a known-good single-patch backup (the factory "Vai
+// ballerina" export) used as a template for generating new presets.
 //
-// The Waza Air uses the "liveset → patches → param array" variant of the TSL
-// format. This differs from the "liveSetData → patchList → flat params map"
-// variant used by the Boss Katana and GT series (see katana-docs and
-// lib-katana); the two variants must not be mixed.
-type TSLFile struct {
-	Version string  `json:"version"`
-	Device  string  `json:"device"`
-	Liveset Liveset `json:"liveset"`
+//go:embed default-patch.tsl
+var defaultPatchTSL []byte
+
+// Entry is one slot in a backup: an optional memo plus its parameter set. The
+// parameter set maps keys (e.g. "User%Patch") to arrays of two-digit
+// upper-case hex bytes.
+type Entry struct {
+	Memo     string              `json:"memo"`
+	ParamSet map[string][]string `json:"paramSet"`
 }
 
-// ParseTSL decodes a .tsl document. The document must carry a version and a
-// device identifier; the parameter list is kept verbatim so unknown IDs are
-// never lost on a round trip.
-func ParseTSL(data []byte) (*TSLFile, error) {
-	var f TSLFile
-	if err := json.Unmarshal(data, &f); err != nil {
+// Backup is a BOSS TONE STUDIO backup (.tsl) for the Waza Air: a named set of
+// one or more patches. Each patch is a fixed-size binary record stored under
+// the "User%Patch" key as an array of hex bytes. This is the format the Waza
+// Air app exports and imports; it differs from the Katana/GT "liveSetData →
+// patchList" variant.
+type Backup struct {
+	Name      string    `json:"name"`
+	FormatRev string    `json:"formatRev"`
+	Device    string    `json:"device"`
+	Data      [][]Entry `json:"data"`
+}
+
+// Patch is one decoded preset: its name and the raw record bytes.
+type Patch struct {
+	Name string
+	Raw  []byte
+}
+
+// ParseTSL decodes a .tsl backup document.
+func ParseTSL(data []byte) (*Backup, error) {
+	var b Backup
+	if err := json.Unmarshal(data, &b); err != nil {
 		return nil, fmt.Errorf("parse .tsl: %w", err)
 	}
-	if f.Version == "" || f.Device == "" {
-		return nil, fmt.Errorf("parse .tsl: missing version or device")
+	if b.Device == "" {
+		return nil, fmt.Errorf("parse .tsl: missing device")
 	}
-	return &f, nil
+	return &b, nil
 }
 
-// ReadTSLFile reads and parses a .tsl file from disk.
-func ReadTSLFile(path string) (*TSLFile, error) {
+// ReadTSLFile reads and parses a .tsl backup from disk.
+func ReadTSLFile(path string) (*Backup, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -63,151 +68,121 @@ func ReadTSLFile(path string) (*TSLFile, error) {
 	return ParseTSL(data)
 }
 
-// Marshal renders the liveset with the two-space indentation BOSS TONE STUDIO
-// writes, followed by a trailing newline.
-func (f *TSLFile) Marshal() ([]byte, error) {
-	b, err := json.MarshalIndent(f, "", "  ")
+// Marshal renders the backup as compact JSON with upper-case hex bytes and a
+// trailing newline.
+func (b *Backup) Marshal() ([]byte, error) {
+	out, err := json.Marshal(b)
 	if err != nil {
 		return nil, err
 	}
-	return append(b, '\n'), nil
+	return append(out, '\n'), nil
 }
 
-// WriteTSLFile writes the liveset to disk.
-func WriteTSLFile(path string, f *TSLFile) error {
-	data, err := f.Marshal()
+// WriteTSLFile writes the backup to disk.
+func WriteTSLFile(path string, b *Backup) error {
+	data, err := b.Marshal()
 	if err != nil {
 		return err
 	}
 	return os.WriteFile(path, data, 0o644)
 }
 
-// String returns the string value of a parameter, or "" when absent.
-func (p Patch) String(id string) string {
-	for _, prm := range p.Param {
-		if prm.ID == id {
-			if s, ok := prm.Value.(string); ok {
-				return s
+// NewBackup returns an empty Waza Air backup.
+func NewBackup(name string) *Backup {
+	return &Backup{Name: name, FormatRev: "0000", Device: WazaAirDeviceID}
+}
+
+// Patches returns every patch in the backup, decoded from their hex records.
+func (b *Backup) Patches() []Patch {
+	var out []Patch
+	for _, bank := range b.Data {
+		for _, e := range bank {
+			hexs, ok := e.ParamSet["User%Patch"]
+			if !ok {
+				continue
 			}
-			return ""
+			out = append(out, NewPatch(decodeHex(hexs)))
 		}
 	}
-	return ""
+	return out
 }
 
-// Int returns the integer value of a parameter, or 0 when absent.
-func (p Patch) Int(id string) int {
-	for _, prm := range p.Param {
-		if prm.ID == id {
-			switch n := prm.Value.(type) {
-			case float64:
-				return int(n)
-			case int:
-				return n
-			}
-			return 0
-		}
+// SetPatches replaces the backup's patches with the given ones, one entry per
+// patch in a single bank.
+func (b *Backup) SetPatches(patches []Patch) {
+	bank := make([]Entry, 0, len(patches))
+	for _, p := range patches {
+		bank = append(bank, Entry{ParamSet: map[string][]string{"User%Patch": encodeHex(p.Raw)}})
 	}
-	return 0
+	b.Data = [][]Entry{bank}
 }
 
-// FirstSpec extracts the tone of the first patch using the raw TSL values. It
-// deliberately does not run through the device catalog, so a value outside the
-// documented lists (e.g. a reverb type "ROOM") is reported verbatim instead of
-// being rejected or silently rewritten.
-func (f *TSLFile) FirstSpec() Spec {
-	if len(f.Liveset.Patches) == 0 {
-		return Spec{Name: f.Liveset.Name}
-	}
-	p := f.Liveset.Patches[0]
-	s := Spec{
-		Name:      p.Name,
-		Amp:       p.String("AMP_TYPE"),
-		Gain:      p.Int("AMP_GAIN"),
-		Volume:    p.Int("AMP_VOLUME"),
-		DelayTime: p.Int("DELAY_TIME"),
-		Reverb:    p.String("REVERB_TYPE"),
-	}
-	if fx := p.String("FX1_TYPE"); fx != "" {
-		if strings.EqualFold(fx, "BOOSTER") {
-			s.Booster = p.String("BOOSTER_TYPE")
-		} else {
-			s.Mod = fx
-		}
-	}
-	return s
+// NewPatch builds a patch from a raw record, decoding its name.
+func NewPatch(raw []byte) Patch {
+	return Patch{Name: decodeName(raw), Raw: append([]byte(nil), raw...)}
 }
 
-// NewTSLFile builds a one-patch liveset for a resolved Spec using the Waza
-// Air's parameter IDs. Only the IDs observed in real livesets are written:
-// the amp type, gain and volume, a single FX1 slot (booster OR mod/fx), and
-// the delay and reverb on/off switches plus the delay time and reverb type.
-// The spatial settings (cabinet resonance, ambience, position, mode) have no
-// observed IDs yet and are left to BOSS TONE STUDIO.
-func NewTSLFile(s Spec) *TSLFile {
-	params := []Param{}
-	add := func(id string, v any) { params = append(params, Param{ID: id, Value: v}) }
-
-	if s.Amp != "" {
-		add("AMP_TYPE", s.Amp)
-	}
-	if s.Gain > 0 {
-		add("AMP_GAIN", s.Gain)
-	}
-	if s.Volume > 0 {
-		add("AMP_VOLUME", s.Volume)
-	}
-
-	fxType := ""
-	switch {
-	case s.Booster != "":
-		fxType = "BOOSTER"
-	case s.Mod != "":
-		fxType = s.Mod
-	case s.FX != "":
-		fxType = s.FX
-	}
-	if fxType != "" {
-		add("FX1_TYPE", fxType)
-		add("FX1_SW", "ON")
-		if strings.EqualFold(fxType, "BOOSTER") {
-			add("BOOSTER_TYPE", s.Booster)
-		}
-	}
-
-	if s.Delay != "" {
-		add("DELAY_SW", "ON")
-		if s.DelayTime > 0 {
-			add("DELAY_TIME", s.DelayTime)
-		}
-	}
-	if s.Reverb != "" {
-		add("REVERB_SW", "ON")
-		add("REVERB_TYPE", reverbTSLValue(s.Reverb))
-	}
-
-	name := strings.TrimSpace(s.Name)
-	if name == "" {
-		name = "New Patch"
-	}
-
-	return &TSLFile{
-		Version: "1.0.0",
-		Device:  WazaAirDeviceID,
-		Liveset: Liveset{
-			Name:    name,
-			Patches: []Patch{{Name: name, Param: params}},
-		},
-	}
+// WithName returns a copy of the patch with its name field replaced. Names are
+// truncated to 16 bytes and space-padded.
+func (p Patch) WithName(name string) Patch {
+	out := NewPatch(p.Raw)
+	pad := encodeName(name)
+	copy(out.Raw[:patchNameSize], pad[:])
+	out.Name = decodeName(out.Raw)
+	return out
 }
 
-// reverbTSLValue maps a resolved device reverb name to the REVERB_TYPE value
-// BOSS TONE STUDIO expects. Only the pairing observed in real livesets
-// ("HALL REVERB" → "HALL") is listed; any other name passes through unchanged
-// so the file is never silently rewritten with a guessed value.
-func reverbTSLValue(name string) string {
-	if name == "HALL REVERB" {
-		return "HALL"
+// TemplatePatch returns the built-in default patch, so a new preset can start
+// from a known-good record and only its name (and, later, its parameters) are
+// changed.
+func TemplatePatch() (Patch, error) {
+	b, err := ParseTSL(defaultPatchTSL)
+	if err != nil {
+		return Patch{}, err
 	}
-	return name
+	patches := b.Patches()
+	if len(patches) == 0 {
+		return Patch{}, fmt.Errorf("default patch template is empty")
+	}
+	return patches[0], nil
+}
+
+func encodeHex(raw []byte) []string {
+	out := make([]string, len(raw))
+	for i, b := range raw {
+		out[i] = fmt.Sprintf("%02X", b)
+	}
+	return out
+}
+
+func decodeHex(hexs []string) []byte {
+	raw := make([]byte, len(hexs))
+	for i, h := range hexs {
+		if len(h) != 2 {
+			continue
+		}
+		b, err := hex.DecodeString(h)
+		if err == nil && len(b) == 1 {
+			raw[i] = b[0]
+		}
+	}
+	return raw
+}
+
+func encodeName(name string) [patchNameSize]byte {
+	var out [patchNameSize]byte
+	copy(out[:], name)
+	for i := range out {
+		if out[i] == 0 {
+			out[i] = ' '
+		}
+	}
+	return out
+}
+
+func decodeName(raw []byte) string {
+	if len(raw) < patchNameSize {
+		return ""
+	}
+	return strings.TrimRight(string(raw[:patchNameSize]), " ")
 }

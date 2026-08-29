@@ -415,8 +415,11 @@ func (r *Registrar) Register(s *mcp.Server) {
 
 	s.Register(mcp.Tool{
 		Name:        "waza_write_tsl",
-		Description: "Write a BOSS TONE STUDIO liveset (.tsl) for the Boss Waza Air from a tone description. Produces the actual preset file the app imports.",
-		InputSchema: objectSchema(wazaToneProps()),
+		Description: "Write a BOSS TONE STUDIO backup (.tsl) for the Boss Waza Air. Starts from the built-in template patch and applies the chosen name; parameter-level mapping is set in the app.",
+		InputSchema: objectSchema(map[string]any{
+			"name":       stringSchema("Patch name (up to 16 characters)."),
+			"output_dir": stringSchema("Directory to write the .tsl into (default: current directory)."),
+		}),
 		Handler: func(_ context.Context, args map[string]any) (string, error) {
 			return r.wazaWriteTSL(args)
 		},
@@ -424,9 +427,9 @@ func (r *Registrar) Register(s *mcp.Server) {
 
 	s.Register(mcp.Tool{
 		Name:        "waza_read_tsl",
-		Description: "Read a Boss Waza Air .tsl liveset and report the first patch's tone (amp, fx, delay, reverb and values) as JSON.",
+		Description: "Read a Boss Waza Air .tsl backup and report its name, device and the list of patch names.",
 		InputSchema: objectSchema(map[string]any{
-			"input_file": stringSchema("Path to the .tsl liveset."),
+			"input_file": stringSchema("Path to the .tsl backup."),
 		}),
 		Handler: func(_ context.Context, args map[string]any) (string, error) {
 			return r.wazaReadTSL(args)
@@ -1184,23 +1187,26 @@ func (r *Registrar) wazaSetupCard(args map[string]any) (string, error) {
 }
 
 func (r *Registrar) wazaWriteTSL(args map[string]any) (string, error) {
-	spec, err := r.wazaSpec(args)
+	name := strings.TrimSpace(argString(args, "name"))
+	if name == "" {
+		name = "New Patch"
+	}
+	tmpl, err := waza.TemplatePatch()
 	if err != nil {
 		return "", err
 	}
-	if strings.TrimSpace(spec.Name) == "" {
-		spec.Name = "New Patch"
-	}
+	backup := waza.NewBackup(name)
+	backup.SetPatches([]waza.Patch{tmpl.WithName(name)})
+
 	outDir := argString(args, "output_dir")
 	if outDir == "" {
 		outDir = "."
 	}
-	file := waza.NewTSLFile(spec)
-	path := filepath.Join(outDir, sanitizeFileBase(spec.Name)+".tsl")
-	if err := waza.WriteTSLFile(path, file); err != nil {
+	path := filepath.Join(outDir, sanitizeFileBase(name)+".tsl")
+	if err := waza.WriteTSLFile(path, backup); err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("Wrote Waza Air liveset to %s", path), nil
+	return fmt.Sprintf("Wrote Waza Air backup to %s", path), nil
 }
 
 func (r *Registrar) wazaReadTSL(args map[string]any) (string, error) {
@@ -1208,16 +1214,19 @@ func (r *Registrar) wazaReadTSL(args map[string]any) (string, error) {
 	if path == "" {
 		return "", fmt.Errorf("input_file is required")
 	}
-	file, err := waza.ReadTSLFile(path)
+	b, err := waza.ReadTSLFile(path)
 	if err != nil {
 		return "", err
 	}
+	names := make([]string, 0, len(b.Patches()))
+	for _, p := range b.Patches() {
+		names = append(names, p.Name)
+	}
 	return marshal(map[string]any{
-		"device":      file.Device,
-		"version":     file.Version,
-		"liveset":     file.Liveset.Name,
-		"patch_count": len(file.Liveset.Patches),
-		"first_patch": file.FirstSpec(),
+		"name":       b.Name,
+		"device":     b.Device,
+		"format_rev": b.FormatRev,
+		"patches":    names,
 	})
 }
 

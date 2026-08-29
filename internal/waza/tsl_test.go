@@ -1,161 +1,118 @@
 package waza
 
 import (
-	"os"
-	"path/filepath"
-	"reflect"
+	"bytes"
+	"strings"
 	"testing"
 )
 
-func readFixture(t *testing.T, name string) []byte {
-	t.Helper()
-	data, err := os.ReadFile(filepath.Join("testdata", name))
-	if err != nil {
-		t.Fatalf("read fixture %s: %v", name, err)
-	}
-	return data
-}
-
-func TestParseFixtureHeavyBrown(t *testing.T) {
-	f, err := ParseTSL(readFixture(t, "Sample_Heavy_Brown.tsl"))
+func TestParseTemplatePatch(t *testing.T) {
+	b, err := ParseTSL(defaultPatchTSL)
 	if err != nil {
 		t.Fatalf("ParseTSL: %v", err)
 	}
-	if f.Device != WazaAirDeviceID || f.Version != "1.0.0" {
-		t.Fatalf("device/version = %q/%q", f.Device, f.Version)
-	}
-	if f.Liveset.Name != "Sample Heavy Brown" {
-		t.Fatalf("liveset name = %q", f.Liveset.Name)
-	}
-	if len(f.Liveset.Patches) != 1 {
-		t.Fatalf("patches = %d, want 1", len(f.Liveset.Patches))
+	if b.Device != WazaAirDeviceID || b.FormatRev != "0000" {
+		t.Fatalf("device/formatRev = %q/%q", b.Device, b.FormatRev)
 	}
 
-	s := f.FirstSpec()
-	if s.Name != "Rock Legend" {
-		t.Fatalf("patch name = %q", s.Name)
+	patches := b.Patches()
+	if len(patches) != 1 {
+		t.Fatalf("patches = %d, want 1", len(patches))
 	}
-	if s.Amp != "BROWN" || s.Booster != "T-SCREAM" || s.Reverb != "ROOM" {
-		t.Fatalf("spec = %+v", s)
+	if patches[0].Name != "Vai ballerina dl" {
+		t.Fatalf("patch name = %q, want Vai ballerina dl", patches[0].Name)
 	}
-	if s.Gain != 85 || s.Volume != 50 {
-		t.Fatalf("gain/volume = %d/%d, want 85/50", s.Gain, s.Volume)
+	if len(patches[0].Raw) != 2335 {
+		t.Fatalf("raw length = %d, want 2335", len(patches[0].Raw))
 	}
 }
 
-func TestParseFixtureCleanAmbient(t *testing.T) {
-	f, err := ParseTSL(readFixture(t, "Sample_Clean_Ambient.tsl"))
+// TestBackupRoundTrip proves a parse → marshal → parse cycle keeps every hex
+// byte verbatim, so a backup can be read and written back losslessly.
+func TestBackupRoundTrip(t *testing.T) {
+	orig, err := ParseTSL(defaultPatchTSL)
 	if err != nil {
 		t.Fatalf("ParseTSL: %v", err)
 	}
-
-	s := f.FirstSpec()
-	if s.Amp != "CLEAN" || s.Mod != "CHORUS" || s.Reverb != "HALL" {
-		t.Fatalf("spec = %+v", s)
+	data, err := orig.Marshal()
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
 	}
-	if s.DelayTime != 450 {
-		t.Fatalf("delay time = %d, want 450", s.DelayTime)
+	back, err := ParseTSL(data)
+	if err != nil {
+		t.Fatalf("re-ParseTSL: %v", err)
 	}
-}
 
-// TestRoundTripFixtures proves the parser keeps every parameter verbatim so a
-// parse → marshal → parse cycle is lossless for the two known samples.
-func TestRoundTripFixtures(t *testing.T) {
-	for _, name := range []string{"Sample_Heavy_Brown.tsl", "Sample_Clean_Ambient.tsl"} {
-		t.Run(name, func(t *testing.T) {
-			f, err := ParseTSL(readFixture(t, name))
-			if err != nil {
-				t.Fatalf("ParseTSL: %v", err)
-			}
-			data, err := f.Marshal()
-			if err != nil {
-				t.Fatalf("Marshal: %v", err)
-			}
-			f2, err := ParseTSL(data)
-			if err != nil {
-				t.Fatalf("re-ParseTSL: %v", err)
-			}
-			if !reflect.DeepEqual(f, f2) {
-				t.Fatalf("round trip changed the liveset:\nfirst:  %+v\nsecond: %+v", f, f2)
-			}
-		})
+	if !bytes.Equal(orig.Patches()[0].Raw, back.Patches()[0].Raw) {
+		t.Fatal("round trip changed the patch bytes")
+	}
+	if back.Name != orig.Name || back.Device != orig.Device || back.FormatRev != orig.FormatRev {
+		t.Fatalf("round trip changed the header: %+v", back)
 	}
 }
 
-func TestNewTSLFileWritesKnownParams(t *testing.T) {
-	d := Default()
-	spec, err := d.Resolve(Spec{
-		Name:      "Brown Practice",
-		Amp:       "BROWN",
-		Booster:   "T-SCREAM",
-		Delay:     "TAPE ECHO",
-		DelayTime: 420,
-		Reverb:    "HALL REVERB",
-		Gain:      85,
-		Volume:    50,
+func TestPatchWithName(t *testing.T) {
+	tmpl, err := TemplatePatch()
+	if err != nil {
+		t.Fatalf("TemplatePatch: %v", err)
+	}
+
+	p := tmpl.WithName("My Tone")
+	if p.Name != "My Tone" {
+		t.Fatalf("name = %q, want My Tone", p.Name)
+	}
+	if !bytes.Equal(p.Raw[16:], tmpl.Raw[16:]) {
+		t.Fatal("WithName changed bytes beyond the name field")
+	}
+
+	// Names longer than 16 bytes are truncated.
+	long := tmpl.WithName("A Very Long Patch Name")
+	if long.Name != "A Very Long Patc" {
+		t.Fatalf("truncated name = %q", long.Name)
+	}
+}
+
+func TestBackupMultiplePatches(t *testing.T) {
+	tmpl, err := TemplatePatch()
+	if err != nil {
+		t.Fatalf("TemplatePatch: %v", err)
+	}
+
+	b := NewBackup("Two Patches")
+	b.SetPatches([]Patch{
+		tmpl.WithName("Clean"),
+		tmpl.WithName("Lead"),
 	})
+
+	data, err := b.Marshal()
 	if err != nil {
-		t.Fatalf("Resolve: %v", err)
+		t.Fatalf("Marshal: %v", err)
+	}
+	back, err := ParseTSL(data)
+	if err != nil {
+		t.Fatalf("ParseTSL: %v", err)
 	}
 
-	f := NewTSLFile(spec)
-	if f.Device != WazaAirDeviceID || f.Version != "1.0.0" {
-		t.Fatalf("device/version = %q/%q", f.Device, f.Version)
+	var names []string
+	for _, p := range back.Patches() {
+		names = append(names, p.Name)
 	}
-	p := f.Liveset.Patches[0]
-	if p.Name != "Brown Practice" {
-		t.Fatalf("patch name = %q", p.Name)
-	}
-
-	want := map[string]any{
-		"AMP_TYPE":     "BROWN",
-		"AMP_GAIN":     85,
-		"AMP_VOLUME":   50,
-		"FX1_TYPE":     "BOOSTER",
-		"FX1_SW":       "ON",
-		"BOOSTER_TYPE": "T-SCREAM",
-		"DELAY_SW":     "ON",
-		"DELAY_TIME":   420,
-		"REVERB_SW":    "ON",
-		"REVERB_TYPE":  "HALL",
-	}
-	got := map[string]any{}
-	for _, prm := range p.Param {
-		got[prm.ID] = prm.Value
-	}
-	if !reflect.DeepEqual(want, got) {
-		t.Fatalf("params = %#v, want %#v", got, want)
+	if strings.Join(names, ",") != "Clean,Lead" {
+		t.Fatalf("patch names = %v, want [Clean Lead]", names)
 	}
 }
 
-func TestNewTSLFileModInsteadOfBooster(t *testing.T) {
-	f := NewTSLFile(Spec{Name: "Ambient", Amp: "CLEAN", Mod: "CHORUS"})
-	p := f.Liveset.Patches[0]
-	if p.String("FX1_TYPE") != "CHORUS" || p.String("BOOSTER_TYPE") != "" {
-		t.Fatalf("FX1_TYPE/BOOSTER_TYPE = %q/%q", p.String("FX1_TYPE"), p.String("BOOSTER_TYPE"))
-	}
-	if p.String("FX1_SW") != "ON" {
-		t.Fatalf("FX1_SW = %q, want ON", p.String("FX1_SW"))
-	}
-}
-
-func TestWriteReadTSLFile(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "Brown Practice.tsl")
-
-	f := NewTSLFile(Spec{Name: "Brown Practice", Amp: "BROWN", Booster: "T-SCREAM"})
-	if err := WriteTSLFile(path, f); err != nil {
-		t.Fatalf("WriteTSLFile: %v", err)
-	}
-
-	back, err := ReadTSLFile(path)
+func TestTemplatePatchIsStable(t *testing.T) {
+	a, err := TemplatePatch()
 	if err != nil {
-		t.Fatalf("ReadTSLFile: %v", err)
+		t.Fatalf("TemplatePatch: %v", err)
 	}
-	orig, _ := f.Marshal()
-	again, _ := back.Marshal()
-	if !reflect.DeepEqual(orig, again) {
-		t.Fatalf("write/read round trip changed the liveset:\nfirst:  %s\nsecond: %s", orig, again)
+	b, err := TemplatePatch()
+	if err != nil {
+		t.Fatalf("TemplatePatch: %v", err)
+	}
+	if !bytes.Equal(a.Raw, b.Raw) {
+		t.Fatal("TemplatePatch is not deterministic")
 	}
 }
 
@@ -163,7 +120,7 @@ func TestParseTSLRejectsNonTSL(t *testing.T) {
 	if _, err := ParseTSL([]byte(`not json`)); err == nil {
 		t.Fatal("expected an error for invalid JSON")
 	}
-	if _, err := ParseTSL([]byte(`{"device":"WAZA-AIR"}`)); err == nil {
-		t.Fatal("expected an error when version is missing")
+	if _, err := ParseTSL([]byte(`{"name":"x","formatRev":"0000"}`)); err == nil {
+		t.Fatal("expected an error when device is missing")
 	}
 }
