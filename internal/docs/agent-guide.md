@@ -82,6 +82,12 @@ Every parameter you set is validated against the device's specifications:
 unknown parameter names, out-of-range numbers, invalid enum options and unknown
 amp/cab/mic models are rejected with a clear message.
 
+A plausibility check also runs before a rig is written: a rig whose estimated
+output level would be very loud (above +20 dB) or effectively muted (amp master
+at 0%) is refused, with a hint on what to lower or raise. `design_rig`'s
+`output_level` (and the `input_gain`, amp `Master` and cab `OutGain`) are all
+capped, so an accidental `output_level: 100` is rejected rather than written.
+
 ## Disclaimer
 
 All trademarks, logos and brand names are the property of their respective

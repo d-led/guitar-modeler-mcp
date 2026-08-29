@@ -35,9 +35,17 @@ func EstimateLevel(file *RigFile, targetDB float64) (LevelEstimate, error) {
 	if err != nil {
 		return LevelEstimate{}, err
 	}
-	patch := content.Data.Patch
+	est := estimateLevel(content.Data.Patch)
+	est.TargetDB = targetDB
+	est.RecommendedRigVolume = round1(clamp(est.OutputRigVolume+(targetDB-est.EstimatedLevelDB), -10, 20))
+	return est, nil
+}
 
-	est := LevelEstimate{TargetDB: targetDB}
+// estimateLevel sums the level-relevant stages of a built patch into a net
+// output level. It is shared by EstimateLevel and the build-time plausibility
+// check so both agree on the numbers.
+func estimateLevel(patch Patch) LevelEstimate {
+	est := LevelEstimate{}
 	if chain, ok := patch.Children["Chain"]; ok {
 		if item, ok := chain.Children["Routing"]; ok && item.Str != nil {
 			est.Routing = *item.Str
@@ -91,8 +99,38 @@ func EstimateLevel(file *RigFile, targetDB float64) (LevelEstimate, error) {
 	}
 
 	est.EstimatedLevelDB = round1(total)
-	est.RecommendedRigVolume = round1(clamp(est.OutputRigVolume+(targetDB-total), -10, 20))
-	return est, nil
+	return est
+}
+
+// Plausibility thresholds: a rig whose estimated net level exceeds these is
+// refused at build time rather than written, to prevent accidentally very loud
+// (or silently muted) presets. +20 dB matches the loudest factory presets.
+const (
+	maxPlausibleLevel = 20  // dB net — above this is very loud
+	minPlausibleLevel = -60 // dB net — at/below this the amp is effectively muted
+)
+
+// validatePlausible refuses to build a rig that is implausibly loud or silent,
+// explaining the problem and how to remediate it.
+func validatePlausible(patch Patch) error {
+	est := estimateLevel(patch)
+
+	var problems []string
+	if est.EstimatedLevelDB > maxPlausibleLevel {
+		problems = append(problems, fmt.Sprintf(
+			"estimated output level %+.1f dB is very loud (above %+d dB): lower the output level (RigVolume, now %+.1f dB), the amp master and/or the cab out gain",
+			est.EstimatedLevelDB, maxPlausibleLevel, est.OutputRigVolume))
+	}
+	if est.EstimatedLevelDB <= minPlausibleLevel {
+		problems = append(problems, fmt.Sprintf(
+			"estimated output level %+.1f dB is effectively muted (the amp master is at 0%%): raise the amp master or the output level",
+			est.EstimatedLevelDB))
+	}
+
+	if len(problems) == 0 {
+		return nil
+	}
+	return fmt.Errorf("rig refused by the plausibility check:\n  - %s", strings.Join(problems, "\n  - "))
 }
 
 // isInstanceOf reports whether a node name is the base name or one of its

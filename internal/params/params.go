@@ -97,6 +97,9 @@ func ampParams(cat *catalog.Catalog) map[string]modspec.Param {
 	return out
 }
 
+// fp is a shorthand for a float64 pointer, used when building Param specs.
+func fp(v float64) *float64 { return &v }
+
 func cabParams(cat *catalog.Catalog) map[string]modspec.Param {
 	cabs := make([]string, 0, len(cat.Cabs()))
 	for _, c := range cat.Cabs() {
@@ -113,10 +116,10 @@ func cabParams(cat *catalog.Catalog) map[string]modspec.Param {
 		"MicType2":    {Kind: "set", Label: "Microphone", Description: "Microphone model (doubled state).", Values: mics},
 		"OnAxis":      {Kind: "toggle", Label: "On Axis", Description: "On-axis microphone position.", Off: "off", On: "on"},
 		"OnAxis2":     {Kind: "toggle", Label: "On Axis", Description: "On-axis microphone position (doubled state).", Off: "off", On: "on"},
-		"Breakup":     {Kind: "range", Label: "Breakup", Description: "Speaker breakup amount."},
-		"Breakup2":    {Kind: "range", Label: "Breakup", Description: "Speaker breakup amount (doubled state)."},
-		"OutGain":     {Kind: "range", Label: "Out Gain", Description: "Output gain of the cabinet."},
-		"OutGain2":    {Kind: "range", Label: "Out Gain", Description: "Output gain of the cabinet (doubled state)."},
-		"AmpCompGain": {Kind: "range", Label: "Amp Comp Gain", Description: "Gain compensation applied to the amp."},
+		"Breakup":     {Kind: "range", Label: "Breakup", Description: "Speaker breakup amount.", Min: fp(0), Max: fp(100), Unit: " %"},
+		"Breakup2":    {Kind: "range", Label: "Breakup", Description: "Speaker breakup amount (doubled state).", Min: fp(0), Max: fp(100), Unit: " %"},
+		"OutGain":     {Kind: "range", Label: "Out Gain", Description: "Output gain of the cabinet.", Min: fp(-12), Max: fp(12), Unit: " dB"},
+		"OutGain2":    {Kind: "range", Label: "Out Gain", Description: "Output gain of the cabinet (doubled state).", Min: fp(-12), Max: fp(12), Unit: " dB"},
+		"AmpCompGain": {Kind: "range", Label: "Amp Comp Gain", Description: "Gain compensation applied to the amp.", Min: fp(-12), Max: fp(12), Unit: " dB"},
 	}
 }

@@ -23,6 +23,15 @@ var colourPalette = map[string]bool{
 	"Dark Green": true, "Orange": true, "Light Blue": true, "Pink": true,
 }
 
+// cabLevelBounds caps the Cab block's output trims (dB) so a cabinet never
+// accidentally boosts a rig by an absurd amount. The Cab module has no editor
+// spec, so these bounds are enforced here rather than via modspec.
+var cabLevelBounds = map[string]struct{ min, max float64 }{
+	"OutGain":     {-12, 12},
+	"OutGain2":    {-12, 12},
+	"AmpCompGain": {-12, 12},
+}
+
 // blockParamKeys returns the parameter names the device itself exposes for a
 // module, taken from its embedded factory block.
 func blockParamKeys(moduleName string) (map[string]bool, error) {
@@ -100,6 +109,13 @@ func (b *Builder) validateBlockParams(canon string, params map[string]any) error
 		if !known[key] {
 			return fmt.Errorf("module %q has no parameter %q", canon, key)
 		}
+		if canon == "Cab" {
+			if bounds, ok := cabLevelBounds[key]; ok {
+				if n, ok := asFloat(value); ok && (n < bounds.min || n > bounds.max) {
+					return fmt.Errorf("module %q: %s = %v dB, must be within [%v, %v]", canon, key, n, bounds.min, bounds.max)
+				}
+			}
+		}
 		if hasSpec {
 			if p, ok := spec[key]; ok {
 				if err := p.Validate(value); err != nil {
@@ -109,4 +125,18 @@ func (b *Builder) validateBlockParams(canon string, params map[string]any) error
 		}
 	}
 	return nil
+}
+
+// asFloat extracts a numeric value from a parameter override (float64, int or
+// int64), reporting whether the value was numeric.
+func asFloat(value any) (float64, bool) {
+	switch v := value.(type) {
+	case float64:
+		return v, true
+	case int:
+		return float64(v), true
+	case int64:
+		return float64(v), true
+	}
+	return 0, false
 }

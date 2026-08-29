@@ -155,6 +155,12 @@ func (b *Builder) Build(spec Spec) (*RigFile, error) {
 	patch.Children["Output"] = outputNode(spec.OutputVolume)
 	patch.Children["Mix"] = mixNode(pathMix)
 
+	// Refuse implausible rigs (accidentally very loud or muted) before any
+	// file is written, with remediation hints.
+	if err := validatePlausible(patch); err != nil {
+		return nil, err
+	}
+
 	footSwitch, err := footSwitchFor(b.footSwitch, c.slots())
 	if err != nil {
 		return nil, err

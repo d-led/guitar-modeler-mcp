@@ -157,7 +157,11 @@ The builder **validates every parameter** against the device's specifications
 (extracted from `headrush-desktop/renderer/config/modules/*.ts` plus the
 backup-derived catalog): unknown parameter names, out-of-range numbers and
 invalid enum options are rejected with a clear message, so an invalid `.rig` is
-never written. Regenerate the extracted spec with
+never written. On top of that, a **plausibility check** refuses to write a rig
+whose estimated output level would be very loud (> +20 dB) or effectively muted
+(amp master 0%), pointing out the offending level and how to fix it; `output
+level`, `input gain` and `cab out gain` are all range-capped. Regenerate the
+extracted spec with
 `node scripts/extract-module-config.cjs <headrush-desktop-root> internal/modspec/data/params.json`,
 and the hints data with
 `node scripts/extract-hints.cjs <gigboardhints-root> internal/catalog/data/hints.json`.
