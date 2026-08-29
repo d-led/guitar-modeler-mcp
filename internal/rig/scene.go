@@ -54,6 +54,10 @@ func footSwitchFor(template []byte, moduleNames []string, switches []Footswitch)
 		n := fmt.Sprintf("%d", 5+i)
 		children["Module"+n] = map[string]any{"string": sw.Module, "type": 8}
 		children["Operation"+n] = map[string]any{"string": sw.Operation, "type": 8}
+		// The switch mode ("Toggle" or "Scene") is already resolved by the
+		// builder; Scene switches recall a block on/off snapshot instead of
+		// toggling a single module.
+		children["ModeNew"+n] = map[string]any{"string": sw.Mode, "type": 4}
 	}
 	return fs, nil
 }

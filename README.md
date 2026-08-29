@@ -128,7 +128,8 @@ headrush-gigboard-mcp serve
 | `catalog_list_block_presets` | List factory presets for one effect |
 | `catalog_list_module_params` | Describe a module's parameters (kind, range, unit, options) |
 | `translate_amp` / `translate_cab` / `translate_mic` | Hardware → device model |
-| `design_rig` | Translate, order, write `.rig` + HTML report (serial or parallel chain); assign the 4 stomp switches with `footswitches` |
+| `design_rig` | Translate, order, write `.rig` + HTML report (serial or parallel chain); assign the 4 stomp switches with `footswitches` (toggle or scene) |
+| `create_setlist` | Bind several `.rig` files into a device `.setlist` for songs that need multiple chains |
 | `render_report` | HTML report for an existing `.rig` |
 | `rig_decode` | Decode a `.rig` into chain + mixer (levels/pans/delay) + parameter values |
 | `estimate_rig_level` | Estimate a rig's output level and recommend a RigVolume for a target level |
@@ -164,14 +165,30 @@ with `design_rig`'s `footswitches` argument (CLI: `--footswitches`), an ordered
 list of up to four `{"module": "...", "operation": "On"}` entries mapped to
 FS5, FS6, FS7 and FS8. `module` is the module **instance name** exactly as it
 appears in the chain (`Wham`, `Green JRC-OD`, `Amp 2`); `operation` defaults to
-`"On"` (toggle on/off). A module not in the chain — or a fifth switch — is
-rejected:
+`"On"` (toggle on/off); add `"mode": "scene"` to make the switch a Scene (a
+multi-block on/off snapshot). A module not in the chain — or a fifth switch —
+is rejected:
 
 ```sh
 headrush-gigboard-mcp design --name "Whammy" --amp "65 Black SR" \
   --fx '[{"type":"Wham","enabled":true}]' \
-  --footswitches '[{"module":"Wham"}]'
+  --footswitches '[{"module":"Wham"},{"module":"Green JRC-OD","mode":"scene"}]'
 ```
+
+### Songs with multiple sounds
+
+One song with incompatible chains (e.g. clean, drive, solo) is best handled as
+**several rigs bound into a setlist** — design each rig, then bind them:
+
+```sh
+headrush-gigboard-mcp design --name "Song Clean" --amp "65 Black SR" --out <card>/Rigs
+headrush-gigboard-mcp design --name "Song Drive" --amp "68 Plexiglas 50W" --out <card>/Rigs
+headrush-gigboard-mcp setlist --name "Song" --out <card>/Setlists <card>/Rigs/*.rig
+```
+
+Copy `Rigs/` and `Setlists/` onto the Gigboard and the whole song travels as one
+bank. Scenes (one rig, blocks toggled) suit variations of the *same* chain;
+setlists suit chains that must be rebuilt.
 
 The builder **validates every parameter** against the device's specifications
 (extracted from `headrush-desktop/renderer/config/modules/*.ts` plus the

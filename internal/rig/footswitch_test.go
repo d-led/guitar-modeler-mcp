@@ -190,3 +190,52 @@ func TestFootswitchMatchesInstanceName(t *testing.T) {
 		t.Fatalf("Module5 = %q, want %q", got, "Amp 2")
 	}
 }
+
+func TestFootswitchSceneMode(t *testing.T) {
+	b, err := NewBuilder(catalog.New())
+	if err != nil {
+		t.Fatalf("NewBuilder: %v", err)
+	}
+	file, err := b.Build(Spec{
+		Name: "Scene Switch",
+		Blocks: []Block{
+			{Type: "Green JRC-OD", Enabled: true},
+			{Type: "Amp", Params: map[string]any{"Type": "65 Black SR"}},
+			{Type: "Cab", Params: map[string]any{"CabType": "1x12 Black Panel Lux"}},
+			{Type: "Tape Echo", Enabled: true},
+		},
+		Footswitches: []Footswitch{
+			{Module: "Green JRC-OD", Mode: "Scene"},
+			{Module: "Tape Echo"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+
+	children := footswitchChildren(t, file)
+	if got := footswitchField(t, children, "ModeNew5"); got != "Scene" {
+		t.Fatalf("ModeNew5 = %q, want Scene", got)
+	}
+	if got := footswitchField(t, children, "ModeNew6"); got != "Toggle" {
+		t.Fatalf("ModeNew6 = %q, want Toggle (default)", got)
+	}
+}
+
+func TestFootswitchRejectsUnknownMode(t *testing.T) {
+	b, err := NewBuilder(catalog.New())
+	if err != nil {
+		t.Fatalf("NewBuilder: %v", err)
+	}
+	_, err = b.Build(Spec{
+		Name: "Bad Mode",
+		Blocks: []Block{
+			{Type: "Amp", Params: map[string]any{"Type": "65 Black SR"}},
+			{Type: "Cab", Params: map[string]any{"CabType": "1x12 Black Panel Lux"}},
+		},
+		Footswitches: []Footswitch{{Module: "Amp", Mode: "Bogus"}},
+	})
+	if err == nil {
+		t.Fatal("expected an error for an unknown footswitch mode")
+	}
+}

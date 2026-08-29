@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -306,6 +307,63 @@ func TestIntegrationDesignFootswitchRejectsUnknownModule(t *testing.T) {
 	}
 	if isErr, _ := result["isError"].(bool); !isErr {
 		t.Fatalf("expected isError for an unknown footswitch module, got: %v", resp)
+	}
+}
+
+func TestIntegrationCreateSetlist(t *testing.T) {
+	s := newIntegrationServer(t)
+	dir := t.TempDir()
+
+	design := func(id int, name string) {
+		out := resultText(t, rpc(t, s, id, "tools/call", map[string]any{
+			"name": "design_rig",
+			"arguments": map[string]any{
+				"name":       name,
+				"amp":        "65 Black SR",
+				"output_dir": dir,
+			},
+		}))
+		if !strings.Contains(out, "Rig file:") {
+			t.Fatalf("design_rig output missing rig path: %s", out)
+		}
+	}
+	design(1, "Clean")
+	design(2, "Drive")
+
+	rigs, err := filepath.Glob(filepath.Join(dir, "*.rig"))
+	if err != nil || len(rigs) != 2 {
+		t.Fatalf("expected two .rig files, got %v (%v)", rigs, err)
+	}
+
+	out := resultText(t, rpc(t, s, 3, "tools/call", map[string]any{
+		"name": "create_setlist",
+		"arguments": map[string]any{
+			"name":       "Song",
+			"rig_files":  []any{rigs[0], rigs[1]},
+			"output_dir": dir,
+		},
+	}))
+	if !strings.Contains(out, "Setlist \"Song\"") {
+		t.Fatalf("create_setlist output missing setlist name: %s", out)
+	}
+
+	setlists, err := filepath.Glob(filepath.Join(dir, "*.setlist"))
+	if err != nil || len(setlists) != 1 {
+		t.Fatalf("expected one .setlist, got %v (%v)", setlists, err)
+	}
+	data, err := os.ReadFile(setlists[0])
+	if err != nil {
+		t.Fatalf("read setlist: %v", err)
+	}
+	var parsed struct {
+		RigNames []string `json:"rig_names"`
+		Rigs     []string `json:"rigs"`
+	}
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("parse setlist: %v", err)
+	}
+	if len(parsed.Rigs) != 2 || len(parsed.RigNames) != 2 {
+		t.Fatalf("setlist should reference two rigs: %+v", parsed)
 	}
 }
 

@@ -103,6 +103,23 @@ type Footswitch struct {
 	// (the default). Other values are module-specific parameters (e.g.
 	// "Vibrato" for a tremolo's speed).
 	Operation string `json:"operation,omitempty"`
+	// Mode is the switch type: "Toggle" (default, toggles the module on/off)
+	// or "Scene" (recalls a scene — a saved snapshot of which blocks are on and
+	// off).
+	Mode string `json:"mode,omitempty"`
+	// Label is the switch's on-screen text (UserFootSwitchText), e.g. "DRIVE".
+	Label string `json:"label,omitempty"`
+	// Scene is the block snapshot a Scene-mode switch recalls. Blocks not
+	// listed are left unchanged.
+	Scene *SceneSnapshot `json:"scene,omitempty"`
+}
+
+// SceneSnapshot is the block on/off state a Scene footswitch recalls: the
+// blocks to turn on and off, by instance name. Any block not listed keeps its
+// current state ("no change").
+type SceneSnapshot struct {
+	On  []string `json:"on,omitempty"`
+	Off []string `json:"off,omitempty"`
 }
 
 // Spec describes the rig to build.
@@ -239,9 +256,58 @@ func resolveFootswitches(spec []Footswitch, modules []string) ([]Footswitch, err
 		if operation == "" {
 			operation = "On"
 		}
-		out = append(out, Footswitch{Module: name, Operation: operation})
+		mode := strings.TrimSpace(sw.Mode)
+		switch {
+		case mode == "" || strings.EqualFold(mode, "Toggle"):
+			mode = "Toggle"
+		case strings.EqualFold(mode, "Scene"):
+			mode = "Scene"
+		default:
+			return nil, fmt.Errorf("footswitch %d: mode must be \"Toggle\" or \"Scene\", got %q", i+1, mode)
+		}
+
+		scene, err := resolveScene(sw.Scene, modules)
+		if err != nil {
+			return nil, fmt.Errorf("footswitch %d: %w", i+1, err)
+		}
+
+		out = append(out, Footswitch{
+			Module:    name,
+			Operation: operation,
+			Mode:      mode,
+			Label:     strings.TrimSpace(sw.Label),
+			Scene:     scene,
+		})
 	}
 	return out, nil
+}
+
+// resolveScene validates a scene snapshot's module references and resolves them
+// to device instance names. A nil snapshot (or one with no on/off blocks) is
+// left nil.
+func resolveScene(snap *SceneSnapshot, modules []string) (*SceneSnapshot, error) {
+	if snap == nil {
+		return nil, nil
+	}
+	resolved := &SceneSnapshot{}
+	for _, name := range snap.On {
+		n, ok := matchInstance(strings.TrimSpace(name), modules)
+		if !ok {
+			return nil, fmt.Errorf("scene block %q is not in the chain (modules: %s)", name, strings.Join(modules, ", "))
+		}
+		resolved.On = append(resolved.On, n)
+	}
+	for _, name := range snap.Off {
+		n, ok := matchInstance(strings.TrimSpace(name), modules)
+		if !ok {
+			return nil, fmt.Errorf("scene block %q is not in the chain (modules: %s)", name, strings.Join(modules, ", "))
+		}
+		resolved.Off = append(resolved.Off, n)
+	}
+	if len(resolved.On) == 0 && len(resolved.Off) == 0 {
+		return nil, nil
+	}
+	return resolved, nil
 }
 
 // matchInstance resolves a module reference to its device instance name with

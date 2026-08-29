@@ -135,9 +135,10 @@ To alternate between two tones on the Gigboard:
 - **Amp/cab Doubling** (device): one Amp block can carry two channels —
   `Doubling`/`DoubleStates`, `Type`/`Type2`, `Master`/`Master2`, … — the
   tightest two-amps-in-one-block switch. Not yet emitted by `design_rig`.
-- **Scene footswitches** (device): a footswitch can be set to Scene mode
-  (`ModeNew="Scene"`) to recall a module on/off snapshot. Not yet emitted by
-  `design_rig`.
+- **Scene footswitches**: a footswitch can be set to Scene mode
+  (`{"module":"X","mode":"scene"}`) to recall a multi-block on/off snapshot —
+  see the scene editing on the device to set which blocks the scene turns on
+  and off.
 
 The Gigboard's mixer has **no "Solo A/B"** parameter — that belongs to newer
 HeadRush hardware (Flex Prime / Prime). Do not try to assign a footswitch to a
@@ -159,14 +160,42 @@ Each entry's `module` is the module **instance name** exactly as it appears in
 the chain (`Wham`, `Green JRC-OD`, `Amp`, `Amp 2` — repeated modules get a
 `" N"` suffix). The default `operation` is `"On"` (toggle the module on/off);
 pass a different `operation` to control a module-specific parameter instead.
-A module that is not in the chain is rejected, and you can never assign more
-than four switches.
+Pass `"mode": "scene"` to make the switch a **Scene** (a saved multi-block
+on/off snapshot) instead of a plain toggle. A module that is not in the chain
+is rejected, and you can never assign more than four switches.
 
 **Order matters: put the most important switches first.** The first two entries
 land on buttons 1 and 2 (FS5/FS6), which stay dedicated to the patch in every
 button mode. Buttons 3 and 4 (FS7/FS8) are repurposed for bank switching in the
 hybrid button mode, so a switch the player hits mid-song (a whammy toe switch,
 a solo boost) must be in the first two slots.
+
+## Songs with multiple sounds (scenes vs setlists)
+
+When one song needs several distinct tones (clean, drive, solo), you have two
+tools. **Ask the user which they want when it is not obvious** — the wrong
+guess wastes a round trip:
+
+- **Scenes** — one rig, one chain. A Scene footswitch turns several blocks on
+  and off at once. Use this when the sounds are variations of the *same chain*
+  (same amp/cab, different pedals or a boost). Design the rig with
+  `footswitches: [{"module":"X","mode":"scene"}, …]`; the multi-block on/off
+  matrix is then edited on the device's scene editor.
+- **A setlist of rigs** — several full `.rig` files stepped through as a bank.
+  Use this when the sounds need *incompatible chains* (different amps/cabs that
+  won't all fit in 11 slots, or a chain that must be rebuilt). Design each rig
+  with `design_rig`, then bind them with `create_setlist`.
+
+Folder layout for a copy-ready card — write rigs into `Rigs/` and the setlist
+into `Setlists/`, then copy both onto the Gigboard:
+
+```
+design_rig ... --out <card>/Rigs     # one call per sound
+create_setlist --name "Song" --out <card>/Setlists <card>/Rigs/*.rig
+```
+
+`create_setlist` reads each `.rig` file's id and name, so the setlist always
+points at the exact rigs you just wrote.
 
 ## Reading a rig (reverse-engineering)
 

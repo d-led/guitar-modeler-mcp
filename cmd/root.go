@@ -55,6 +55,7 @@ func newRootCmd() *cobra.Command {
 		newReportCmd(),
 		newDecodeCmd(),
 		newLevelCmd(),
+		newSetlistCmd(),
 		newMcpCmd(),
 	)
 	return root

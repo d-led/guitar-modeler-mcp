@@ -29,6 +29,7 @@ type FootswitchSummary struct {
 	Switch    string `json:"switch"` // FS5..FS8
 	Module    string `json:"module"`
 	Operation string `json:"operation"`
+	Mode      string `json:"mode,omitempty"` // "Toggle" or "Scene"
 }
 
 // FootswitchLine renders the assigned stomp switches as a one-liner
@@ -168,6 +169,7 @@ func footswitchAssignments(content *Content) []FootswitchSummary {
 			Switch:    "FS" + n,
 			Module:    module,
 			Operation: childString(children, "Operation"+n),
+			Mode:      childString(children, "ModeNew"+n),
 		})
 	}
 	return out

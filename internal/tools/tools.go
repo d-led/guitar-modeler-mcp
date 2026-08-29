@@ -17,6 +17,7 @@ import (
 	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/mcp"
 	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/params"
 	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/rig"
+	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/setlist"
 )
 
 // Registrar binds the catalog, rig builder and designer to the MCP server.
@@ -268,6 +269,19 @@ func (r *Registrar) Register(s *mcp.Server) {
 			return marshal(est)
 		},
 	})
+
+	s.Register(mcp.Tool{
+		Name:        "create_setlist",
+		Description: "Write a device .setlist file that steps through the given rig files in order, so one song can use several incompatible chains (e.g. clean, drive, solo). Reads each .rig file's id and name, and writes <output_dir>/<name>.setlist.",
+		InputSchema: objectSchema(map[string]any{
+			"name":       stringSchema("Setlist name (becomes the .setlist file name)."),
+			"rig_files":  arraySchema("Paths to the .rig files, in setlist order.", stringSchema("Path to a .rig file.")),
+			"output_dir": stringSchema("Directory to write the .setlist into (default: the first rig file's directory)."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.createSetlist(args)
+		},
+	})
 }
 
 func (r *Registrar) designRig(args map[string]any) (string, error) {
@@ -373,6 +387,48 @@ func (r *Registrar) describeModule(typ string) (string, error) {
 	return marshal(spec)
 }
 
+// createSetlist binds the given rig files into a device .setlist, so a song
+// can step through several incompatible chains.
+func (r *Registrar) createSetlist(args map[string]any) (string, error) {
+	name := argString(args, "name")
+	if strings.TrimSpace(name) == "" {
+		return "", fmt.Errorf("a setlist name is required")
+	}
+	paths := argStrings(args["rig_files"])
+	if len(paths) == 0 {
+		return "", fmt.Errorf("rig_files is required")
+	}
+
+	entries := make([]setlist.Entry, 0, len(paths))
+	for _, p := range paths {
+		file, err := readRigFile(p)
+		if err != nil {
+			return "", fmt.Errorf("read rig %q: %w", p, err)
+		}
+		entries = append(entries, setlist.Entry{ID: file.ID, Name: file.Name()})
+	}
+
+	sl, err := setlist.New(name, entries)
+	if err != nil {
+		return "", err
+	}
+	outDir := argString(args, "output_dir")
+	if outDir == "" {
+		outDir = filepath.Dir(paths[0])
+	}
+	path, err := sl.Write(outDir)
+	if err != nil {
+		return "", err
+	}
+
+	var b strings.Builder
+	fmt.Fprintf(&b, "Setlist %q written to %s\n", sl.Name(), path)
+	for i, e := range entries {
+		fmt.Fprintf(&b, "  %d. %s\n", i+1, e.Name)
+	}
+	return b.String(), nil
+}
+
 func readRigFile(path string) (*rig.RigFile, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -454,6 +510,7 @@ func parseFootswitches(raw any) []rig.Footswitch {
 		sw := rig.Footswitch{
 			Module:    argString(m, "module"),
 			Operation: argString(m, "operation"),
+			Mode:      argString(m, "mode"),
 		}
 		if sw.Module != "" {
 			out = append(out, sw)
@@ -574,5 +631,6 @@ func footswitchItemSchema() map[string]any {
 	return objectSchema(map[string]any{
 		"module":    stringSchema("Module instance name to control, e.g. \"Wham\" or \"Amp 2\"."),
 		"operation": stringSchema("What the switch controls; \"On\" toggles the module on/off (default)."),
+		"mode":      stringSchema("Switch type: \"Toggle\" (default) or \"Scene\" (recalls a multi-block on/off snapshot)."),
 	})
 }
