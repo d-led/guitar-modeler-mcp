@@ -1,10 +1,16 @@
 # guitar-modeler-mcp
 
 An MCP server and CLI for designing and writing guitar-modeler presets for
-multiple hardware devices, written in Go. The first supported device is the
-**HeadRush Gigboard** (`.rig` patch files); the architecture is a
-device-agnostic design core with per-device backends, so Quad Cortex, Mooer
-GE100 Pro and others can be added as new backends.
+multiple hardware devices, written in Go. The design core is device-agnostic
+and per-device backends supply the model catalog and preset file format.
+
+Supported devices:
+
+- **HeadRush Gigboard** — `.rig` patch files.
+- **Mooer** GE150 Pro Li, GE200, GE150, GE100 Pro — `.mo` files (file-capable
+  models) plus a printable setup card for every model.
+- **BOSS Waza Air** — BOSS TONE STUDIO livesets (`.tsl`) plus a printable setup
+  card.
 
 ## Trademarks & disclaimer
 
@@ -16,11 +22,15 @@ sponsored by HeadRush or any of the referenced brands.
 
 ## Roadmap
 
-- **Gigboard** — implemented (the only backend today).
+- **Gigboard** — implemented.
+- **Mooer GE150 Pro Li / GE200 / GE150 / GE100 Pro** — implemented (`.mo` files
+  and setup cards); the cross-device `map_preset` tool maps Gigboard rigs to
+  and from Mooer presets.
+- **BOSS Waza Air** — implemented (`.tsl` livesets and setup cards). The
+  `.tsl` reader/writer is based on the observed `liveset → patches → param`
+  variant; spatial-setting IDs (ambience, position, mode) are not yet written.
 - **Quad Cortex** — planned; see [OpenCortex](https://github.com/VanIseghemThomas/OpenCortex)
   (open-source QC preset format work) as a starting point for the preset format.
-- **Mooer GE100 Pro and others** — planned, pending a sample preset dump to
-  reverse-engineer each format.
 
 Give it a song and a tone description, and it will:
 
@@ -41,6 +51,11 @@ per-device backend supplies the model catalog and preset file format:
   layer from [Gigboard Hints](https://boguz.github.io/gigboardhints/)), and
   `internal/rig` (the exact on-disk `.rig` format: outer JSON envelope whose
   `content` field is a second JSON document describing the signal chain).
+- **Mooer backend** — `internal/mooer` (per-model catalogs, the 2048-byte
+  `.mo` format and setup cards) and `internal/presetmap` (Gigboard ↔ Mooer
+  model mapping).
+- **Waza Air backend** — `internal/waza` (amp/effect catalogs, the BOSS TONE
+  STUDIO `.tsl` liveset format and setup cards).
 - `internal/assets/data/blocks` — factory block definitions captured from the
   device backup, used as defaults for every effect module.
 - `internal/docs/agent-guide.md` — the agent-facing guide (signal-chain topology,
@@ -97,6 +112,12 @@ guitar-modeler-mcp search "tube screamer" --kind fx
 
 # Where each effect category goes in each chain layout
 guitar-modeler-mcp fx-placement
+
+# Which devices are supported, and whether each one exchanges preset files
+guitar-modeler-mcp device list
+
+# Cross-device conversion: Gigboard .rig <-> Mooer .mo
+guitar-modeler-mcp map "001 HOW DOES IT FEEL.rig"
 
 # Dial in a tone and write the patch + HTML report
 guitar-modeler-mcp design \
@@ -167,6 +188,15 @@ guitar-modeler-mcp serve
 | `render_report` | HTML report for an existing `.rig` |
 | `rig_decode` | Decode a `.rig` into chain + mixer (levels/pans/delay) + parameter values |
 | `estimate_rig_level` | Estimate a rig's output level and recommend a RigVolume for a target level |
+| `device_list` | List every supported device and whether it exchanges preset files |
+| `mooer_catalog_list_amps` / `_cabs` / `_fx` | List a Mooer model's amps, cabs and effects (with the real hardware each emulates) |
+| `mooer_design` | Build a Mooer preset: writes `.mo` (file-capable models) + a printable setup card |
+| `render_setup_card` | Render a setup card from an existing `.mo` |
+| `map_preset` | Convert a preset across devices: Gigboard `.rig` ↔ Mooer `.mo` |
+| `waza_catalog_list_amps` / `_fx` | List the Waza Air's amps and effects (with the real hardware each emulates) |
+| `waza_write_tsl` | Write a BOSS TONE STUDIO `.tsl` liveset for the Waza Air from a tone description |
+| `waza_read_tsl` | Read a Waza Air `.tsl` and report the first patch's tone |
+| `waza_setup_card` | Write a printable HTML setup card for a Waza Air tone |
 
 Example agent workflow: list amps → translate the song's amp → `design_rig` with
 effects → read the report → tweak by re-running `design_rig` with parameter

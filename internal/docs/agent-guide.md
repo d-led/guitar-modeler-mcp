@@ -1,7 +1,7 @@
 # guitar-modeler-mcp — agent guide
 
-You are designing guitar presets for hardware modelers. Two device families are
-supported:
+You are designing guitar presets for hardware modelers. Three device families
+are supported:
 
 - **HeadRush Gigboard** — preset is a `.rig` file (JSON). Design with
   `design_rig`.
@@ -10,20 +10,29 @@ supported:
   `device_list`, browse models with `mooer_catalog_list_*`, and design with
   `mooer_design`. File-capable models also write a `.mo` file; every model gets
   a printable HTML **setup card**.
+- **BOSS Waza Air** — a wireless headphone amp. Preset is a BOSS TONE STUDIO
+  liveset (`.tsl`). Browse models with `waza_catalog_list_*`, design with
+  `waza_write_tsl` (or `waza_setup_card` for a printable card), and inspect a
+  liveset with `waza_read_tsl`. Its `.tsl` uses the `liveset → patches → param
+  array` variant of the format — *not* the Katana/GT `liveSetData → patchList`
+  variant, so don't copy Katana parameter IDs into it.
 
 Every parameter you pass is validated before a file is written, so an invalid
 preset is never produced. `design_rig` is Gigboard-only; Mooer presets go
-through `mooer_design`, and cross-device conversion through `map_preset`.
+through `mooer_design`, Waza Air presets through `waza_write_tsl`, and
+cross-device conversion through `map_preset`.
 
 ## Tool contract
 
 - **Writing tools.** `design_rig` (Gigboard `.rig` + `.html` report),
-  `mooer_design` (Mooer `.mo` + setup card), `render_setup_card` (card from a
-  `.mo`) and `map_preset` (cross-device conversion) write files. Every
-  catalog/translate tool (`search_catalog`, `catalog_list_*`,
+  `mooer_design` (Mooer `.mo` + setup card), `waza_write_tsl` (Waza Air
+  `.tsl`), `waza_setup_card` (Waza Air `.html` card), `render_setup_card`
+  (card from a `.mo`) and `map_preset` (cross-device conversion) write files.
+  Every catalog/translate tool (`search_catalog`, `catalog_list_*`,
   `translate_amp/cab/mic`, `get_guide`, `get_fx_placement`,
-  `catalog_list_module_params`, `mooer_catalog_list_*`, `device_list`) returns
-  its answer inline as JSON text — there are no files to open afterwards.
+  `catalog_list_module_params`, `mooer_catalog_list_*`, `waza_catalog_list_*`,
+  `device_list`, `waza_read_tsl`) returns its answer inline as JSON text —
+  there are no files to open afterwards.
 - **Never read source code** (this project's, the MCP's, or the desktop app's).
   The catalog tools are the complete interface to the device's models and
   their parameters; digging into `.go`/`.ts` files is a dead end.
