@@ -70,8 +70,8 @@ func TestParseFootswitchFlags(t *testing.T) {
 
 func TestSupportedDevices(t *testing.T) {
 	devices := supportedDevices()
-	if len(devices) != 10 {
-		t.Fatalf("supportedDevices returned %d devices, want 10", len(devices))
+	if len(devices) != 11 {
+		t.Fatalf("supportedDevices returned %d devices, want 11", len(devices))
 	}
 
 	byName := make(map[string]deviceInfo, len(devices))
@@ -96,5 +96,8 @@ func TestSupportedDevices(t *testing.T) {
 	}
 	if g := byName["thr"]; g.FileExchange || g.Description != "Yamaha THR-II" {
 		t.Fatalf("thr entry = %+v, want card-only", g)
+	}
+	if g := byName["quad-cortex"]; g.FileExchange || g.FileExt != "" || g.Description != "Neural DSP Quad Cortex" {
+		t.Fatalf("quad-cortex entry = %+v, want catalog-only", g)
 	}
 }

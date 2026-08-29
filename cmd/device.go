@@ -4,6 +4,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/d-led/guitar-modeler-mcp/internal/mooer"
+	"github.com/d-led/guitar-modeler-mcp/internal/qc"
 	"github.com/d-led/guitar-modeler-mcp/internal/thr"
 	"github.com/d-led/guitar-modeler-mcp/internal/waza"
 )
@@ -38,6 +39,8 @@ func supportedDevices() []deviceInfo {
 	for _, t := range thr.Models() {
 		list = append(list, deviceInfo{Name: t.Name, Description: t.Display, FileExchange: t.FileExchange, FileExt: t.FileExt})
 	}
+	q := qc.Default()
+	list = append(list, deviceInfo{Name: q.Name, Description: q.Display, FileExchange: q.FileExchange, FileExt: q.FileExt})
 	return list
 }
 

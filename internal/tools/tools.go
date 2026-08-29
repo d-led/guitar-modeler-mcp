@@ -18,6 +18,7 @@ import (
 	"github.com/d-led/guitar-modeler-mcp/internal/mooer"
 	"github.com/d-led/guitar-modeler-mcp/internal/params"
 	"github.com/d-led/guitar-modeler-mcp/internal/presetmap"
+	"github.com/d-led/guitar-modeler-mcp/internal/qc"
 	"github.com/d-led/guitar-modeler-mcp/internal/rig"
 	"github.com/d-led/guitar-modeler-mcp/internal/setlist"
 	"github.com/d-led/guitar-modeler-mcp/internal/thr"
@@ -481,6 +482,62 @@ func (r *Registrar) Register(s *mcp.Server) {
 		}, thrKnobProps())),
 		Handler: func(_ context.Context, args map[string]any) (string, error) {
 			return r.thrSetupCard(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "qc_catalog_list_amps",
+		Description: "List the Neural DSP Quad Cortex guitar amp models (and bass amps) with the real hardware each is based on. Preset file exchange is not implemented yet, so these models are for tone translation and recommendation.",
+		InputSchema: objectSchema(map[string]any{
+			"query": stringSchema("Optional case-insensitive filter over name or based-on."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.qcListAmps(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "qc_catalog_list_cabs",
+		Description: "List the Quad Cortex guitar cabinet (cabsim) models with the real cabinet each is based on.",
+		InputSchema: objectSchema(map[string]any{
+			"query": stringSchema("Optional case-insensitive filter over name or based-on."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.qcListCabs(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "qc_catalog_list_fx",
+		Description: "List the Quad Cortex effect models in one category: drive, compressor, equalizer, delay, modulation, reverb, wah, pitch, filter or gate.",
+		InputSchema: objectSchema(map[string]any{
+			"category": stringSchema("Effect category: drive, compressor, equalizer, delay, modulation, reverb, wah, pitch, filter or gate."),
+			"query":    stringSchema("Optional case-insensitive filter over name or based-on."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.qcListFX(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "qc_translate_amp",
+		Description: "Translate a real-world amplifier description into the closest Quad Cortex amp model (e.g. \"Marshall JCM800\" or \"Fender Twin Reverb\").",
+		InputSchema: objectSchema(map[string]any{
+			"query": stringSchema("Free-form hardware description."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.qcTranslateAmp(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "qc_translate_cab",
+		Description: "Translate a cabinet description into the closest Quad Cortex cabinet model.",
+		InputSchema: objectSchema(map[string]any{
+			"query": stringSchema("Free-form cabinet description."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.qcTranslateCab(args)
 		},
 	})
 }
@@ -1570,6 +1627,67 @@ func filterWazaItems(items []waza.Item, query string) []catalogItem {
 		out = append(out, catalogItem{Index: i, Name: it.Name, InspiredBy: it.InspiredBy})
 	}
 	return out
+}
+
+// ---- Quad Cortex device tools ----
+
+func filterQCItems(items []qc.Item, query string) []catalogItem {
+	q := strings.ToLower(strings.TrimSpace(query))
+	out := make([]catalogItem, 0, len(items))
+	for i, it := range items {
+		if q != "" && !strings.Contains(strings.ToLower(it.Name+" "+it.InspiredBy), q) {
+			continue
+		}
+		out = append(out, catalogItem{Index: i, Name: it.Name, InspiredBy: it.InspiredBy})
+	}
+	return out
+}
+
+func (r *Registrar) qcListAmps(args map[string]any) (string, error) {
+	d := qc.Default()
+	amps := append(append([]qc.Item{}, d.Amps...), d.BassAmps...)
+	return marshal(map[string]any{
+		"device": d.Display,
+		"amps":   filterQCItems(amps, argString(args, "query")),
+	})
+}
+
+func (r *Registrar) qcListCabs(args map[string]any) (string, error) {
+	d := qc.Default()
+	return marshal(map[string]any{
+		"device": d.Display,
+		"cabs":   filterQCItems(d.Cabs, argString(args, "query")),
+	})
+}
+
+func (r *Registrar) qcListFX(args map[string]any) (string, error) {
+	d := qc.Default()
+	category := strings.ToLower(strings.TrimSpace(argString(args, "category")))
+	query := argString(args, "query")
+	effects := map[string][]catalogItem{}
+	for name, items := range d.Effects {
+		if category != "" && name != category {
+			continue
+		}
+		effects[name] = filterQCItems(items, query)
+	}
+	return marshal(map[string]any{"device": d.Display, "effects": effects})
+}
+
+func (r *Registrar) qcTranslateAmp(args map[string]any) (string, error) {
+	item, err := qc.Default().ResolveAmp(argString(args, "query"))
+	if err != nil {
+		return "", err
+	}
+	return marshal(map[string]any{"name": item.Name, "based_on": item.InspiredBy})
+}
+
+func (r *Registrar) qcTranslateCab(args map[string]any) (string, error) {
+	item, err := qc.Default().ResolveCab(argString(args, "query"))
+	if err != nil {
+		return "", err
+	}
+	return marshal(map[string]any{"name": item.Name, "based_on": item.InspiredBy})
 }
 
 // ---- Yamaha THR device tools ----

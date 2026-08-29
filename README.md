@@ -57,8 +57,16 @@ sponsored by HeadRush or any of the referenced brands.
   The **XSONIC AIRSTEP BW** foot controller's four footswitch modes
   (channel memories CH 1–6 + effect toggles) are modelled and printable on the
   setup card.
-- **Quad Cortex** — planned; see [OpenCortex](https://github.com/VanIseghemThomas/OpenCortex)
-  (open-source QC preset format work) as a starting point for the preset format.
+- **Quad Cortex** — catalog + translation implemented (`qc_catalog_list_*`,
+  `qc_translate_*`): the full amp/cab/effect model list with what each is
+  "based on", so a real amp can be mapped to its QC model and a preset
+  recommended from standard components. **`.qpreset` file exchange is not
+  implemented yet** — QC presets are AES-encrypted protobufs, so writing a
+  loadable file would require re-implementing the encryption rather than using
+  a public key. See [OpenCortex](https://github.com/VanIseghemThomas/OpenCortex)
+  (which has documented the format) and [pyquadcortex](https://github.com/stokes-audio/pyquadcortex)
+  (USB device control) as the two practical paths to file-level or live preset
+  editing.
 
 Give it a song and a tone description, and it will:
 

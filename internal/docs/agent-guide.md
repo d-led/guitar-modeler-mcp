@@ -67,6 +67,14 @@ are supported:
   `thr_setup_card`. The legacy
   THR10/THR10C/THR10X amp lists are partial (community reference) and have no
   cabinet list.
+- **Neural DSP Quad Cortex** — catalog and translation only, no file exchange.
+  QC presets are AES-encrypted protobufs, so there is no `qc_design` yet. Use
+  `qc_catalog_list_amps`/`qc_catalog_list_cabs`/`qc_catalog_list_fx` to browse
+  the model list (each model carries what real hardware it is "based on"), and
+  `qc_translate_amp`/`qc_translate_cab` to map a real amp/cab description to
+  the exact QC model name. To *write* a preset, either recommend a standard
+  component chain for the user to dial in by hand, or route through USB control
+  (e.g. pyquadcortex) — never attempt to write a `.qpreset` file directly.
 
 Every parameter you pass is validated before a file is written, so an invalid
 preset is never produced. `design_rig` is Gigboard-only; Mooer presets go
