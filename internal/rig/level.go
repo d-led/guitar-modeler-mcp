@@ -134,7 +134,11 @@ func dB(v float64) string {
 }
 
 func round1(v float64) float64 {
-	return math.Round(v*10) / 10
+	r := math.Round(v*10) / 10
+	if r == 0 {
+		return 0 // normalise -0 to 0
+	}
+	return r
 }
 
 func clamp(v, lo, hi float64) float64 {

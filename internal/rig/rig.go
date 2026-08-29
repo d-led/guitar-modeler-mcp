@@ -211,6 +211,29 @@ const (
 	paraLevelMax = 6
 )
 
+// levelBounds cap the rig-level level controls so a rig is never written with
+// an accidentally huge boost. Ranges are the device's observed limits.
+const (
+	inputGainMin = -40
+	inputGainMax = 12
+	rigVolumeMin = -10
+	rigVolumeMax = 20
+)
+
+// validateLevels rejects out-of-range path mix and rig-level level values.
+func validateLevels(spec Spec) error {
+	if err := validatePara(spec); err != nil {
+		return err
+	}
+	if spec.InputGain < inputGainMin || spec.InputGain > inputGainMax {
+		return fmt.Errorf("input gain = %v dB, must be within [%v, %v]", spec.InputGain, inputGainMin, inputGainMax)
+	}
+	if spec.OutputVolume < rigVolumeMin || spec.OutputVolume > rigVolumeMax {
+		return fmt.Errorf("output level = %v dB, must be within [%v, %v]", spec.OutputVolume, rigVolumeMin, rigVolumeMax)
+	}
+	return nil
+}
+
 // validatePara rejects out-of-range path mix values.
 func validatePara(spec Spec) error {
 	check := func(name string, v *float64, min, max float64) error {
@@ -303,7 +326,7 @@ func (c chain) slots() []string {
 // enforces the Gigboard's slot budgets, measured from the device backups.
 func buildChain(cat *catalog.Catalog, spec Spec) (chain, error) {
 	var c chain
-	if err := validatePara(spec); err != nil {
+	if err := validateLevels(spec); err != nil {
 		return c, err
 	}
 

@@ -83,12 +83,12 @@ func TestIntegrationInitializeAndToolList(t *testing.T) {
 		names[tool.(map[string]any)["name"].(string)] = true
 	}
 	for _, want := range []string{
-		"get_guide",
+		"get_guide", "search_catalog",
 		"catalog_list_amps", "catalog_list_cabs", "catalog_list_mics", "catalog_list_fx",
 		"catalog_list_fx_categories", "catalog_list_fx_by_category",
 		"catalog_list_block_presets", "catalog_list_module_params",
 		"translate_amp", "translate_cab", "translate_mic",
-		"design_rig", "render_report", "rig_decode",
+		"design_rig", "render_report", "rig_decode", "estimate_rig_level",
 	} {
 		if !names[want] {
 			t.Errorf("missing tool %q in tools/list", want)

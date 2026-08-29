@@ -57,15 +57,23 @@ headrush-gigboard-mcp translate amp "Marshall JCM800"
 headrush-gigboard-mcp translate cab "greenback 4x12"
 headrush-gigboard-mcp translate mic "SM57"
 
+# Fuzzy-search amps, cabs, mics and effects (by name or the real hardware)
+headrush-gigboard-mcp search "JCM800"
+headrush-gigboard-mcp search "tube screamer" --kind fx
+
 # Dial in a tone and write the patch + HTML report
 headrush-gigboard-mcp design \
   --name "Brown Sound" --song "Van Halen - Panama" \
   --amp "Marshall JCM800" \
   --fx '[{"type":"Green JRC-OD","enabled":true},{"type":"Tape Echo","enabled":true}]' \
+  --output-level 6 \
   --out ./rigs
 
 # Decode an existing rig for analysis
 headrush-gigboard-mcp decode "001 HOW DOES IT FEEL.rig"
+
+# Estimate a rig's output level and the RigVolume to reach 0 dB
+headrush-gigboard-mcp level "001 HOW DOES IT FEEL.rig"
 
 # Render an HTML report for an existing rig
 headrush-gigboard-mcp report --rig "001 HOW DOES IT FEEL.rig"
@@ -106,6 +114,7 @@ headrush-gigboard-mcp serve
 | Tool | Purpose |
 | --- | --- |
 | `get_guide` | Return the embedded agent guide (chain topology, routing constraints, categories, workflow) |
+| `search_catalog` | Fuzzy-search amps/cabs/mics/effects by name or the real hardware they emulate (both directions) |
 | `catalog_list_amps` | List amps with the real hardware each emulates (`modeled_after`), a `gain` character (clean/edge of breakup/crunch/high gain/bass) and capabilities |
 | `catalog_list_cabs` | List cabinet models |
 | `catalog_list_mics` | List microphone models |
@@ -118,6 +127,7 @@ headrush-gigboard-mcp serve
 | `design_rig` | Translate, order, write `.rig` + HTML report (serial or parallel chain) |
 | `render_report` | HTML report for an existing `.rig` |
 | `rig_decode` | Decode a `.rig` into chain + mixer (levels/pans/delay) + parameter values |
+| `estimate_rig_level` | Estimate a rig's output level and recommend a RigVolume for a target level |
 
 Example agent workflow: list amps → translate the song's amp → `design_rig` with
 effects → read the report → tweak by re-running `design_rig` with parameter
