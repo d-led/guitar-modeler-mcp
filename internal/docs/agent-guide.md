@@ -105,6 +105,25 @@ In `design_rig`, pass `routing: "SPS-1"` with `amp2` (and optional `cab2`,
 `path_a_fx`/`path_b_fx` for a shared-amp split. Balance and pan the two paths
 with `para1_level`/`para2_level`, `para1_pan`/`para2_pan` and `para_delay`.
 
+### A/B switching
+
+To alternate between two tones on the Gigboard:
+
+- **Toggle the modules that differ.** In a split (`SPS-1`/`PS-1`) or serial
+  rig, assign a footswitch to each module you want on/off — e.g.
+  `footswitches: [{"module":"Amp"},{"module":"Amp 2"}]` toggles each amp.
+  This is the method `design_rig` emits today.
+- **Amp/cab Doubling** (device): one Amp block can carry two channels —
+  `Doubling`/`DoubleStates`, `Type`/`Type2`, `Master`/`Master2`, … — the
+  tightest two-amps-in-one-block switch. Not yet emitted by `design_rig`.
+- **Scene footswitches** (device): a footswitch can be set to Scene mode
+  (`ModeNew="Scene"`) to recall a module on/off snapshot. Not yet emitted by
+  `design_rig`.
+
+The Gigboard's mixer has **no "Solo A/B"** parameter — that belongs to newer
+HeadRush hardware (Flex Prime / Prime). Do not try to assign a footswitch to a
+mixer "Solo"; use module toggles, Doubling or Scenes instead.
+
 ## Footswitches
 
 The Gigboard has four stomp switches (FS5–FS8) that can each turn a module on
