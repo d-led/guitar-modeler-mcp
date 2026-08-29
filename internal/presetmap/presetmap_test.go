@@ -10,7 +10,7 @@ import (
 
 func newTable(t *testing.T) *Table {
 	t.Helper()
-	return NewTable(catalog.New())
+	return NewTable(catalog.New(), mooer.Default())
 }
 
 func TestMapAmpGigboardToMooer(t *testing.T) {
@@ -94,12 +94,13 @@ func TestMapFXMooerToGigboard(t *testing.T) {
 
 func TestMooerToGigboard(t *testing.T) {
 	table := newTable(t)
+	m := mooer.Default()
 
-	ampIndex, _ := mooer.AmpIndex("Brit 800")
-	cabIndex, _ := mooer.CabIndex("4x12 Green")
-	driveIndex, _ := mooer.EffectIndex("od", "TS808")
-	delayIndex, _ := mooer.EffectIndex("delay", "Tape")
-	reverbIndex, _ := mooer.EffectIndex("reverb", "Spring")
+	ampIndex, _ := m.AmpIndex("Brit 800")
+	cabIndex, _ := m.CabIndex("4x12 Green")
+	driveIndex, _ := m.EffectIndex("od", "TS808")
+	delayIndex, _ := m.EffectIndex("delay", "Tape")
+	reverbIndex, _ := m.EffectIndex("reverb", "Spring")
 
 	p := mooer.New()
 	p.Name = "Mapped Tone"
@@ -179,19 +180,20 @@ func TestGigboardToMooer(t *testing.T) {
 	if got.Name != "To Mooer" {
 		t.Fatalf("name = %q, want To Mooer", got.Name)
 	}
-	if !got.Amp.Enabled || mooer.EffectName("amp", got.Amp.Type) != "Brit 800" {
+	m := mooer.Default()
+	if !got.Amp.Enabled || m.EffectName("amp", got.Amp.Type) != "Brit 800" {
 		t.Fatalf("amp = %+v, want enabled Brit 800", got.Amp)
 	}
-	if !got.Cab.Enabled || mooer.EffectName("cab", got.Cab.Type) != "4x12 Green" {
+	if !got.Cab.Enabled || m.EffectName("cab", got.Cab.Type) != "4x12 Green" {
 		t.Fatalf("cab = %+v, want enabled 4x12 Green", got.Cab)
 	}
-	if !got.Drive.Enabled || mooer.EffectName("od", got.Drive.Type) != "TS808" {
+	if !got.Drive.Enabled || m.EffectName("od", got.Drive.Type) != "TS808" {
 		t.Fatalf("drive = %+v, want enabled TS808", got.Drive)
 	}
-	if !got.Delay.Enabled || mooer.EffectName("delay", got.Delay.Type) != "Tape" {
+	if !got.Delay.Enabled || m.EffectName("delay", got.Delay.Type) != "Tape" {
 		t.Fatalf("delay = %+v, want enabled Tape", got.Delay)
 	}
-	if !got.Reverb.Enabled || mooer.EffectName("reverb", got.Reverb.Type) != "Spring" {
+	if !got.Reverb.Enabled || m.EffectName("reverb", got.Reverb.Type) != "Spring" {
 		t.Fatalf("reverb = %+v, want enabled Spring", got.Reverb)
 	}
 }

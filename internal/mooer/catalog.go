@@ -10,8 +10,6 @@
 // FX, DS, AMP, CAB, NS, EQ, MOD, DELAY and REVERB.
 package mooer
 
-import "strings"
-
 // Amps is every amp model, in effect_type index order (index = wire value).
 var Amps = []string{
 	"Deluxe Vib", "Deluxe Tweed", "Brit 800", "Brit 2000",
@@ -69,59 +67,6 @@ var Effects = map[string][]string{
 	},
 }
 
-// ModuleOrder is the fixed signal-chain order of the device's nine modules.
-// It is also the order the modules appear in a preset record on the wire.
-var ModuleOrder = []string{"fx", "od", "amp", "cab", "ns", "eq", "mod", "delay", "reverb"}
-
-// EffectName returns the human-readable name of the effect selected in the
-// given module by the given effect_type index. Modules with a fixed single
-// effect (ns, eq) return their own name; an out-of-range index returns "".
-func EffectName(module string, effectType uint8) string {
-	switch module {
-	case "amp":
-		return listName(Amps, effectType)
-	case "cab":
-		return listName(Cabs, effectType)
-	case "ns":
-		return "Noise Gate"
-	case "eq":
-		return "EQ"
-	}
-	return listName(Effects[strings.ToLower(module)], effectType)
-}
-
-// EffectIndex returns the effect_type index for a named effect in the given
-// module, matching case-insensitively. It reports false when the name is not
-// in the module's list.
-func EffectIndex(module, name string) (uint8, bool) {
-	index, ok := listIndex(Effects[strings.ToLower(module)], name)
-	return uint8(index), ok
-}
-
-// AmpIndex returns the effect_type index for a named amp model.
-func AmpIndex(name string) (uint8, bool) {
-	index, ok := listIndex(Amps, name)
-	return uint8(index), ok
-}
-
-// CabIndex returns the effect_type index for a named cab model.
-func CabIndex(name string) (uint8, bool) {
-	index, ok := listIndex(Cabs, name)
-	return uint8(index), ok
-}
-
-func listName(list []string, index uint8) string {
-	if int(index) >= len(list) {
-		return ""
-	}
-	return list[index]
-}
-
-func listIndex(list []string, name string) (int, bool) {
-	for i, candidate := range list {
-		if strings.EqualFold(candidate, name) {
-			return i, true
-		}
-	}
-	return 0, false
-}
+// The index↔name and "inspired by" accessors were folded into the Model
+// methods (model.go); ModuleOrder moved there too. This file now holds only
+// the GE150 Pro Li / GE150 Max model tables (Amps/Cabs/Effects).

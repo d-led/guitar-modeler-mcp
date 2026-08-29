@@ -281,23 +281,24 @@ func (ft *fxTable) mooerToGigboard(module, name string) (string, bool) {
 // Table is the set of cross-device lookup tables, built once from the device
 // catalogs.
 type Table struct {
-	amps *linkIndex
-	cabs *linkIndex
-	fx   *fxTable
-	mics *linkIndex
+	amps  *linkIndex
+	cabs  *linkIndex
+	fx    *fxTable
+	mics  *linkIndex
+	mooer mooer.Model
 }
 
 // NewTable builds the cross-device lookup tables from the Gigboard catalog and
-// the Mooer device data.
-func NewTable(cat *catalog.Catalog) *Table {
-	t := &Table{amps: newLinkIndex(), cabs: newLinkIndex(), fx: newFXTable(), mics: newLinkIndex()}
+// a Mooer model (the device the Mooer side of the lookup is built from).
+func NewTable(cat *catalog.Catalog, m mooer.Model) *Table {
+	t := &Table{amps: newLinkIndex(), cabs: newLinkIndex(), fx: newFXTable(), mics: newLinkIndex(), mooer: m}
 
 	for _, a := range cat.Amps() {
 		t.amps.add(DeviceGigboard, a.Model, canonicalKey(a.Brand+" "+a.RealModel))
 	}
-	for _, name := range mooer.Amps {
-		if raw, ok := mooer.AmpInspiredBy(name); ok {
-			t.amps.add(DeviceMooer, name, canonicalKey(raw))
+	for _, a := range m.Amps {
+		if raw := a.InspiredBy; raw != "" {
+			t.amps.add(DeviceMooer, a.Name, canonicalKey(raw))
 		}
 	}
 
@@ -306,9 +307,9 @@ func NewTable(cat *catalog.Catalog) *Table {
 			t.cabs.add(DeviceGigboard, c.Model, canonicalKey(raw))
 		}
 	}
-	for _, name := range mooer.Cabs {
-		if raw, ok := mooer.CabInspiredBy(name); ok {
-			t.cabs.add(DeviceMooer, name, canonicalKey(raw))
+	for _, c := range m.Cabs {
+		if raw := c.InspiredBy; raw != "" {
+			t.cabs.add(DeviceMooer, c.Name, canonicalKey(raw))
 		}
 	}
 
@@ -317,10 +318,10 @@ func NewTable(cat *catalog.Catalog) *Table {
 			t.fx.addGigboard(f.Name, f.Category, canonicalKey(raw))
 		}
 	}
-	for module, list := range mooer.Effects {
-		for _, name := range list {
-			if raw, ok := mooer.FXInspiredBy(module, name); ok {
-				t.fx.addMooer(module, name, canonicalKey(raw))
+	for module, list := range m.Effects {
+		for _, f := range list {
+			if raw := f.InspiredBy; raw != "" {
+				t.fx.addMooer(module, f.Name, canonicalKey(raw))
 			}
 		}
 	}

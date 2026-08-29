@@ -1,21 +1,29 @@
 # guitar-modeler-mcp — agent guide
 
-You are designing guitar presets for hardware modelers. The currently supported
-device is the **HeadRush Gigboard**, whose preset is a `.rig` file: one line of
-JSON whose `content` field is a second JSON document describing the signal chain
-(the `Patch`). Use these tools to discover models and to write preset files;
-every parameter you pass is validated before a file is written, so an invalid
-preset is never produced. Pass `device: "gigboard"` on `design_rig` (other
-devices are not wired up yet).
+You are designing guitar presets for hardware modelers. Two device families are
+supported:
+
+- **HeadRush Gigboard** — preset is a `.rig` file (JSON). Design with
+  `design_rig`.
+- **Mooer** (GE150 Pro Li, GE200, GE150, GE100 Pro) — a fixed nine-module chain
+  (FX → DS/OD → AMP → CAB → NS → EQ → MOD → DELAY → REVERB). List devices with
+  `device_list`, browse models with `mooer_catalog_list_*`, and design with
+  `mooer_design`. File-capable models also write a `.mo` file; every model gets
+  a printable HTML **setup card**.
+
+Every parameter you pass is validated before a file is written, so an invalid
+preset is never produced. `design_rig` is Gigboard-only; Mooer presets go
+through `mooer_design`, and cross-device conversion through `map_preset`.
 
 ## Tool contract
 
-- **Nothing writes files except `design_rig` and `render_report`.** Every
+- **Writing tools.** `design_rig` (Gigboard `.rig` + `.html` report),
+  `mooer_design` (Mooer `.mo` + setup card), `render_setup_card` (card from a
+  `.mo`) and `map_preset` (cross-device conversion) write files. Every
   catalog/translate tool (`search_catalog`, `catalog_list_*`,
   `translate_amp/cab/mic`, `get_guide`, `get_fx_placement`,
-  `catalog_list_module_params`) returns its answer inline as JSON text — there
-  are no files to open afterwards. `design_rig`'s reply tells you the `.rig`
-  and `.html` paths it wrote.
+  `catalog_list_module_params`, `mooer_catalog_list_*`, `device_list`) returns
+  its answer inline as JSON text — there are no files to open afterwards.
 - **Never read source code** (this project's, the MCP's, or the desktop app's).
   The catalog tools are the complete interface to the device's models and
   their parameters; digging into `.go`/`.ts` files is a dead end.
@@ -279,6 +287,35 @@ output level would be very loud (above +20 dB) or effectively muted (amp master
 at 0%) is refused, with a hint on what to lower or raise. `design_rig`'s
 `output_level` (and the `input_gain`, amp `Master` and cab `OutGain`) are all
 capped, so an accidental `output_level: 100` is rejected rather than written.
+
+## Mooer devices & cross-device mapping
+
+Mooer devices use a **fixed nine-module chain** (FX, DS/OD, AMP, CAB, NS, EQ,
+MOD, DELAY, REVERB) — there is no free slot layout, no parallel paths and no
+dual-amp config. Each module holds one effect, selected by its `effect_type`
+index into that module's own list.
+
+1. `device_list` — which devices are supported and whether each supports
+   preset **file exchange** (`file_ext`) or only a **printable setup card**
+   (`file_exchange: false`).
+2. `mooer_catalog_list_amps` / `mooer_catalog_list_cabs` /
+   `mooer_catalog_list_fx` — browse a device's models
+   (`model: ge150pro|ge200|ge150|ge100pro`); each row carries the real
+   hardware it emulates (`inspired_by`).
+3. `mooer_design` — resolve amp/cab/effects and write the preset. Arguments:
+   `model`, `name`, `amp` (model name or a real-hardware description, e.g.
+   `"Marshall JCM800"`), optional `cab`, and `fx` — an ordered list of
+   `{"module": "od|fx|mod|delay|reverb|ns|eq", "type": "...", "enabled": bool}`.
+   It always writes an `.html` setup card; file-capable models also write a
+   `.mo` file.
+4. `render_setup_card` — turn an existing `.mo` file into the printable card.
+5. `map_preset` — convert a preset between devices. A `.rig` maps to a Mooer
+   preset (GE150 Pro Li) plus a setup card; a `.mo` maps back to a Gigboard
+   `.rig`.
+
+The setup card is the deliverable for models without file exchange (the
+non-pro GE150): it lists every module's effect, on/off state, the real hardware
+it emulates, and the raw parameter values, so the player can dial it in by hand.
 
 ## Disclaimer
 

@@ -1,7 +1,5 @@
 package mooer
 
-import "strings"
-
 // The device's models, mapped to the real hardware they emulate. Only targets
 // that are obvious from the name or the owner's manual are annotated; anything
 // ambiguous is left out, matching the Gigboard catalog's "leave empty rather
@@ -106,39 +104,5 @@ var (
 	}
 )
 
-// AmpInspiredBy returns the real amplifier a Mooer amp model emulates.
-func AmpInspiredBy(model string) (string, bool) {
-	v, ok := ampInspiredBy[exact(ampInspiredBy, model)]
-	return v, ok
-}
-
-// CabInspiredBy returns the real cabinet a Mooer cab model emulates.
-func CabInspiredBy(model string) (string, bool) {
-	v, ok := cabInspiredBy[exact(cabInspiredBy, model)]
-	return v, ok
-}
-
-// FXInspiredBy returns the real effect a Mooer effect (by module and name)
-// emulates.
-func FXInspiredBy(module, name string) (string, bool) {
-	table, ok := fxInspiredBy[strings.ToLower(module)]
-	if !ok {
-		return "", false
-	}
-	v, ok := table[exact(table, name)]
-	return v, ok
-}
-
-// exact resolves name against a map case-insensitively, returning the exact
-// map key that matched.
-func exact[V any](m map[string]V, name string) string {
-	if _, ok := m[name]; ok {
-		return name
-	}
-	for k := range m {
-		if strings.EqualFold(k, name) {
-			return k
-		}
-	}
-	return name
-}
+// The "inspired by" accessors were replaced by Model.InspiredAmp/InspiredCab/
+// InspiredFX (model.go); this file now holds only the data tables.

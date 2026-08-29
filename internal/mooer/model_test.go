@@ -132,3 +132,63 @@ func TestSetupCardHTML(t *testing.T) {
 		}
 	}
 }
+
+func TestResolveAmpByInspiredBy(t *testing.T) {
+	m, _ := ModelByName("ge200")
+	index, err := m.ResolveAmp("Marshall JCM800")
+	if err != nil {
+		t.Fatalf("ResolveAmp: %v", err)
+	}
+	if m.AmpName(index) != "800" {
+		t.Fatalf("ResolveAmp(JCM800) = %q, want 800", m.AmpName(index))
+	}
+}
+
+func TestResolveAmpUnknown(t *testing.T) {
+	m, _ := ModelByName("ge200")
+	if _, err := m.ResolveAmp("not an amp"); err == nil {
+		t.Fatal("expected an error for an unknown amp")
+	}
+}
+
+func TestBuildPreset(t *testing.T) {
+	m, _ := ModelByName("ge200")
+	p, err := m.BuildPreset(Spec{
+		Name: "Mooer Tone",
+		Amp:  "Marshall JCM800",
+		Cab:  "1960 412",
+		FX: []FXSpec{
+			{Module: "od", Type: "808", Enabled: true},
+			{Module: "delay", Type: "TAPE", Enabled: true},
+			{Module: "reverb", Type: "SPRING", Enabled: false},
+		},
+	})
+	if err != nil {
+		t.Fatalf("BuildPreset: %v", err)
+	}
+	if p.Name != "Mooer Tone" {
+		t.Fatalf("name = %q", p.Name)
+	}
+	if !p.Amp.Enabled || m.AmpName(p.Amp.Type) != "800" {
+		t.Fatalf("amp = %+v, want enabled 800", p.Amp)
+	}
+	if !p.Cab.Enabled || m.CabName(p.Cab.Type) != "1960 412" {
+		t.Fatalf("cab = %+v, want enabled 1960 412", p.Cab)
+	}
+	if !p.Drive.Enabled || m.EffectName("od", p.Drive.Type) != "808" {
+		t.Fatalf("drive = %+v, want enabled 808", p.Drive)
+	}
+	if !p.Delay.Enabled || m.EffectName("delay", p.Delay.Type) != "TAPE" {
+		t.Fatalf("delay = %+v, want enabled TAPE", p.Delay)
+	}
+	if p.Reverb.Enabled {
+		t.Fatal("reverb should be disabled")
+	}
+}
+
+func TestBuildPresetUnknownEffect(t *testing.T) {
+	m, _ := ModelByName("ge200")
+	if _, err := m.BuildPreset(Spec{Amp: "800", FX: []FXSpec{{Module: "od", Type: "nope"}}}); err == nil {
+		t.Fatal("expected an error for an unknown effect")
+	}
+}

@@ -21,7 +21,7 @@ func newServeCmd() *cobra.Command {
 				return err
 			}
 			server := mcp.NewServer("guitar-modeler-mcp", version)
-			tools.NewRegistrar(a.cat, a.builder, a.design).Register(server)
+			tools.NewRegistrar(a.cat, a.builder, a.design, a.table).Register(server)
 			return server.Run(context.Background(), os.Stdin, os.Stdout)
 		},
 	}

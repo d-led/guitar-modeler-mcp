@@ -12,6 +12,8 @@ import (
 	"github.com/d-led/guitar-modeler-mcp/internal/catalog"
 	"github.com/d-led/guitar-modeler-mcp/internal/design"
 	"github.com/d-led/guitar-modeler-mcp/internal/mcp"
+	"github.com/d-led/guitar-modeler-mcp/internal/mooer"
+	"github.com/d-led/guitar-modeler-mcp/internal/presetmap"
 	"github.com/d-led/guitar-modeler-mcp/internal/rig"
 )
 
@@ -24,7 +26,7 @@ func newIntegrationServer(t *testing.T) *mcp.Server {
 		t.Fatalf("NewBuilder: %v", err)
 	}
 	server := mcp.NewServer("guitar-modeler-mcp", "test")
-	NewRegistrar(cat, builder, design.NewDesigner(cat)).Register(server)
+	NewRegistrar(cat, builder, design.NewDesigner(cat), presetmap.NewTable(cat, mooer.Default())).Register(server)
 	return server
 }
 
@@ -90,6 +92,9 @@ func TestIntegrationInitializeAndToolList(t *testing.T) {
 		"catalog_list_block_presets", "catalog_list_module_params",
 		"translate_amp", "translate_cab", "translate_mic",
 		"design_rig", "render_report", "rig_decode", "estimate_rig_level",
+		"create_setlist",
+		"device_list", "mooer_catalog_list_amps", "mooer_catalog_list_cabs", "mooer_catalog_list_fx",
+		"mooer_design", "render_setup_card", "map_preset",
 	} {
 		if !names[want] {
 			t.Errorf("missing tool %q in tools/list", want)
@@ -125,6 +130,78 @@ func TestIntegrationCatalogAndTranslate(t *testing.T) {
 	}))
 	if !strings.Contains(params, "\"kind\": \"range\"") || !strings.Contains(params, "Feedback") {
 		t.Fatalf("catalog_list_module_params missing range/Feedback: %s", params)
+	}
+}
+
+func TestIntegrationMooerCatalogDesignAndCard(t *testing.T) {
+	s := newIntegrationServer(t)
+	dir := t.TempDir()
+
+	devices := resultText(t, rpc(t, s, 1, "tools/call", map[string]any{
+		"name":      "device_list",
+		"arguments": map[string]any{},
+	}))
+	if !strings.Contains(devices, "ge150") || !strings.Contains(devices, "file_exchange") {
+		t.Fatalf("device_list missing ge150/file_exchange: %s", devices)
+	}
+
+	amps := resultText(t, rpc(t, s, 2, "tools/call", map[string]any{
+		"name":      "mooer_catalog_list_amps",
+		"arguments": map[string]any{"model": "ge200"},
+	}))
+	if !strings.Contains(amps, "800") || !strings.Contains(amps, "Marshall JCM800") {
+		t.Fatalf("mooer_catalog_list_amps(ge200) missing 800/JCM800: %s", amps)
+	}
+
+	design := resultText(t, rpc(t, s, 3, "tools/call", map[string]any{
+		"name": "mooer_design",
+		"arguments": map[string]any{
+			"model":      "ge200",
+			"name":       "Mooer Test",
+			"amp":        "Marshall JCM800",
+			"cab":        "1960 412",
+			"output_dir": dir,
+			"fx": []any{
+				map[string]any{"module": "od", "type": "808", "enabled": true},
+			},
+		},
+	}))
+	if !strings.Contains(design, "Setup card:") || !strings.Contains(design, ".mo") {
+		t.Fatalf("mooer_design output missing card/.mo: %s", design)
+	}
+
+	mos, err := filepath.Glob(filepath.Join(dir, "*.mo"))
+	if err != nil || len(mos) != 1 {
+		t.Fatalf("expected one .mo in %s (got %v, err %v)", dir, mos, err)
+	}
+	cards, err := filepath.Glob(filepath.Join(dir, "*.html"))
+	if err != nil || len(cards) != 1 {
+		t.Fatalf("expected one setup card .html in %s (got %v, err %v)", dir, cards, err)
+	}
+}
+
+func TestIntegrationMooerCardOnlyDevice(t *testing.T) {
+	s := newIntegrationServer(t)
+	dir := t.TempDir()
+
+	// ge150 is card-only: no .mo is written, only the HTML card.
+	out := resultText(t, rpc(t, s, 1, "tools/call", map[string]any{
+		"name": "mooer_design",
+		"arguments": map[string]any{
+			"model":      "ge150",
+			"name":       "Card Only",
+			"amp":        "65 US TW",
+			"output_dir": dir,
+		},
+	}))
+	if !strings.Contains(out, "does not support preset file transfer") {
+		t.Fatalf("ge150 design should say card-only: %s", out)
+	}
+	if mos, _ := filepath.Glob(filepath.Join(dir, "*.mo")); len(mos) != 0 {
+		t.Fatalf("ge150 should not write a .mo file, got %v", mos)
+	}
+	if cards, _ := filepath.Glob(filepath.Join(dir, "*.html")); len(cards) != 1 {
+		t.Fatalf("ge150 should write one setup card, got %v", cards)
 	}
 }
 

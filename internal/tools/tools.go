@@ -15,21 +15,25 @@ import (
 	"github.com/d-led/guitar-modeler-mcp/internal/docs"
 	"github.com/d-led/guitar-modeler-mcp/internal/htmlreport"
 	"github.com/d-led/guitar-modeler-mcp/internal/mcp"
+	"github.com/d-led/guitar-modeler-mcp/internal/mooer"
 	"github.com/d-led/guitar-modeler-mcp/internal/params"
+	"github.com/d-led/guitar-modeler-mcp/internal/presetmap"
 	"github.com/d-led/guitar-modeler-mcp/internal/rig"
 	"github.com/d-led/guitar-modeler-mcp/internal/setlist"
 )
 
-// Registrar binds the catalog, rig builder and designer to the MCP server.
+// Registrar binds the catalog, rig builder, designer and cross-device mapping
+// table to the MCP server.
 type Registrar struct {
 	cat     *catalog.Catalog
 	builder *rig.Builder
 	design  *design.Designer
+	table   *presetmap.Table
 }
 
 // NewRegistrar creates a Registrar.
-func NewRegistrar(cat *catalog.Catalog, b *rig.Builder, d *design.Designer) *Registrar {
-	return &Registrar{cat: cat, builder: b, design: d}
+func NewRegistrar(cat *catalog.Catalog, b *rig.Builder, d *design.Designer, tbl *presetmap.Table) *Registrar {
+	return &Registrar{cat: cat, builder: b, design: d, table: tbl}
 }
 
 // Register adds all tools to the server.
@@ -281,6 +285,93 @@ func (r *Registrar) Register(s *mcp.Server) {
 		}),
 		Handler: func(_ context.Context, args map[string]any) (string, error) {
 			return r.createSetlist(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "device_list",
+		Description: "List the supported target devices and whether each supports preset file exchange (file_ext) or only a printable setup card.",
+		InputSchema: objectSchema(map[string]any{}),
+		Handler: func(_ context.Context, _ map[string]any) (string, error) {
+			return marshal(deviceList())
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "mooer_catalog_list_amps",
+		Description: "List amp models for a Mooer device (ge150pro, ge200, ge150, ge100pro). Returns the effect_type index, screen name and the real amp it emulates (inspired_by).",
+		InputSchema: objectSchema(map[string]any{
+			"model": stringSchema("Mooer model: ge150pro, ge200, ge150 or ge100pro (default ge150pro)."),
+			"query": stringSchema("Optional case-insensitive filter over name or inspired_by."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.mooerListAmps(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "mooer_catalog_list_cabs",
+		Description: "List cabinet models for a Mooer device, with the real cabinet each emulates.",
+		InputSchema: objectSchema(map[string]any{
+			"model": stringSchema("Mooer model: ge150pro, ge200, ge150 or ge100pro (default ge150pro)."),
+			"query": stringSchema("Optional case-insensitive filter over name or inspired_by."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.mooerListCabs(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "mooer_catalog_list_fx",
+		Description: "List effect modules for a Mooer device, per module (fx, od, mod, delay, reverb, ns, eq).",
+		InputSchema: objectSchema(map[string]any{
+			"model":  stringSchema("Mooer model: ge150pro, ge200, ge150 or ge100pro (default ge150pro)."),
+			"module": stringSchema("Optional module filter: fx, od, mod, delay, reverb, ns or eq."),
+			"query":  stringSchema("Optional case-insensitive filter over name or inspired_by."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.mooerListFX(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "mooer_design",
+		Description: "Dial in a tone for a Mooer device: resolve the amp/cab/effects to model indices, then write a .mo file (file-capable models) and a printable HTML setup card.",
+		InputSchema: objectSchema(map[string]any{
+			"model":      stringSchema("Mooer model: ge150pro, ge200, ge150 or ge100pro (default ge150pro)."),
+			"name":       stringSchema("Preset name."),
+			"amp":        stringSchema("Amp: device model name or a real-hardware description, e.g. \"Marshall JCM800\"."),
+			"cab":        stringSchema("Optional cab: device model name or description."),
+			"fx":         arraySchema("Optional effects; each names a module and an effect within it.", mooerFXItemSchema()),
+			"output_dir": stringSchema("Directory to write the files into (default: current directory)."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.mooerDesign(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "render_setup_card",
+		Description: "Render the printable HTML setup card for an existing Mooer .mo preset file.",
+		InputSchema: objectSchema(map[string]any{
+			"model":       stringSchema("Mooer model that produced the .mo file (default ge150pro)."),
+			"preset_file": stringSchema("Path to the .mo file."),
+			"output_dir":  stringSchema("Directory to write the HTML card into (default: same as the .mo file)."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.renderSetupCard(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "map_preset",
+		Description: "Map a preset from one device to another. A .rig file maps to a Mooer preset (GE150 Pro Li) plus a printable setup card; a .mo file maps back to a Gigboard .rig.",
+		InputSchema: objectSchema(map[string]any{
+			"input_file": stringSchema("Path to the source preset (.rig or .mo)."),
+			"output_dir": stringSchema("Directory to write the target into (default: the source file's directory)."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.mapPreset(args)
 		},
 	})
 }
@@ -649,5 +740,266 @@ func footswitchItemSchema() map[string]any {
 			"on":  arraySchema("Modules the scene turns ON (instance names).", stringSchema("Module instance name.")),
 			"off": arraySchema("Modules the scene turns OFF (instance names).", stringSchema("Module instance name.")),
 		}),
+	})
+}
+
+// ---- Mooer device tools ----
+
+// deviceInfo describes one supported device for the device_list tool.
+type deviceInfo struct {
+	Name         string `json:"name"`
+	Description  string `json:"description"`
+	FileExchange bool   `json:"file_exchange"`
+	FileExt      string `json:"file_ext,omitempty"`
+}
+
+func deviceList() []deviceInfo {
+	list := []deviceInfo{
+		{Name: "gigboard", Description: "HeadRush Gigboard", FileExchange: true, FileExt: ".rig"},
+	}
+	for _, m := range mooer.Models() {
+		ext := ""
+		if m.FileExchange {
+			ext = m.FileExt
+		}
+		list = append(list, deviceInfo{Name: m.Name, Description: m.Display, FileExchange: m.FileExchange, FileExt: ext})
+	}
+	return list
+}
+
+// mooerItem is one catalog row for the Mooer listing tools.
+type mooerItem struct {
+	Index      int    `json:"index"`
+	Name       string `json:"name"`
+	InspiredBy string `json:"inspired_by,omitempty"`
+}
+
+func mooerModelName(args map[string]any) string {
+	if name := argString(args, "model"); name != "" {
+		return name
+	}
+	return "ge150pro"
+}
+
+func mooerModel(args map[string]any) (mooer.Model, error) {
+	m, ok := mooer.ModelByName(mooerModelName(args))
+	if !ok {
+		return mooer.Model{}, fmt.Errorf("unknown Mooer model %q; see device_list", mooerModelName(args))
+	}
+	return m, nil
+}
+
+func filterItems(items []mooer.Item, query string) []mooerItem {
+	q := strings.ToLower(strings.TrimSpace(query))
+	out := make([]mooerItem, 0, len(items))
+	for i, it := range items {
+		if q != "" && !strings.Contains(strings.ToLower(it.Name+" "+it.InspiredBy), q) {
+			continue
+		}
+		out = append(out, mooerItem{Index: i, Name: it.Name, InspiredBy: it.InspiredBy})
+	}
+	return out
+}
+
+func (r *Registrar) mooerListAmps(args map[string]any) (string, error) {
+	m, err := mooerModel(args)
+	if err != nil {
+		return "", err
+	}
+	return marshal(filterItems(m.Amps, argString(args, "query")))
+}
+
+func (r *Registrar) mooerListCabs(args map[string]any) (string, error) {
+	m, err := mooerModel(args)
+	if err != nil {
+		return "", err
+	}
+	return marshal(filterItems(m.Cabs, argString(args, "query")))
+}
+
+func (r *Registrar) mooerListFX(args map[string]any) (string, error) {
+	m, err := mooerModel(args)
+	if err != nil {
+		return "", err
+	}
+	module := strings.ToLower(strings.TrimSpace(argString(args, "module")))
+	if module == "ds" {
+		module = "od"
+	}
+	query := argString(args, "query")
+
+	modules := map[string][]mooerItem{}
+	for _, mod := range m.ModuleOrder {
+		if mod == "amp" || mod == "cab" {
+			continue
+		}
+		if module != "" && mod != module {
+			continue
+		}
+		modules[mod] = filterItems(m.Effects[mod], query)
+	}
+	return marshal(modules)
+}
+
+func (r *Registrar) mooerDesign(args map[string]any) (string, error) {
+	m, err := mooerModel(args)
+	if err != nil {
+		return "", err
+	}
+	name := strings.TrimSpace(argString(args, "name"))
+	if name == "" {
+		name = "New Preset"
+	}
+	spec := mooer.Spec{
+		Name: name,
+		Amp:  argString(args, "amp"),
+		Cab:  argString(args, "cab"),
+		FX:   parseMooerFX(args["fx"]),
+	}
+	p, err := m.BuildPreset(spec)
+	if err != nil {
+		return "", err
+	}
+	outDir := argString(args, "output_dir")
+	if outDir == "" {
+		outDir = "."
+	}
+	return r.writeMooerOutput(m, p, outDir)
+}
+
+func parseMooerFX(raw any) []mooer.FXSpec {
+	arr, ok := raw.([]any)
+	if !ok {
+		return nil
+	}
+	out := make([]mooer.FXSpec, 0, len(arr))
+	for _, item := range arr {
+		m, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		spec := mooer.FXSpec{
+			Module:  argString(m, "module"),
+			Type:    argString(m, "type"),
+			Enabled: argBool(m, "enabled", true),
+		}
+		if spec.Module != "" && spec.Type != "" {
+			out = append(out, spec)
+		}
+	}
+	return out
+}
+
+func sanitizeFileBase(name string) string {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return "preset"
+	}
+	return strings.ReplaceAll(name, "/", "-")
+}
+
+// writeMooerOutput writes a .mo file (when the model supports file exchange)
+// and always writes a printable HTML setup card, then returns a text summary.
+func (r *Registrar) writeMooerOutput(m mooer.Model, p mooer.Preset, outDir string) (string, error) {
+	base := sanitizeFileBase(p.Name)
+	var b strings.Builder
+
+	if m.FileExchange {
+		path := filepath.Join(outDir, base+m.FileExt)
+		if err := mooer.WriteMOFile(path, p); err != nil {
+			return "", err
+		}
+		fmt.Fprintf(&b, "Wrote %s preset to %s\n", m.Display, path)
+	} else {
+		fmt.Fprintf(&b, "%s does not support preset file transfer; here is a printable setup card.\n", m.Display)
+	}
+
+	cardPath := filepath.Join(outDir, base+".html")
+	if err := os.WriteFile(cardPath, []byte(mooer.SetupCardHTML(m, p)), 0o644); err != nil {
+		return "", err
+	}
+	fmt.Fprintf(&b, "Setup card: %s\n", cardPath)
+
+	for _, d := range mooer.Describe(p, m) {
+		state := "off"
+		if d.Enabled {
+			state = "on"
+		}
+		fmt.Fprintf(&b, "- %s: %s (%s)\n", d.Module, d.Effect, state)
+	}
+	return b.String(), nil
+}
+
+func (r *Registrar) renderSetupCard(args map[string]any) (string, error) {
+	m, err := mooerModel(args)
+	if err != nil {
+		return "", err
+	}
+	path := argString(args, "preset_file")
+	if path == "" {
+		return "", fmt.Errorf("preset_file is required")
+	}
+	p, err := mooer.ReadMOFile(path)
+	if err != nil {
+		return "", err
+	}
+	outDir := argString(args, "output_dir")
+	if outDir == "" {
+		outDir = filepath.Dir(path)
+	}
+	cardPath := filepath.Join(outDir, sanitizeFileBase(p.Name)+".html")
+	if err := os.WriteFile(cardPath, []byte(mooer.SetupCardHTML(m, p)), 0o644); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("Wrote setup card to %s", cardPath), nil
+}
+
+func (r *Registrar) mapPreset(args map[string]any) (string, error) {
+	input := argString(args, "input_file")
+	if input == "" {
+		return "", fmt.Errorf("input_file is required")
+	}
+	outDir := argString(args, "output_dir")
+	if outDir == "" {
+		outDir = filepath.Dir(input)
+	}
+
+	if strings.EqualFold(filepath.Ext(input), ".mo") {
+		p, err := mooer.ReadMOFile(input)
+		if err != nil {
+			return "", err
+		}
+		spec, err := r.table.MooerToGigboard(p)
+		if err != nil {
+			return "", err
+		}
+		file, err := r.builder.Build(spec)
+		if err != nil {
+			return "", err
+		}
+		path, err := file.Write(outDir)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("Mapped Mooer -> Gigboard rig: %s", path), nil
+	}
+
+	file, err := readRigFile(input)
+	if err != nil {
+		return "", err
+	}
+	p, err := r.table.GigboardToMooer(file)
+	if err != nil {
+		return "", err
+	}
+	m, _ := mooer.ModelByName("ge150pro")
+	return r.writeMooerOutput(m, p, outDir)
+}
+
+func mooerFXItemSchema() map[string]any {
+	return objectSchema(map[string]any{
+		"module":  stringSchema("Target module: fx, od, mod, delay, reverb, ns or eq."),
+		"type":    stringSchema("Effect name within the module, e.g. \"808\" in module \"od\"."),
+		"enabled": map[string]any{"type": "boolean", "description": "Whether the module is on."},
 	})
 }

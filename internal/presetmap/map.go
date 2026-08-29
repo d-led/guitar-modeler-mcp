@@ -35,7 +35,7 @@ func (t *Table) GigboardToMooer(file *rig.RigFile) (mooer.Preset, error) {
 		case strings.HasPrefix(slot, "Amp"):
 			if model, ok := m.Params["Type"].(string); ok {
 				if mooerModel, found := t.MapAmp(DeviceGigboard, model, DeviceMooer); found {
-					if index, found := mooer.AmpIndex(mooerModel); found {
+					if index, found := t.mooer.AmpIndex(mooerModel); found {
 						p.Amp = mooer.Amp{Enabled: m.On, Type: index}
 					}
 				}
@@ -43,7 +43,7 @@ func (t *Table) GigboardToMooer(file *rig.RigFile) (mooer.Preset, error) {
 		case strings.HasPrefix(slot, "Cab"):
 			if model, ok := m.Params["CabType"].(string); ok {
 				if mooerModel, found := t.MapCab(DeviceGigboard, model, DeviceMooer); found {
-					if index, found := mooer.CabIndex(mooerModel); found {
+					if index, found := t.mooer.CabIndex(mooerModel); found {
 						p.Cab = mooer.Cab{Enabled: m.On, Type: index}
 					}
 				}
@@ -52,7 +52,7 @@ func (t *Table) GigboardToMooer(file *rig.RigFile) (mooer.Preset, error) {
 			p.NoiseGate.Enabled = m.On
 		default:
 			if module, name, ok := t.MapFXGigboardToMooer(slot); ok {
-				if index, found := mooer.EffectIndex(module, name); found {
+				if index, found := t.mooer.EffectIndex(module, name); found {
 					setMooerModule(&p, module, index, m.On)
 				}
 			}
@@ -65,18 +65,18 @@ func (t *Table) GigboardToMooer(file *rig.RigFile) (mooer.Preset, error) {
 // GigboardToMooer, the mapping is structural (which modules are present and
 // on); parameter values are not translated.
 func (t *Table) MooerToGigboard(p mooer.Preset) (rig.Spec, error) {
-	ampModel, ok := t.MapAmp(DeviceMooer, mooer.EffectName("amp", p.Amp.Type), DeviceGigboard)
+	ampModel, ok := t.MapAmp(DeviceMooer, t.mooer.EffectName("amp", p.Amp.Type), DeviceGigboard)
 	if !ok {
-		return rig.Spec{}, &UnmappedError{Kind: "amp", Model: mooer.EffectName("amp", p.Amp.Type)}
+		return rig.Spec{}, &UnmappedError{Kind: "amp", Model: t.mooer.EffectName("amp", p.Amp.Type)}
 	}
-	cabModel, ok := t.MapCab(DeviceMooer, mooer.EffectName("cab", p.Cab.Type), DeviceGigboard)
+	cabModel, ok := t.MapCab(DeviceMooer, t.mooer.EffectName("cab", p.Cab.Type), DeviceGigboard)
 	if !ok {
-		return rig.Spec{}, &UnmappedError{Kind: "cab", Model: mooer.EffectName("cab", p.Cab.Type)}
+		return rig.Spec{}, &UnmappedError{Kind: "cab", Model: t.mooer.EffectName("cab", p.Cab.Type)}
 	}
 
 	blocks := make([]rig.Block, 0, 9)
-	blocks = append(blocks, mappedFX(t, "fx", mooer.EffectName("fx", p.FX.Type), p.FX.Enabled)...)
-	blocks = append(blocks, mappedFX(t, "od", mooer.EffectName("od", p.Drive.Type), p.Drive.Enabled)...)
+	blocks = append(blocks, mappedFX(t, "fx", t.mooer.EffectName("fx", p.FX.Type), p.FX.Enabled)...)
+	blocks = append(blocks, mappedFX(t, "od", t.mooer.EffectName("od", p.Drive.Type), p.Drive.Enabled)...)
 	if p.NoiseGate.Enabled {
 		blocks = append(blocks, rig.Block{Type: "Gate", Enabled: true})
 	}
@@ -89,9 +89,9 @@ func (t *Table) MooerToGigboard(p mooer.Preset) (rig.Spec, error) {
 		rig.Block{Type: "Cab", Enabled: true, Params: map[string]any{"CabType": cabModel, "MicType": "Dyn 57", "On": p.Cab.Enabled}},
 	)
 
-	blocks = append(blocks, mappedFX(t, "mod", mooer.EffectName("mod", p.Mod.Type), p.Mod.Enabled)...)
-	blocks = append(blocks, mappedFX(t, "delay", mooer.EffectName("delay", p.Delay.Type), p.Delay.Enabled)...)
-	blocks = append(blocks, mappedFX(t, "reverb", mooer.EffectName("reverb", p.Reverb.Type), p.Reverb.Enabled)...)
+	blocks = append(blocks, mappedFX(t, "mod", t.mooer.EffectName("mod", p.Mod.Type), p.Mod.Enabled)...)
+	blocks = append(blocks, mappedFX(t, "delay", t.mooer.EffectName("delay", p.Delay.Type), p.Delay.Enabled)...)
+	blocks = append(blocks, mappedFX(t, "reverb", t.mooer.EffectName("reverb", p.Reverb.Type), p.Reverb.Enabled)...)
 
 	return rig.Spec{Name: p.Name, Blocks: blocks}, nil
 }

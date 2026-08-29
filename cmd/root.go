@@ -6,6 +6,7 @@ import (
 
 	"github.com/d-led/guitar-modeler-mcp/internal/catalog"
 	"github.com/d-led/guitar-modeler-mcp/internal/design"
+	"github.com/d-led/guitar-modeler-mcp/internal/mooer"
 	"github.com/d-led/guitar-modeler-mcp/internal/presetmap"
 	"github.com/d-led/guitar-modeler-mcp/internal/rig"
 )
@@ -32,7 +33,7 @@ func newApp() (*app, error) {
 		cat:     cat,
 		builder: builder,
 		design:  design.NewDesigner(cat),
-		table:   presetmap.NewTable(cat),
+		table:   presetmap.NewTable(cat, mooer.Default()),
 	}, nil
 }
 

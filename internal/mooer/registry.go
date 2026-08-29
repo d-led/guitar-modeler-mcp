@@ -21,3 +21,10 @@ func ModelByName(name string) (Model, bool) {
 	}
 	return Model{}, false
 }
+
+// Default returns the canonical Mooer model used for cross-device mapping
+// (the GE150 Pro Li, whose .mo preset format the cross-link was built from).
+func Default() Model {
+	m, _ := ModelByName("ge150pro")
+	return m
+}
