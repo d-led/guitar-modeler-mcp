@@ -7,16 +7,40 @@ import (
 )
 
 // Spec is a tone to dial in on a THR: the amp-selector position, the cabinet,
-// the EFFECT, ECHO and REVERB choices, and the two app-only toggles.
+// the EFFECT, ECHO and REVERB choices, the two app-only toggles, and the knob
+// values for every module. The selection fields are required where noted; the
+// knob fields are optional (Unset knobs are omitted from the card).
 type Spec struct {
-	Name       string
-	Amp        string
-	Cab        string
-	Mod        string
-	Echo       string
-	Reverb     string
-	Compressor bool
-	NoiseGate  bool
+	Name         string
+	Amp          string
+	Cab          string
+	Mod          string
+	Echo         string
+	Reverb       string
+	Compressor   bool
+	NoiseGate    bool
+	AmpParams    AmpParams
+	ModParams    ModParams
+	EchoParams   EchoParams
+	ReverbParams ReverbParams
+	CompParams   CompressorParams
+	GateParams   GateParams
+	Levels       Levels
+}
+
+// NewSpec returns a Spec with every knob Unset, so the setup card shows only
+// the values that are explicitly assigned. Fill in the selection fields (amp
+// is required) and any knobs you want on the card.
+func NewSpec() Spec {
+	return Spec{
+		AmpParams:    AmpParams{Gain: Unset, Master: Unset, Bass: Unset, Mid: Unset, Treble: Unset},
+		ModParams:    ModParams{Speed: Unset, Depth: Unset, PreDelay: Unset, Feedback: Unset, Mix: Unset},
+		EchoParams:   EchoParams{Time: Unset, Feedback: Unset, Bass: Unset, Treble: Unset, Mix: Unset},
+		ReverbParams: ReverbParams{Level: Unset, Decay: Unset, PreDelay: Unset, Tone: Unset, Mix: Unset},
+		CompParams:   CompressorParams{Sustain: Unset, Level: Unset},
+		GateParams:   GateParams{Threshold: Unset, Decay: Unset},
+		Levels:       Levels{Guitar: Unset, Audio: Unset},
+	}
 }
 
 // SetupCardHTML renders a printable setup card for a resolved Spec.
@@ -31,39 +55,44 @@ table{width:100%;border-collapse:collapse;margin-bottom:1rem}
 td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;vertical-align:top}
 .module{font-weight:600;white-space:nowrap}
 .effect{font-weight:600}.off{color:#999}.inspired{color:#666;font-size:.85em}
+.params{color:#444;font-size:.85em;font-variant-numeric:tabular-nums}
 </style></head><body>`)
 	fmt.Fprintf(&b, "<h1>%s</h1><h2>%s — setup card</h2>", html.EscapeString(s.Name), html.EscapeString(d.Display))
 
 	for _, module := range d.Chain {
 		switch module {
 		case "COMPRESSOR":
-			writeModule(&b, module, onOff(s.Compressor), "")
+			writeModuleCard(&b, module, onOff(s.Compressor), "", s.Compressor, compressorKnobs(s.CompParams))
 		case "NOISE GATE":
-			writeModule(&b, module, onOff(s.NoiseGate), "")
+			writeModuleCard(&b, module, onOff(s.NoiseGate), "", s.NoiseGate, gateKnobs(s.GateParams))
 		case "AMP":
 			if cell, ok := d.ampCell(s.Amp); ok {
-				writeModule(&b, module, cell.Name, cell.InspiredBy)
+				writeModuleCard(&b, module, cell.Name, cell.InspiredBy, true, ampKnobs(s.AmpParams))
 				if cell.Description != "" {
 					writeNote(&b, cell.Description)
 				}
 			} else {
-				writeModule(&b, module, "OFF", "")
+				writeModuleCard(&b, module, "OFF", "", false, nil)
 			}
 		case "CAB":
-			writeModule(&b, module, s.Cab, "")
+			writeModuleCard(&b, module, s.Cab, "", true, nil)
 		case "MOD":
-			writeModule(&b, module, s.Mod, "")
+			writeModuleCard(&b, module, s.Mod, "", true, modKnobs(s.ModParams))
 		case "ECHO":
-			writeModule(&b, module, s.Echo, "")
+			writeModuleCard(&b, module, s.Echo, "", true, echoKnobs(s.EchoParams))
 		case "REVERB":
-			writeModule(&b, module, s.Reverb, "")
+			writeModuleCard(&b, module, s.Reverb, "", true, reverbKnobs(s.ReverbParams))
 		}
+	}
+
+	if knobs := levelKnobs(s.Levels); len(knobs) > 0 {
+		writeModuleCard(&b, "LEVELS", "", "", true, knobs)
 	}
 
 	if d.Note != "" {
 		writeNote(&b, d.Note)
 	}
-	b.WriteString("<p class=\"inspired\">Set the knob positions in the THR Remote app.</p>")
+	b.WriteString("<p class=\"inspired\">Knob values are 0&ndash;100 unless noted (ms).</p>")
 	b.WriteString("</body></html>")
 	return b.String()
 }
@@ -75,13 +104,27 @@ func onOff(on bool) string {
 	return "OFF"
 }
 
-func writeModule(b *strings.Builder, module, effect, inspired string) {
+// writeModuleCard writes one module as a small table: the module label, its
+// selection or on/off state, the real hardware it emulates (when known), and
+// the knob values that were specified. Unset knobs are omitted.
+func writeModuleCard(b *strings.Builder, module, effect, inspired string, enabled bool, knobs []knob) {
 	if effect == "" {
 		effect = "OFF"
 	}
-	fmt.Fprintf(b, "<table><tr><td class=\"module\">%s</td><td class=\"effect\">%s</td></tr>", html.EscapeString(module), html.EscapeString(effect))
+	class := ""
+	if !enabled {
+		class = " class=\"off\""
+	}
+	fmt.Fprintf(b, "<table><tr><td class=\"module\"%s>%s</td><td class=\"effect\">%s</td></tr>", class, html.EscapeString(module), html.EscapeString(effect))
 	if inspired != "" {
 		fmt.Fprintf(b, "<tr><td></td><td><span class=\"inspired\">based on %s</span></td></tr>", html.EscapeString(inspired))
+	}
+	if len(knobs) > 0 {
+		parts := make([]string, 0, len(knobs))
+		for _, k := range knobs {
+			parts = append(parts, fmt.Sprintf("%s: %d", k.name, k.value))
+		}
+		fmt.Fprintf(b, "<tr><td class=\"params\">%s</td><td></td></tr>", html.EscapeString(strings.Join(parts, " · ")))
 	}
 	b.WriteString("</table>")
 }

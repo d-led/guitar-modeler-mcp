@@ -463,7 +463,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 	s.Register(mcp.Tool{
 		Name:        "thr_setup_card",
 		Description: "Write a printable HTML setup card for a Yamaha THR tone. The THR has no preset file format, so the card is the only output.",
-		InputSchema: objectSchema(map[string]any{
+		InputSchema: objectSchema(mergeMaps(map[string]any{
 			"name":       stringSchema("Patch name."),
 			"model":      stringSchema("THR model: thr (default), thr10, thr10c or thr10x."),
 			"amp":        stringSchema("Amp: CLEAN/CRUNCH/LEAD/HI GAIN/SPECIAL/BASS/ACOUSTIC/FLAT, optionally with CLASSIC/BOUTIQUE/MODERN (e.g. \"CLEAN BOUTIQUE\" or \"Twin Reverb\")."),
@@ -474,11 +474,44 @@ func (r *Registrar) Register(s *mcp.Server) {
 			"compressor": map[string]any{"type": "boolean", "description": "Optional app-only compressor on/off."},
 			"noise_gate": map[string]any{"type": "boolean", "description": "Optional app-only noise gate on/off."},
 			"output_dir": stringSchema("Directory to write the HTML card into (default: current directory)."),
-		}),
+		}, thrKnobProps())),
 		Handler: func(_ context.Context, args map[string]any) (string, error) {
 			return r.thrSetupCard(args)
 		},
 	})
+}
+
+// thrKnobProps returns the optional numeric knob values for the THR setup
+// card. All are on a 0-100 scale unless noted; unset knobs are omitted.
+func thrKnobProps() map[string]any {
+	return map[string]any{
+		"gain":            numberSchema("Optional amp gain (0-100)."),
+		"master":          numberSchema("Optional amp master volume (0-100)."),
+		"bass":            numberSchema("Optional amp bass (0-100)."),
+		"mid":             numberSchema("Optional amp middle (0-100)."),
+		"treble":          numberSchema("Optional amp treble (0-100)."),
+		"guitar_vol":      numberSchema("Optional global guitar input volume (0-100)."),
+		"audio_vol":       numberSchema("Optional global audio output volume (0-100)."),
+		"comp_sustain":    numberSchema("Optional compressor sustain (0-100)."),
+		"comp_level":      numberSchema("Optional compressor level (0-100)."),
+		"gate_threshold":  numberSchema("Optional noise gate threshold (0-100)."),
+		"gate_decay":      numberSchema("Optional noise gate decay (0-100)."),
+		"mod_speed":       numberSchema("Optional EFFECT speed (0-100)."),
+		"mod_depth":       numberSchema("Optional EFFECT depth (0-100)."),
+		"mod_predelay":    numberSchema("Optional EFFECT pre-delay in milliseconds."),
+		"mod_feedback":    numberSchema("Optional EFFECT feedback (0-100)."),
+		"mod_mix":         numberSchema("Optional EFFECT mix (0-100)."),
+		"echo_time":       numberSchema("Optional ECHO time in milliseconds."),
+		"echo_feedback":   numberSchema("Optional ECHO feedback (0-100)."),
+		"echo_bass":       numberSchema("Optional ECHO bass (0-100)."),
+		"echo_treble":     numberSchema("Optional ECHO treble (0-100)."),
+		"echo_mix":        numberSchema("Optional ECHO mix (0-100)."),
+		"reverb_level":    numberSchema("Optional REVERB level (0-100)."),
+		"reverb_decay":    numberSchema("Optional REVERB decay (0-100)."),
+		"reverb_predelay": numberSchema("Optional REVERB pre-delay in milliseconds."),
+		"reverb_tone":     numberSchema("Optional REVERB tone (0-100)."),
+		"reverb_mix":      numberSchema("Optional REVERB mix (0-100)."),
+	}
 }
 
 // wazaToneProps is the shared argument schema for the Waza Air tone tools.
@@ -797,6 +830,22 @@ func argFloat(args map[string]any, key string) float64 {
 	return 0
 }
 
+// argInt returns the integer value of a numeric argument, or def when the
+// argument is absent or not a number.
+func argInt(args map[string]any, key string, def int) int {
+	if v, ok := args[key]; ok {
+		switch n := v.(type) {
+		case float64:
+			return int(n)
+		case int:
+			return n
+		case int64:
+			return int(n)
+		}
+	}
+	return def
+}
+
 // argFloatPtr returns the numeric value as a pointer, or nil when the argument
 // is absent or not a number. Used for optional parameters where nil means
 // "keep the default".
@@ -854,6 +903,18 @@ func numberSchema(desc string) map[string]any {
 
 func arraySchema(desc string, items map[string]any) map[string]any {
 	return map[string]any{"type": "array", "description": desc, "items": items}
+}
+
+// mergeMaps returns a new map with the entries of all the given maps. Later
+// maps win on key collisions.
+func mergeMaps(maps ...map[string]any) map[string]any {
+	out := map[string]any{}
+	for _, m := range maps {
+		for k, v := range m {
+			out[k] = v
+		}
+	}
+	return out
 }
 
 func fxItemSchema() map[string]any {
@@ -1309,28 +1370,55 @@ func (r *Registrar) thrSetupCard(args map[string]any) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	spec, err := d.Resolve(thr.Spec{
-		Name:       argString(args, "name"),
-		Amp:        argString(args, "amp"),
-		Cab:        argString(args, "cab"),
-		Mod:        argString(args, "mod"),
-		Echo:       argString(args, "echo"),
-		Reverb:     argString(args, "reverb"),
-		Compressor: argBool(args, "compressor", false),
-		NoiseGate:  argBool(args, "noise_gate", false),
-	})
+	spec := thr.NewSpec()
+	spec.Name = argString(args, "name")
+	spec.Amp = argString(args, "amp")
+	spec.Cab = argString(args, "cab")
+	spec.Mod = argString(args, "mod")
+	spec.Echo = argString(args, "echo")
+	spec.Reverb = argString(args, "reverb")
+	spec.Compressor = argBool(args, "compressor", false)
+	spec.NoiseGate = argBool(args, "noise_gate", false)
+	spec.AmpParams.Gain = argInt(args, "gain", thr.Unset)
+	spec.AmpParams.Master = argInt(args, "master", thr.Unset)
+	spec.AmpParams.Bass = argInt(args, "bass", thr.Unset)
+	spec.AmpParams.Mid = argInt(args, "mid", thr.Unset)
+	spec.AmpParams.Treble = argInt(args, "treble", thr.Unset)
+	spec.ModParams.Speed = argInt(args, "mod_speed", thr.Unset)
+	spec.ModParams.Depth = argInt(args, "mod_depth", thr.Unset)
+	spec.ModParams.PreDelay = argInt(args, "mod_predelay", thr.Unset)
+	spec.ModParams.Feedback = argInt(args, "mod_feedback", thr.Unset)
+	spec.ModParams.Mix = argInt(args, "mod_mix", thr.Unset)
+	spec.EchoParams.Time = argInt(args, "echo_time", thr.Unset)
+	spec.EchoParams.Feedback = argInt(args, "echo_feedback", thr.Unset)
+	spec.EchoParams.Bass = argInt(args, "echo_bass", thr.Unset)
+	spec.EchoParams.Treble = argInt(args, "echo_treble", thr.Unset)
+	spec.EchoParams.Mix = argInt(args, "echo_mix", thr.Unset)
+	spec.ReverbParams.Level = argInt(args, "reverb_level", thr.Unset)
+	spec.ReverbParams.Decay = argInt(args, "reverb_decay", thr.Unset)
+	spec.ReverbParams.PreDelay = argInt(args, "reverb_predelay", thr.Unset)
+	spec.ReverbParams.Tone = argInt(args, "reverb_tone", thr.Unset)
+	spec.ReverbParams.Mix = argInt(args, "reverb_mix", thr.Unset)
+	spec.CompParams.Sustain = argInt(args, "comp_sustain", thr.Unset)
+	spec.CompParams.Level = argInt(args, "comp_level", thr.Unset)
+	spec.GateParams.Threshold = argInt(args, "gate_threshold", thr.Unset)
+	spec.GateParams.Decay = argInt(args, "gate_decay", thr.Unset)
+	spec.Levels.Guitar = argInt(args, "guitar_vol", thr.Unset)
+	spec.Levels.Audio = argInt(args, "audio_vol", thr.Unset)
+
+	resolved, err := d.Resolve(spec)
 	if err != nil {
 		return "", err
 	}
-	if strings.TrimSpace(spec.Name) == "" {
-		spec.Name = "New Patch"
+	if strings.TrimSpace(resolved.Name) == "" {
+		resolved.Name = "New Patch"
 	}
 	outDir := argString(args, "output_dir")
 	if outDir == "" {
 		outDir = "."
 	}
-	path := filepath.Join(outDir, sanitizeFileBase(spec.Name)+"."+d.Name+".html")
-	if err := os.WriteFile(path, []byte(d.SetupCardHTML(spec)), 0o644); err != nil {
+	path := filepath.Join(outDir, sanitizeFileBase(resolved.Name)+"."+d.Name+".html")
+	if err := os.WriteFile(path, []byte(d.SetupCardHTML(resolved)), 0o644); err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("Wrote %s setup card to %s", d.Display, path), nil

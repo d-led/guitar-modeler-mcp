@@ -105,14 +105,64 @@ func TestResolveRequiresAmp(t *testing.T) {
 
 func TestSetupCardHTML(t *testing.T) {
 	d := Default()
-	s, err := d.Resolve(Spec{Name: "THR Clean", Amp: "Twin Reverb", Cab: "California 1x12", Mod: "CHORUS", Echo: "Tape", Reverb: "Hall"})
+	spec := NewSpec()
+	spec.Name = "THR Clean"
+	spec.Amp = "Twin Reverb"
+	spec.Cab = "California 1x12"
+	spec.Mod = "CHORUS"
+	spec.Echo = "Tape"
+	spec.Reverb = "Hall"
+	spec.AmpParams = AmpParams{Gain: 42, Master: 68, Bass: 50, Mid: 45, Treble: 60}
+	spec.EchoParams.Time = 380
+	spec.EchoParams.Feedback = 32
+	spec.EchoParams.Mix = 24
+	spec.ReverbParams.Level = 40
+	spec.ReverbParams.Decay = 55
+	spec.ReverbParams.Tone = 50
+	spec.Levels = Levels{Guitar: 80, Audio: 75}
+	s, err := d.Resolve(spec)
 	if err != nil {
 		t.Fatalf("Resolve: %v", err)
 	}
 	html := d.SetupCardHTML(s)
-	for _, want := range []string{"THR Clean", "Yamaha THR-II", "CLEAN CLASSIC", "Fender Twin Reverb", "California 1x12", "CHORUS", "Tape", "Hall", "OFF"} {
+	for _, want := range []string{
+		"THR Clean", "Yamaha THR-II", "CLEAN CLASSIC", "Fender Twin Reverb",
+		"California 1x12", "CHORUS", "Tape", "Hall",
+		"Gain: 42", "Master: 68", "Bass: 50", "Mid: 45", "Treble: 60",
+		"Time (ms): 380", "Feedback: 32", "Mix: 24",
+		"Level: 40", "Decay: 55", "Tone: 50",
+		"Guitar: 80", "Audio: 75",
+		"OFF",
+	} {
 		if !strings.Contains(html, want) {
 			t.Fatalf("setup card missing %q", want)
+		}
+	}
+	// The unset echo bass/treble and reverb mix must not leak zeros onto the card.
+	for _, absent := range []string{"Bass: 0", "Treble: 0", "Mix: 0"} {
+		if strings.Contains(html, absent) {
+			t.Fatalf("setup card should not contain %q", absent)
+		}
+	}
+}
+
+func TestSetupCardOmitsUnsetKnobs(t *testing.T) {
+	d := Default()
+	spec := NewSpec()
+	spec.Name = "Bare"
+	spec.Amp = "CLEAN"
+	spec.AmpParams.Gain = 42
+	s, err := d.Resolve(spec)
+	if err != nil {
+		t.Fatalf("Resolve: %v", err)
+	}
+	html := d.SetupCardHTML(s)
+	if !strings.Contains(html, "Gain: 42") {
+		t.Fatal("setup card should show the amp gain value")
+	}
+	for _, absent := range []string{"Master:", "Bass:", "Treble:", "Speed:", "Time (ms):"} {
+		if strings.Contains(html, absent) {
+			t.Fatalf("setup card should omit unset knob %q", absent)
 		}
 	}
 }

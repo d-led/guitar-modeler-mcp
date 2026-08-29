@@ -323,21 +323,41 @@ func TestIntegrationThrSetupCard(t *testing.T) {
 	card := resultText(t, rpc(t, s, 3, "tools/call", map[string]any{
 		"name": "thr_setup_card",
 		"arguments": map[string]any{
-			"name":       "THR Clean",
-			"amp":        "Twin Reverb",
-			"cab":        "California 1x12",
-			"mod":        "CHORUS",
-			"echo":       "Tape",
-			"reverb":     "Hall",
-			"compressor": true,
-			"output_dir": dir,
+			"name":          "THR Clean",
+			"amp":           "Twin Reverb",
+			"cab":           "California 1x12",
+			"mod":           "CHORUS",
+			"echo":          "Tape",
+			"reverb":        "Hall",
+			"gain":          42,
+			"master":        68,
+			"bass":          50,
+			"mid":           45,
+			"treble":        60,
+			"echo_time":     380,
+			"echo_feedback": 32,
+			"echo_mix":      24,
+			"reverb_level":  40,
+			"reverb_decay":  55,
+			"compressor":    true,
+			"output_dir":    dir,
 		},
 	}))
 	if !strings.Contains(card, ".thr.html") {
 		t.Fatalf("thr_setup_card output missing .thr.html: %s", card)
 	}
-	if cards, _ := filepath.Glob(filepath.Join(dir, "*.html")); len(cards) != 1 {
+	cards, _ := filepath.Glob(filepath.Join(dir, "*.html"))
+	if len(cards) != 1 {
 		t.Fatalf("expected one .html card in %s, got %v", dir, cards)
+	}
+	body, err := os.ReadFile(cards[0])
+	if err != nil {
+		t.Fatalf("read setup card: %v", err)
+	}
+	for _, want := range []string{"Gain: 42", "Master: 68", "Time (ms): 380", "Level: 40", "Decay: 55"} {
+		if !strings.Contains(string(body), want) {
+			t.Fatalf("setup card missing %q:\n%s", want, body)
+		}
 	}
 
 	// The effects catalog now includes cabinets, echo and reverb types.
