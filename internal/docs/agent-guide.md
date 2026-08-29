@@ -20,15 +20,18 @@ are supported:
   record stored as hex under `data[0][].paramSet["User%Patch"]`. The record is
   the Katana dense patch layout, so amp (type/gain/volume/bass/middle/treble/
   presence), booster (type/drive/tone/level), mod/fx (type), delay (type/time/
-  feedback/level) and reverb (type/level) are read and written at their Katana
-  offsets. Browse models with `waza_catalog_list_*`, design with
-  `waza_write_tsl` (writes a backup from the built-in template patch with the
-  chosen tone applied) and `waza_setup_card` (a printable card), and read a
-  backup's decoded patches with `waza_read_tsl`. An **XSONIC AIRSTEP
-  BW** foot controller turns the six channel memories (CH 1–6, the Waza Air's
-  "scenes") and the effect blocks into hands-free footswitches; list its four
-  layouts with `waza_catalog_list_modes` and print one on the card with
-  `waza_setup_card`'s `airstep_mode` (1–4).
+  feedback/level), reverb (type/level) and the spatial settings — POSITION
+  (gyro SURROUND/STATIC/STAGE), AMBIENCE (STUDIO/STAGE) and MODE
+  (DELAY/DLY+REV/REVERB) — are read and written at their Katana offsets.
+  Amp gain uses the Katana scaling (stored = 20 + 0.8×gain); a requested delay
+  switches the second delay block off. Browse models with
+  `waza_catalog_list_*`, design with `waza_write_tsl` (writes a backup from the
+  built-in template patch with the chosen tone applied) and `waza_setup_card`
+  (a printable card), and read a backup's decoded patches with
+  `waza_read_tsl`. An **XSONIC AIRSTEP BW** foot controller turns the six
+  channel memories (CH 1–6, the Waza Air's "scenes") and the effect blocks into
+  hands-free footswitches; list its four layouts with `waza_catalog_list_modes`
+  and print one on the card with `waza_setup_card`'s `airstep_mode` (1–4).
 - **Yamaha THR** (THR-II, THR10, THR10C, THR10X) — a desktop practice amp with
   no preset file format, so the only output is a printable setup card. The
   THR-II amp selector is a grid of eight types (CLEAN, CRUNCH, LEAD, HI GAIN,

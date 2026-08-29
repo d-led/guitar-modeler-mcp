@@ -198,16 +198,16 @@ type Params struct {
 func (p Patch) ReadParams() Params {
 	raw := p.Raw
 	pr := Params{
-		AmpType:      ampTypeName[raw[offPreampType]],
-		AmpGain:      ampGainDecode(raw[offPreampGain]),
-		AmpVolume:    int(raw[offPreampLevel]),
-		AmpBass:      int(raw[offPreampBass]),
-		AmpMiddle:    int(raw[offPreampMiddle]),
-		AmpTreble:    int(raw[offPreampTreble]),
-		AmpPresence:  int(raw[offPreampPresence]),
-		Position:     gyroTypeName[raw[offGyroType]],
-		Ambience:     ambienceTypeName[raw[offAmbType]],
-		Mode:         modeName[raw[offModeGreen]],
+		AmpType:     ampTypeName[raw[offPreampType]],
+		AmpGain:     ampGainDecode(raw[offPreampGain]),
+		AmpVolume:   int(raw[offPreampLevel]),
+		AmpBass:     int(raw[offPreampBass]),
+		AmpMiddle:   int(raw[offPreampMiddle]),
+		AmpTreble:   int(raw[offPreampTreble]),
+		AmpPresence: int(raw[offPreampPresence]),
+		Position:    gyroTypeName[raw[offGyroType]],
+		Ambience:    ambienceTypeName[raw[offAmbType]],
+		Mode:        modeName[raw[offModeGreen]],
 	}
 	if raw[offBoosterOnOff] != 0 {
 		pr.BoosterType = boosterTypeName[raw[offBoosterType]]

@@ -1,5 +1,10 @@
 # guitar-modeler-mcp
 
+> **!!! USE AT YOUR OWN RISK !!!** — This project writes preset files for
+> third-party hardware. We do our best to get the formats right, but we can't
+> guarantee compatibility with every device or firmware version. Well-meant
+> contributions (fixes, corrections, new devices) are always welcome.
+
 An MCP server and CLI for designing and writing guitar-modeler presets for
 multiple hardware devices, written in Go. The design core is device-agnostic
 and per-device backends supply the model catalog and preset file format.
@@ -28,12 +33,15 @@ sponsored by HeadRush or any of the referenced brands.
   the classic **GE150 is card-only**. The cross-device `map_preset` tool maps
   Gigboard rigs to and from Mooer presets; mapped parameter values are neutral
   defaults (128 = noon) rather than copied knob positions.
-- **BOSS Waza Air** — implemented (`.tsl` livesets and setup cards). The
-  `.tsl` reader/writer is based on the observed `liveset → patches → param`
-  variant; spatial-setting IDs (ambience, position, mode) are not yet written.
-  The **XSONIC AIRSTEP BW** foot controller's four footswitch modes (channel
-  memories CH 1–6 + effect toggles) are modelled and printable on the setup
-  card.
+- **BOSS Waza Air** — implemented (`.tsl` backups and setup cards). The
+  `.tsl` reader/writer follows the real backup format — a named set of patches
+  each stored as a 2335-byte Katana-layout record under
+  `data[0][].paramSet["User%Patch"]` — with the offsets and encodings taken
+  from the `waza-tsl` reverse-engineering reference (amp gain scaling, booster
+  on/off, the second delay block, and the gyro/ambience/mode spatial settings
+  included). The **XSONIC AIRSTEP BW** foot controller's four footswitch modes
+  (channel memories CH 1–6 + effect toggles) are modelled and printable on the
+  setup card.
 - **Quad Cortex** — planned; see [OpenCortex](https://github.com/VanIseghemThomas/OpenCortex)
   (open-source QC preset format work) as a starting point for the preset format.
 
@@ -60,7 +68,7 @@ per-device backend supplies the model catalog and preset file format:
   `.mo` format and setup cards) and `internal/presetmap` (Gigboard ↔ Mooer
   model mapping).
 - **Waza Air backend** — `internal/waza` (amp/effect catalogs, the BOSS TONE
-  STUDIO `.tsl` liveset format and setup cards).
+  STUDIO `.tsl` backup format and setup cards).
 - `internal/assets/data/blocks` — factory block definitions captured from the
   device backup, used as defaults for every effect module.
 - `internal/docs/agent-guide.md` — the agent-facing guide (signal-chain topology,
