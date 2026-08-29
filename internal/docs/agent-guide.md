@@ -33,7 +33,10 @@ are supported:
   canonical names such as `rate`, `depth`, `effect_level`, `direct_mix`,
   `manual`, `resonance`, `sustain`, `attack`, `threshold`, `release`,
   `feedback`, and the chorus `low_rate`/`high_rate` bands (the short `rate`/
-  `depth`/`effect_level` names target the chorus's low band). Browse models
+  `depth`/`effect_level` names target the chorus's low band). **`*_direct_mix`
+  is the DRY (unprocessed) signal level — 100 = unity, so leave it unset unless
+  you explicitly want to attenuate the dry guitar; setting it to a low
+  "effect level" value makes the whole patch very quiet.** Browse models
   with `waza_catalog_list_*`, design with `waza_write_tsl` (writes a backup
   from the built-in template patch with the chosen tone applied) and
   `waza_setup_card` (a printable card), and read a backup's decoded patches
