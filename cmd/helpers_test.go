@@ -70,8 +70,8 @@ func TestParseFootswitchFlags(t *testing.T) {
 
 func TestSupportedDevices(t *testing.T) {
 	devices := supportedDevices()
-	if len(devices) != 5 {
-		t.Fatalf("supportedDevices returned %d devices, want 5", len(devices))
+	if len(devices) != 6 {
+		t.Fatalf("supportedDevices returned %d devices, want 6", len(devices))
 	}
 
 	byName := make(map[string]deviceInfo, len(devices))
@@ -90,5 +90,8 @@ func TestSupportedDevices(t *testing.T) {
 	}
 	if g := byName["ge100pro"]; !g.FileExchange || g.FileExt != ".mo" {
 		t.Fatalf("ge100pro entry = %+v", g)
+	}
+	if g := byName["wazaair"]; g.FileExchange || g.Description != "BOSS Waza Air" {
+		t.Fatalf("wazaair entry = %+v, want card-only", g)
 	}
 }

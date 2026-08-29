@@ -4,6 +4,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/d-led/guitar-modeler-mcp/internal/mooer"
+	"github.com/d-led/guitar-modeler-mcp/internal/waza"
 )
 
 // deviceInfo describes one supported device for the `device list` command.
@@ -14,7 +15,7 @@ type deviceInfo struct {
 	FileExt      string `json:"file_ext,omitempty"`
 }
 
-// supportedDevices lists the Gigboard plus every registered Mooer model.
+// supportedDevices lists the Gigboard, every Mooer model and the Waza Air.
 func supportedDevices() []deviceInfo {
 	list := []deviceInfo{
 		{Name: "gigboard", Description: "HeadRush Gigboard", FileExchange: true, FileExt: ".rig"},
@@ -31,6 +32,8 @@ func supportedDevices() []deviceInfo {
 			FileExt:      ext,
 		})
 	}
+	w := waza.Default()
+	list = append(list, deviceInfo{Name: w.Name, Description: w.Display, FileExchange: w.FileExchange, FileExt: w.FileExt})
 	return list
 }
 

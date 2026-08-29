@@ -20,6 +20,7 @@ import (
 	"github.com/d-led/guitar-modeler-mcp/internal/presetmap"
 	"github.com/d-led/guitar-modeler-mcp/internal/rig"
 	"github.com/d-led/guitar-modeler-mcp/internal/setlist"
+	"github.com/d-led/guitar-modeler-mcp/internal/waza"
 )
 
 // Registrar binds the catalog, rig builder, designer and cross-device mapping
@@ -374,6 +375,74 @@ func (r *Registrar) Register(s *mcp.Server) {
 			return r.mapPreset(args)
 		},
 	})
+
+	s.Register(mcp.Tool{
+		Name:        "waza_catalog_list_amps",
+		Description: "List the five amp types of the Boss Waza Air, with the real hardware each emulates.",
+		InputSchema: objectSchema(map[string]any{}),
+		Handler: func(_ context.Context, _ map[string]any) (string, error) {
+			return r.wazaListAmps()
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "waza_catalog_list_fx",
+		Description: "List the Boss Waza Air effects (booster, mod/fx, delay, reverb) with the real hardware each emulates.",
+		InputSchema: objectSchema(map[string]any{"query": stringSchema("Optional case-insensitive filter over name or inspired_by.")}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.wazaListFX(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "waza_setup_card",
+		Description: "Write a printable HTML setup card for a Boss Waza Air tone: the amp, booster, mod, fx, delay, reverb and spatial settings.",
+		InputSchema: objectSchema(wazaToneProps()),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.wazaSetupCard(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "waza_write_tsl",
+		Description: "Write a BOSS TONE STUDIO liveset (.tsl) for the Boss Waza Air from a tone description. Produces the actual preset file the app imports.",
+		InputSchema: objectSchema(wazaToneProps()),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.wazaWriteTSL(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "waza_read_tsl",
+		Description: "Read a Boss Waza Air .tsl liveset and report the first patch's tone (amp, fx, delay, reverb and values) as JSON.",
+		InputSchema: objectSchema(map[string]any{
+			"input_file": stringSchema("Path to the .tsl liveset."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.wazaReadTSL(args)
+		},
+	})
+}
+
+// wazaToneProps is the shared argument schema for the Waza Air tone tools.
+func wazaToneProps() map[string]any {
+	return map[string]any{
+		"name":              stringSchema("Patch name."),
+		"amp":               stringSchema("Amp type: CLEAN, CRUNCH, LEAD, BROWN or FLAT (or a description, e.g. \"Twin Reverb\")."),
+		"amp_gain":          numberSchema("Optional amp gain (0-100)."),
+		"amp_volume":        numberSchema("Optional amp volume (0-100)."),
+		"booster":           stringSchema("Optional BOOSTER effect, e.g. \"T-SCREAM\" or \"TS-808\"."),
+		"mod":               stringSchema("Optional MOD effect, e.g. \"CHORUS\"."),
+		"fx":                stringSchema("Optional FX effect (same list as MOD)."),
+		"delay":             stringSchema("Optional DELAY effect, e.g. \"TAPE ECHO\"."),
+		"delay_time":        numberSchema("Optional delay time in milliseconds."),
+		"reverb":            stringSchema("Optional REVERB effect, e.g. \"HALL REVERB\"."),
+		"cabinet_resonance": stringSchema("Optional: VINTAGE, MODERN or DEEP."),
+		"ambience":          stringSchema("Optional: STUDIO or STAGE."),
+		"position":          stringSchema("Optional: SURROUND, STATIC or STAGE."),
+		"mode":              stringSchema("Optional: DELAY, DLY+REV or REVERB."),
+		"output_dir":        stringSchema("Directory to write the output into (default: current directory)."),
+	}
 }
 
 func (r *Registrar) designRig(args map[string]any) (string, error) {
@@ -764,11 +833,13 @@ func deviceList() []deviceInfo {
 		}
 		list = append(list, deviceInfo{Name: m.Name, Description: m.Display, FileExchange: m.FileExchange, FileExt: ext})
 	}
+	w := waza.Default()
+	list = append(list, deviceInfo{Name: w.Name, Description: w.Display, FileExchange: w.FileExchange, FileExt: w.FileExt})
 	return list
 }
 
-// mooerItem is one catalog row for the Mooer listing tools.
-type mooerItem struct {
+// catalogItem is one catalog row for the listing tools.
+type catalogItem struct {
 	Index      int    `json:"index"`
 	Name       string `json:"name"`
 	InspiredBy string `json:"inspired_by,omitempty"`
@@ -789,14 +860,14 @@ func mooerModel(args map[string]any) (mooer.Model, error) {
 	return m, nil
 }
 
-func filterItems(items []mooer.Item, query string) []mooerItem {
+func filterItems(items []mooer.Item, query string) []catalogItem {
 	q := strings.ToLower(strings.TrimSpace(query))
-	out := make([]mooerItem, 0, len(items))
+	out := make([]catalogItem, 0, len(items))
 	for i, it := range items {
 		if q != "" && !strings.Contains(strings.ToLower(it.Name+" "+it.InspiredBy), q) {
 			continue
 		}
-		out = append(out, mooerItem{Index: i, Name: it.Name, InspiredBy: it.InspiredBy})
+		out = append(out, catalogItem{Index: i, Name: it.Name, InspiredBy: it.InspiredBy})
 	}
 	return out
 }
@@ -828,7 +899,7 @@ func (r *Registrar) mooerListFX(args map[string]any) (string, error) {
 	}
 	query := argString(args, "query")
 
-	modules := map[string][]mooerItem{}
+	modules := map[string][]catalogItem{}
 	for _, mod := range m.ModuleOrder {
 		if mod == "amp" || mod == "cab" {
 			continue
@@ -994,6 +1065,113 @@ func (r *Registrar) mapPreset(args map[string]any) (string, error) {
 	}
 	m, _ := mooer.ModelByName("ge150pro")
 	return r.writeMooerOutput(m, p, outDir)
+}
+
+func (r *Registrar) wazaListAmps() (string, error) {
+	d := waza.Default()
+	return marshal(filterWazaItems(d.Amps, ""))
+}
+
+func (r *Registrar) wazaListFX(args map[string]any) (string, error) {
+	d := waza.Default()
+	query := argString(args, "query")
+	return marshal(map[string]any{
+		"booster": filterWazaItems(d.Boosters, query),
+		"mod_fx":  filterWazaItems(d.ModFX, query),
+		"delay":   filterWazaItems(d.Delays, query),
+		"reverb":  filterWazaItems(d.Reverbs, query),
+	})
+}
+
+func (r *Registrar) wazaSetupCard(args map[string]any) (string, error) {
+	spec, err := r.wazaSpec(args)
+	if err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(spec.Name) == "" {
+		spec.Name = "New Patch"
+	}
+	outDir := argString(args, "output_dir")
+	if outDir == "" {
+		outDir = "."
+	}
+	d := waza.Default()
+	path := filepath.Join(outDir, sanitizeFileBase(spec.Name)+".html")
+	if err := os.WriteFile(path, []byte(d.SetupCardHTML(spec)), 0o644); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("Wrote Waza Air setup card to %s", path), nil
+}
+
+func (r *Registrar) wazaWriteTSL(args map[string]any) (string, error) {
+	spec, err := r.wazaSpec(args)
+	if err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(spec.Name) == "" {
+		spec.Name = "New Patch"
+	}
+	outDir := argString(args, "output_dir")
+	if outDir == "" {
+		outDir = "."
+	}
+	file := waza.NewTSLFile(spec)
+	path := filepath.Join(outDir, sanitizeFileBase(spec.Name)+".tsl")
+	if err := waza.WriteTSLFile(path, file); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("Wrote Waza Air liveset to %s", path), nil
+}
+
+func (r *Registrar) wazaReadTSL(args map[string]any) (string, error) {
+	path := argString(args, "input_file")
+	if path == "" {
+		return "", fmt.Errorf("input_file is required")
+	}
+	file, err := waza.ReadTSLFile(path)
+	if err != nil {
+		return "", err
+	}
+	return marshal(map[string]any{
+		"device":      file.Device,
+		"version":     file.Version,
+		"liveset":     file.Liveset.Name,
+		"patch_count": len(file.Liveset.Patches),
+		"first_patch": file.FirstSpec(),
+	})
+}
+
+// wazaSpec builds and resolves a Waza Air tone from the tool arguments.
+func (r *Registrar) wazaSpec(args map[string]any) (waza.Spec, error) {
+	d := waza.Default()
+	return d.Resolve(waza.Spec{
+		Name:         argString(args, "name"),
+		Amp:          argString(args, "amp"),
+		Booster:      argString(args, "booster"),
+		Mod:          argString(args, "mod"),
+		FX:           argString(args, "fx"),
+		Delay:        argString(args, "delay"),
+		Reverb:       argString(args, "reverb"),
+		CabResonance: argString(args, "cabinet_resonance"),
+		Ambience:     argString(args, "ambience"),
+		Position:     argString(args, "position"),
+		Mode:         argString(args, "mode"),
+		Gain:         int(argFloat(args, "amp_gain")),
+		Volume:       int(argFloat(args, "amp_volume")),
+		DelayTime:    int(argFloat(args, "delay_time")),
+	})
+}
+
+func filterWazaItems(items []waza.Item, query string) []catalogItem {
+	q := strings.ToLower(strings.TrimSpace(query))
+	out := make([]catalogItem, 0, len(items))
+	for i, it := range items {
+		if q != "" && !strings.Contains(strings.ToLower(it.Name+" "+it.InspiredBy), q) {
+			continue
+		}
+		out = append(out, catalogItem{Index: i, Name: it.Name, InspiredBy: it.InspiredBy})
+	}
+	return out
 }
 
 func mooerFXItemSchema() map[string]any {
