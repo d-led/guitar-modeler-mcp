@@ -75,14 +75,21 @@ are supported:
   inspect one model's knobs with `qc_list_model_params` (use the **screen
   units** it reports — GAIN 5 on a 0..10 knob, dB and % values as shown).
   `qc_design` places a **serial chain** — amp, then cab, then the effects in
-  the order you give — and writes an encrypted `.pb`; `qc_decode_preset` reads
-  one back. The wire is free-form (4 lanes that split and merge), but
-  `qc_design` covers the common single-lane case; for parallel/dual-amp rigs,
-  place the blocks yourself across `qc_design` calls or describe the routing
-  to the user. The `.pb` is encrypted with the unit's serial (9 characters) —
+  the order you give — and writes an encrypted `.pb` **plus a printable HTML
+  setup card**; `qc_decode_preset` reads the `.pb` back as JSON and
+  `qc_render_setup_card` re-renders the card from an existing file. The wire
+  is free-form (4 lanes that split and merge), but `qc_design` covers the
+  common single-lane case; for parallel/dual-amp rigs, describe the routing to
+  the user. The `.pb` is encrypted with the unit's serial (9 characters) —
   pass `serial` (or `""` for cloud files). There is no private key: the scheme
   is the device's public `KEY_MATERIAL` + serial, so files round-trip through
   `qc_design` → `qc_decode_preset` offline.
+
+  **Caveat — say it out loud.** The `.pb` is a valid encrypted `BinaryPreset`
+  and round-trips through `qc_decode_preset`, but loading it onto a unit by
+  copying the file is **not yet confirmed on hardware**, and `qc_design` only
+  builds a single-lane serial chain. State this to the user when you hand back
+  a preset; do not claim on-device load is verified.
 
 Every parameter you pass is validated before a file is written, so an invalid
 preset is never produced. `design_rig` is Gigboard-only; Mooer presets go
