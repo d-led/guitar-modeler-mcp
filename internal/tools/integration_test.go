@@ -316,6 +316,46 @@ func TestIntegrationWazaTSLAndCard(t *testing.T) {
 	}
 }
 
+func TestIntegrationWazaMultiPatchBackup(t *testing.T) {
+	s := newIntegrationServer(t)
+	dir := t.TempDir()
+
+	// Pack two named scenes into one backup; the file is named after the backup.
+	out := resultText(t, rpc(t, s, 1, "tools/call", map[string]any{
+		"name": "waza_write_tsl",
+		"arguments": map[string]any{
+			"name":       "Always with Me",
+			"output_dir": dir,
+			"patches": []any{
+				map[string]any{"name": "DRIVE", "amp": "CRUNCH", "amp_gain": 58, "booster": "T-SCREAM", "delay": "ANALOG DELAY", "delay_time": 380},
+				map[string]any{"name": "CLEAN", "amp": "CLEAN", "amp_gain": 30, "mod": "CHORUS", "reverb": "HALL REVERB"},
+			},
+		},
+	}))
+	if !strings.Contains(out, "Always with Me.tsl") {
+		t.Fatalf("waza_write_tsl output should use the backup name, got %q", out)
+	}
+
+	tsls, err := filepath.Glob(filepath.Join(dir, "*.tsl"))
+	if err != nil || len(tsls) != 1 {
+		t.Fatalf("expected exactly one .tsl in %s (got %v, err %v)", dir, tsls, err)
+	}
+
+	read := resultText(t, rpc(t, s, 2, "tools/call", map[string]any{
+		"name":      "waza_read_tsl",
+		"arguments": map[string]any{"input_file": tsls[0]},
+	}))
+	for _, want := range []string{
+		"\"name\": \"Always with Me\"",
+		"\"name\": \"DRIVE\"", "\"amp\": \"CRUNCH\"", "\"delay\": \"ANALOG DELAY\"",
+		"\"name\": \"CLEAN\"", "\"amp\": \"CLEAN\"", "\"reverb\": \"HALL REVERB\"",
+	} {
+		if !strings.Contains(read, want) {
+			t.Fatalf("waza_read_tsl missing %q:\n%s", want, read)
+		}
+	}
+}
+
 func TestIntegrationThrSetupCard(t *testing.T) {
 	s := newIntegrationServer(t)
 	dir := t.TempDir()

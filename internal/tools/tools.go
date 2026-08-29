@@ -839,6 +839,22 @@ func argStrings(raw any) []string {
 	return out
 }
 
+// argObjects returns the object elements of an array argument (e.g. a patches
+// list), or nil when the argument is absent or not an array of objects.
+func argObjects(args map[string]any, key string) []map[string]any {
+	arr, ok := args[key].([]any)
+	if !ok {
+		return nil
+	}
+	out := make([]map[string]any, 0, len(arr))
+	for _, item := range arr {
+		if m, ok := item.(map[string]any); ok {
+			out = append(out, m)
+		}
+	}
+	return out
+}
+
 func argFloat(args map[string]any, key string) float64 {
 	if v, ok := args[key]; ok {
 		switch n := v.(type) {
@@ -1273,19 +1289,61 @@ func (r *Registrar) wazaSetupCard(args map[string]any) (string, error) {
 }
 
 func (r *Registrar) wazaWriteTSL(args map[string]any) (string, error) {
-	spec, err := r.wazaSpec(args)
-	if err != nil {
-		return "", err
-	}
-	name := strings.TrimSpace(spec.Name)
-	if name == "" {
-		name = "New Patch"
-	}
 	tmpl, err := waza.TemplatePatch()
 	if err != nil {
 		return "", err
 	}
-	patch := tmpl.WriteParams(waza.Params{
+
+	var patches []waza.Patch
+	if _, multi := args["patches"]; multi {
+		for i, pm := range argObjects(args, "patches") {
+			spec, err := r.wazaSpec(pm)
+			if err != nil {
+				return "", fmt.Errorf("patches[%d]: %w", i, err)
+			}
+			patches = append(patches, wazaPatch(tmpl, spec))
+		}
+		if len(patches) == 0 {
+			return "", fmt.Errorf("patches must contain at least one patch")
+		}
+	} else {
+		spec, err := r.wazaSpec(args)
+		if err != nil {
+			return "", err
+		}
+		patches = append(patches, wazaPatch(tmpl, spec))
+	}
+
+	name := strings.TrimSpace(argString(args, "name"))
+	if name == "" {
+		name = patches[0].Name
+	}
+	if name == "" {
+		name = "New Patch"
+	}
+
+	backup := waza.NewBackup(name)
+	backup.SetPatches(patches)
+
+	outDir := argString(args, "output_dir")
+	if outDir == "" {
+		outDir = "."
+	}
+	path := filepath.Join(outDir, sanitizeFileBase(name)+".tsl")
+	if err := waza.WriteTSLFile(path, backup); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("Wrote Waza Air backup (%d patch(es)) to %s", len(patches), path), nil
+}
+
+// wazaPatch builds one preset patch from the neutral template plus a resolved
+// spec: the specified blocks and knobs are applied, everything else stays off.
+func wazaPatch(tmpl waza.Patch, spec waza.Spec) waza.Patch {
+	name := strings.TrimSpace(spec.Name)
+	if name == "" {
+		name = "New Patch"
+	}
+	return tmpl.WriteParams(waza.Params{
 		AmpType:       spec.Amp,
 		AmpGain:       spec.Gain,
 		AmpVolume:     spec.Volume,
@@ -1306,19 +1364,6 @@ func (r *Registrar) wazaWriteTSL(args map[string]any) (string, error) {
 		ReverbType:    spec.Reverb,
 		ReverbLevel:   spec.ReverbLevel,
 	}).WithName(name)
-
-	backup := waza.NewBackup(name)
-	backup.SetPatches([]waza.Patch{patch})
-
-	outDir := argString(args, "output_dir")
-	if outDir == "" {
-		outDir = "."
-	}
-	path := filepath.Join(outDir, sanitizeFileBase(name)+".tsl")
-	if err := waza.WriteTSLFile(path, backup); err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("Wrote Waza Air backup to %s", path), nil
 }
 
 func (r *Registrar) wazaReadTSL(args map[string]any) (string, error) {

@@ -142,30 +142,41 @@ type Params struct {
 	ReverbLevel   int
 }
 
-// ReadParams decodes the patch's editable parameters into names and values.
+// ReadParams decodes the patch's active parameters into names and values. An
+// effect type is only reported when its block is on, so an off block reads as
+// empty rather than echoing its remembered type.
 func (p Patch) ReadParams() Params {
 	raw := p.Raw
-	return Params{
-		AmpType:       ampTypeName[raw[offPreampType]],
-		AmpGain:       int(raw[offPreampGain]),
-		AmpVolume:     int(raw[offPreampLevel]),
-		AmpBass:       int(raw[offPreampBass]),
-		AmpMiddle:     int(raw[offPreampMiddle]),
-		AmpTreble:     int(raw[offPreampTreble]),
-		AmpPresence:   int(raw[offPreampPresence]),
-		BoosterType:   boosterTypeName[raw[offBoosterType]],
-		BoosterDrive:  int(raw[offBoosterDrive]),
-		BoosterTone:   int(raw[offBoosterTone]),
-		BoosterLevel:  int(raw[offBoosterLevel]),
-		ModType:       modFXTypeName[raw[offFX1Type]],
-		FXType:        modFXTypeName[raw[offFX2Type]],
-		DelayType:     delayTypeName[raw[offDelayType]],
-		DelayTime:     int(raw[offDelayTimeHi])<<7 | int(raw[offDelayTimeLo]),
-		DelayFeedback: int(raw[offDelayFeedback]),
-		DelayLevel:    int(raw[offDelayLevel]),
-		ReverbType:    reverbTypeName[raw[offReverbType]],
-		ReverbLevel:   int(raw[offReverbLevel]),
+	pr := Params{
+		AmpType:      ampTypeName[raw[offPreampType]],
+		AmpGain:      int(raw[offPreampGain]),
+		AmpVolume:    int(raw[offPreampLevel]),
+		AmpBass:      int(raw[offPreampBass]),
+		AmpMiddle:    int(raw[offPreampMiddle]),
+		AmpTreble:    int(raw[offPreampTreble]),
+		AmpPresence:  int(raw[offPreampPresence]),
+		BoosterType:  boosterTypeName[raw[offBoosterType]],
+		BoosterDrive: int(raw[offBoosterDrive]),
+		BoosterTone:  int(raw[offBoosterTone]),
+		BoosterLevel: int(raw[offBoosterLevel]),
 	}
+	if raw[offFX1OnOff] != 0 {
+		pr.ModType = modFXTypeName[raw[offFX1Type]]
+	}
+	if raw[offFX2OnOff] != 0 {
+		pr.FXType = modFXTypeName[raw[offFX2Type]]
+	}
+	if raw[offDelayOnOff] != 0 {
+		pr.DelayType = delayTypeName[raw[offDelayType]]
+		pr.DelayTime = int(raw[offDelayTimeHi])<<7 | int(raw[offDelayTimeLo])
+		pr.DelayFeedback = int(raw[offDelayFeedback])
+		pr.DelayLevel = int(raw[offDelayLevel])
+	}
+	if raw[offReverbOnOff] != 0 {
+		pr.ReverbType = reverbTypeName[raw[offReverbType]]
+		pr.ReverbLevel = int(raw[offReverbLevel])
+	}
+	return pr
 }
 
 // WriteParams applies the given parameters to a copy of the patch and returns
