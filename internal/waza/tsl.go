@@ -15,8 +15,10 @@ const WazaAirDeviceID = "WAZA-AIR"
 // patchNameSize is the fixed width of the patch name field, space-padded.
 const patchNameSize = 16
 
-// defaultPatchTSL is a known-good single-patch backup (the factory "Vai
-// ballerina" export) used as a template for generating new presets.
+// defaultPatchTSL is a neutral, known-good single-patch backup ("Init Tone"):
+// a CLEAN amp at noon with every effect block off. It is the byte container
+// new presets start from, so unspecified effects stay off rather than
+// inheriting someone's preset.
 //
 //go:embed default-patch.tsl
 var defaultPatchTSL []byte
@@ -132,9 +134,9 @@ func (p Patch) WithName(name string) Patch {
 	return out
 }
 
-// TemplatePatch returns the built-in default patch, so a new preset can start
-// from a known-good record and only its name (and, later, its parameters) are
-// changed.
+// TemplatePatch returns the built-in neutral patch (a CLEAN amp at noon with
+// every effect off), so a new preset starts from a known-good record and only
+// the specified tone is applied.
 func TemplatePatch() (Patch, error) {
 	b, err := ParseTSL(defaultPatchTSL)
 	if err != nil {

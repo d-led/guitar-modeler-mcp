@@ -19,8 +19,8 @@ func TestParseTemplatePatch(t *testing.T) {
 	if len(patches) != 1 {
 		t.Fatalf("patches = %d, want 1", len(patches))
 	}
-	if patches[0].Name != "Vai ballerina dl" {
-		t.Fatalf("patch name = %q, want Vai ballerina dl", patches[0].Name)
+	if patches[0].Name != "Init Tone" {
+		t.Fatalf("patch name = %q, want Init Tone", patches[0].Name)
 	}
 	if len(patches[0].Raw) != 2335 {
 		t.Fatalf("raw length = %d, want 2335", len(patches[0].Raw))

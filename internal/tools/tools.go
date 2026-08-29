@@ -415,8 +415,13 @@ func (r *Registrar) Register(s *mcp.Server) {
 
 	s.Register(mcp.Tool{
 		Name:        "waza_write_tsl",
-		Description: "Write a BOSS TONE STUDIO backup (.tsl) for the Boss Waza Air. Starts from the built-in template patch and applies the chosen amp/effect types and knob values (gain, volume, bass, middle, treble, presence, booster, delay, reverb); unspecified values keep the template's settings.",
-		InputSchema: objectSchema(wazaToneProps()),
+		Description: "Write a BOSS TONE STUDIO backup (.tsl) for the Boss Waza Air. Starts from a neutral CLEAN template and applies the chosen amp/effect types and knob values; unspecified effects stay off. Pass a `patches` array to pack several named patches into one backup.",
+		InputSchema: objectSchema(mergeMaps(map[string]any{
+			"name":       stringSchema("Backup name (becomes the .tsl file name)."),
+			"output_dir": stringSchema("Directory to write the .tsl into (default: current directory)."),
+			"patches": arraySchema("Optional list of patches (each with `name` plus the tone fields below); when given, all are written into this one backup instead of a single top-level patch.",
+				objectSchema(mergeMaps(map[string]any{"name": stringSchema("Patch name (up to 16 characters).")}, wazaPatchProps()))),
+		}, wazaPatchProps())),
 		Handler: func(_ context.Context, args map[string]any) (string, error) {
 			return r.wazaWriteTSL(args)
 		},
@@ -512,9 +517,11 @@ func thrKnobProps() map[string]any {
 }
 
 // wazaToneProps is the shared argument schema for the Waza Air tone tools.
-func wazaToneProps() map[string]any {
+// wazaPatchProps is the tone-definition schema shared by the single-patch and
+// multi-patch Waza Air write tools (everything except the name and the output
+// directory).
+func wazaPatchProps() map[string]any {
 	return map[string]any{
-		"name":              stringSchema("Patch name."),
 		"amp":               stringSchema("Amp type: CLEAN, CRUNCH, LEAD, BROWN or FLAT (or a description, e.g. \"Twin Reverb\")."),
 		"amp_gain":          numberSchema("Optional amp gain (0-100)."),
 		"amp_volume":        numberSchema("Optional amp volume (0-100)."),
@@ -538,8 +545,17 @@ func wazaToneProps() map[string]any {
 		"ambience":          stringSchema("Optional: STUDIO or STAGE."),
 		"position":          stringSchema("Optional: SURROUND, STATIC or STAGE."),
 		"mode":              stringSchema("Optional: DELAY, DLY+REV or REVERB."),
-		"output_dir":        stringSchema("Directory to write the output into (default: current directory)."),
 	}
+}
+
+// wazaToneProps is the argument schema for the single-patch Waza Air tools:
+// a name, the tone fields and the output directory.
+func wazaToneProps() map[string]any {
+	return mergeMaps(
+		map[string]any{"name": stringSchema("Patch name.")},
+		wazaPatchProps(),
+		map[string]any{"output_dir": stringSchema("Directory to write the output into (default: current directory).")},
+	)
 }
 
 // wazaCardProps is the setup-card argument schema: the shared tone props plus

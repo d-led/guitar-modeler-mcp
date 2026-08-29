@@ -5,8 +5,8 @@ import (
 	"testing"
 )
 
-// TestReadParamsTemplate decodes the built-in template patch and checks the
-// known values of the "Vai ballerina dl" factory export.
+// TestReadParamsTemplate decodes the built-in template patch and checks that
+// it is a neutral CLEAN patch with every effect off.
 func TestReadParamsTemplate(t *testing.T) {
 	tmpl, err := TemplatePatch()
 	if err != nil {
@@ -17,30 +17,21 @@ func TestReadParamsTemplate(t *testing.T) {
 	if p.AmpType != "CLEAN" {
 		t.Fatalf("amp type = %q, want CLEAN", p.AmpType)
 	}
-	want := map[string]int{
-		"gain": 64, "volume": 75, "bass": 40, "middle": 45, "treble": 50, "presence": 85,
-	}
-	got := map[string]int{
+	for k, v := range map[string]int{
 		"gain": p.AmpGain, "volume": p.AmpVolume, "bass": p.AmpBass,
 		"middle": p.AmpMiddle, "treble": p.AmpTreble, "presence": p.AmpPresence,
-	}
-	for k, v := range want {
-		if got[k] != v {
-			t.Fatalf("%s = %d, want %d", k, got[k], v)
+	} {
+		if v != 50 {
+			t.Fatalf("%s = %d, want 50 (noon)", k, v)
 		}
 	}
-
-	if p.BoosterType != "MID BOOST" || p.BoosterDrive != 105 || p.BoosterTone != 60 || p.BoosterLevel != 70 {
-		t.Fatalf("booster = %q/%d/%d/%d, want MID BOOST/105/60/70", p.BoosterType, p.BoosterDrive, p.BoosterTone, p.BoosterLevel)
+	if p.BoosterType != "CLEAN BOOST" || p.BoosterDrive != 0 || p.BoosterLevel != 0 {
+		t.Fatalf("booster = %q/drive %d/level %d, want a transparent CLEAN BOOST", p.BoosterType, p.BoosterDrive, p.BoosterLevel)
 	}
-	if p.ModType != "PITCH SHIFTER" {
-		t.Fatalf("mod type = %q, want PITCH SHIFTER (the template's FX1)", p.ModType)
-	}
-	if p.ReverbType != "PLATE REVERB" {
-		t.Fatalf("reverb type = %q, want PLATE REVERB", p.ReverbType)
-	}
-	if p.DelayTime != 120 {
-		t.Fatalf("delay time = %d ms, want 120", p.DelayTime)
+	for name, v := range map[string]string{"mod": p.ModType, "fx": p.FXType, "delay": p.DelayType, "reverb": p.ReverbType} {
+		if v != "" {
+			t.Fatalf("%s type = %q, want empty (off)", name, v)
+		}
 	}
 }
 
@@ -96,8 +87,8 @@ func TestWriteParamsRoundTrip(t *testing.T) {
 	}
 }
 
-// TestWriteParamsLeavesUnsetUntouched verifies that unspecified values keep
-// the template's bytes rather than zeroing them.
+// TestWriteParamsLeavesUnsetUntouched verifies that unspecified numeric knobs
+// keep the template's bytes while unspecified effect blocks are turned off.
 func TestWriteParamsLeavesUnsetUntouched(t *testing.T) {
 	tmpl, err := TemplatePatch()
 	if err != nil {
@@ -110,12 +101,42 @@ func TestWriteParamsLeavesUnsetUntouched(t *testing.T) {
 	if got.AmpType != "CRUNCH" || got.AmpGain != 99 {
 		t.Fatalf("specified params not applied: %+v", got)
 	}
-	// Everything else must still be the template's values.
-	if got.AmpVolume != 75 || got.AmpBass != 40 || got.AmpPresence != 85 {
+	// Unspecified amp knobs keep the template's noon values.
+	if got.AmpVolume != 50 || got.AmpBass != 50 || got.AmpPresence != 50 {
 		t.Fatalf("unspecified amp knobs were changed: %+v", got)
 	}
-	if got.BoosterType != "MID BOOST" || got.ReverbType != "PLATE REVERB" {
-		t.Fatalf("unspecified effect types were changed: %+v", got)
+	// Unspecified effect blocks must be OFF, not inherited from the template.
+	for name, v := range map[string]string{"mod": got.ModType, "fx": got.FXType, "delay": got.DelayType, "reverb": got.ReverbType} {
+		if v != "" {
+			t.Fatalf("unspecified %s block stayed on (%q)", name, v)
+		}
+	}
+}
+
+// TestWriteParamsAlignsDelayTaps proves the two Dual-Delay tap lines are
+// written to the requested time so a single delay never keeps the template's
+// double-delay taps.
+func TestWriteParamsAlignsDelayTaps(t *testing.T) {
+	tmpl, err := TemplatePatch()
+	if err != nil {
+		t.Fatalf("TemplatePatch: %v", err)
+	}
+
+	out := tmpl.WriteParams(Params{DelayType: "ANALOG DELAY", DelayTime: 380, DelayLevel: 40})
+
+	if out.Raw[offDelayOnOff] != 1 {
+		t.Fatalf("delay on/off = %d, want 1", out.Raw[offDelayOnOff])
+	}
+	if got := int(out.Raw[offDelayTimeHi])<<7 | int(out.Raw[offDelayTimeLo]); got != 380 {
+		t.Fatalf("main delay time = %d, want 380", got)
+	}
+	for off, what := range map[int]string{offDelayD1TimeHi: "D1", offDelayD2TimeHi: "D2"} {
+		if got := int(out.Raw[off])<<7 | int(out.Raw[off+1]); got != 380 {
+			t.Fatalf("%s tap time = %d, want 380", what, got)
+		}
+	}
+	if out.Raw[offDelayD1Level] != 40 || out.Raw[offDelayD2Level] != 40 {
+		t.Fatalf("tap levels = %d/%d, want 40/40", out.Raw[offDelayD1Level], out.Raw[offDelayD2Level])
 	}
 }
 

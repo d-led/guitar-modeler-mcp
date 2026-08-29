@@ -29,12 +29,20 @@ const (
 	offFX2Type  = 461
 
 	// Delay. Time is two bytes: high 4 bits + low 7 bits, in milliseconds.
+	// The block also carries two independent tap lines (Dual Delay 1 & 2);
+	// they share the same 11-bit time encoding.
 	offDelayOnOff    = 736
 	offDelayType     = 737
 	offDelayTimeHi   = 738
 	offDelayTimeLo   = 739
 	offDelayFeedback = 740
 	offDelayLevel    = 742
+	offDelayD1TimeHi = 745
+	offDelayD1TimeLo = 746
+	offDelayD1Level  = 749
+	offDelayD2TimeHi = 750
+	offDelayD2TimeLo = 751
+	offDelayD2Level  = 754
 
 	// Reverb.
 	offReverbOnOff = 784
@@ -191,26 +199,43 @@ func (p Patch) WriteParams(pr Params) Patch {
 	if pr.ModType != "" {
 		out.Raw[offFX1OnOff] = 1
 		out.Raw[offFX1Type] = modFXTypeIndex[pr.ModType]
+	} else {
+		out.Raw[offFX1OnOff] = 0
 	}
 	if pr.FXType != "" {
 		out.Raw[offFX2OnOff] = 1
 		out.Raw[offFX2Type] = modFXTypeIndex[pr.FXType]
+	} else {
+		out.Raw[offFX2OnOff] = 0
 	}
 
 	if pr.DelayType != "" {
 		out.Raw[offDelayOnOff] = 1
 		out.Raw[offDelayType] = delayTypeIndex[pr.DelayType]
+	} else {
+		out.Raw[offDelayOnOff] = 0
 	}
 	if pr.DelayTime > 0 {
 		out.Raw[offDelayTimeHi] = byte(pr.DelayTime >> 7)
 		out.Raw[offDelayTimeLo] = byte(pr.DelayTime & 0x7F)
+		// Align the two tap lines with the requested single-tap time, so a
+		// preset written over the template does not keep the template's
+		// double-delay taps (the Waza Air spreads them wide in headphones).
+		out.Raw[offDelayD1TimeHi] = byte(pr.DelayTime >> 7)
+		out.Raw[offDelayD1TimeLo] = byte(pr.DelayTime & 0x7F)
+		out.Raw[offDelayD2TimeHi] = byte(pr.DelayTime >> 7)
+		out.Raw[offDelayD2TimeLo] = byte(pr.DelayTime & 0x7F)
 	}
 	setByte(offDelayFeedback, pr.DelayFeedback)
 	setByte(offDelayLevel, pr.DelayLevel)
+	setByte(offDelayD1Level, pr.DelayLevel)
+	setByte(offDelayD2Level, pr.DelayLevel)
 
 	if pr.ReverbType != "" {
 		out.Raw[offReverbOnOff] = 1
 		out.Raw[offReverbType] = reverbTypeIndex[pr.ReverbType]
+	} else {
+		out.Raw[offReverbOnOff] = 0
 	}
 	setByte(offReverbLevel, pr.ReverbLevel)
 
