@@ -1,4 +1,5 @@
 package thr
+package thr
 
 import (
 	"strings"
