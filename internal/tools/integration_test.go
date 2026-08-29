@@ -95,6 +95,7 @@ func TestIntegrationInitializeAndToolList(t *testing.T) {
 		"create_setlist",
 		"device_list", "mooer_catalog_list_amps", "mooer_catalog_list_cabs", "mooer_catalog_list_fx",
 		"mooer_design", "render_setup_card", "map_preset",
+		"waza_catalog_list_amps", "waza_catalog_list_fx", "waza_setup_card", "waza_write_tsl", "waza_read_tsl",
 	} {
 		if !names[want] {
 			t.Errorf("missing tool %q in tools/list", want)
