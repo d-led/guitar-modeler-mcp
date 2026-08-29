@@ -15,6 +15,8 @@ type Summary struct {
 	CreatedAt    int64               `json:"created_at"`
 	Version      string              `json:"version"`
 	Tempo        float64             `json:"tempo"`
+	InputGain    float64             `json:"input_gain"`    // Input node, dB
+	OutputVolume float64             `json:"output_volume"` // Output node RigVolume, dB
 	Routing      string              `json:"routing"`
 	Mixer        MixerSummary        `json:"mixer"`
 	Slots        []string            `json:"slots"`
@@ -91,6 +93,16 @@ func Describe(file *RigFile) (Summary, error) {
 			s.Tempo = *item.Value
 		}
 	}
+	if in, ok := patch.Children["Input"]; ok {
+		if item, ok := in.Children["InputGain"]; ok && item.Value != nil {
+			s.InputGain = *item.Value
+		}
+	}
+	if out, ok := patch.Children["Output"]; ok {
+		if item, ok := out.Children["RigVolume"]; ok && item.Value != nil {
+			s.OutputVolume = *item.Value
+		}
+	}
 
 	for _, name := range patch.ChildOrder {
 		if isStructuralNode(name) {
@@ -142,40 +154,20 @@ func mixerSummary(chain *Node) MixerSummary {
 // footswitchAssignments lists the stomp switches that are assigned to a
 // module, in FS5..FS8 order. Unassigned switches are omitted.
 func footswitchAssignments(content *Content) []FootswitchSummary {
-	fs, ok := content.FootSwitch.(map[string]any)
-	if !ok {
+	children := namedChildren(content.FootSwitch, "FootSwitch")
+	if children == nil {
 		return nil
-	}
-	data, ok := fs["data"].(map[string]any)
-	if !ok {
-		return nil
-	}
-	fsw, ok := data["FootSwitch"].(map[string]any)
-	if !ok {
-		return nil
-	}
-	children, ok := fsw["children"].(map[string]any)
-	if !ok {
-		return nil
-	}
-	childString := func(key string) string {
-		item, ok := children[key].(map[string]any)
-		if !ok {
-			return ""
-		}
-		s, _ := item["string"].(string)
-		return s
 	}
 	var out []FootswitchSummary
 	for _, n := range []string{"5", "6", "7", "8"} {
-		module := childString("Module" + n)
+		module := childString(children, "Module"+n)
 		if module == "" || module == "Unassigned" {
 			continue
 		}
 		out = append(out, FootswitchSummary{
 			Switch:    "FS" + n,
 			Module:    module,
-			Operation: childString("Operation" + n),
+			Operation: childString(children, "Operation"+n),
 		})
 	}
 	return out

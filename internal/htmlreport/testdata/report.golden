@@ -20,6 +20,22 @@
   @media (prefers-color-scheme: dark) { .chip { background: #2c2c2e; } }
   .chip.off { opacity: .45; text-decoration: line-through; }
   .arrow { color: #999; }
+  .hw { margin-bottom: 26px; }
+  .hw h2 { margin: 0 0 10px; font-size: .8em; text-transform: uppercase; letter-spacing: .08em; color: #888; }
+  .buttons { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+  .btn { border: 1px solid #e3e3e8; border-radius: 12px; padding: 10px 8px; text-align: center; }
+  @media (prefers-color-scheme: dark) { .btn { border-color: #2c2c2e; } }
+  .btn .num { display: inline-block; min-width: 22px; height: 22px; line-height: 22px; border-radius: 999px; background: #e8e8ed; font-size: .74em; font-weight: 700; margin-bottom: 6px; }
+  @media (prefers-color-scheme: dark) { .btn .num { background: #2c2c2e; } }
+  .btn .mod { font-weight: 700; font-size: .9em; overflow-wrap: anywhere; }
+  .btn .op { font-size: .76em; color: #888; }
+  .btn.assigned { background: #34c75918; border-color: #34c75955; }
+  .btn.assigned .num { background: #34c759; color: #fff; }
+  .btn.empty { opacity: .42; }
+  .pedals { margin-top: 12px; font-size: .9em; display: flex; flex-direction: column; gap: 6px; }
+  .pedal { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .pedal .name { font-weight: 700; }
+  .muted { color: #999; }
   .module { border: 1px solid #e3e3e8; border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; }
   @media (prefers-color-scheme: dark) { .module { border-color: #2c2c2e; } }
   .module h2 { margin: 0 0 2px; font-size: 1.1em; }
@@ -42,6 +58,39 @@
   </div>
   <div class="chain">
     <span class="chip">Amp</span><span class="arrow">→</span><span class="chip">Cab</span><span class="arrow">→</span><span class="chip">Spring Reverb</span><span class="arrow">→</span>
+  </div>
+  <div class="hw">
+    <h2>Footswitches</h2>
+    <div class="buttons">
+      <div class="btn empty">
+        <div class="num">1</div>
+        <div class="mod">—</div>
+        
+      </div><div class="btn empty">
+        <div class="num">2</div>
+        <div class="mod">—</div>
+        
+      </div><div class="btn empty">
+        <div class="num">3</div>
+        <div class="mod">—</div>
+        
+      </div><div class="btn empty">
+        <div class="num">4</div>
+        <div class="mod">—</div>
+        
+      </div>
+    </div>
+    <div class="pedals">
+      
+      <div class="pedal"><span class="name">Pedal 1 (Classic)</span>
+        <span class="muted">unassigned</span>
+      </div>
+      
+      <div class="pedal"><span class="name">Pedal 2</span>
+        <span class="muted">unassigned</span>
+      </div>
+      
+    </div>
   </div>
   
   <div class="module">

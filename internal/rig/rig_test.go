@@ -138,7 +138,9 @@ func TestWriteProducesDecodableFile(t *testing.T) {
 func TestDescribeReturnsChainAndParams(t *testing.T) {
 	b := newTestBuilder(t)
 	file, err := b.Build(Spec{
-		Name: "Describe Test",
+		Name:         "Describe Test",
+		InputGain:    6,
+		OutputVolume: 3,
 		Blocks: []Block{
 			{Type: "Amp", Params: map[string]any{"Type": "82 Lead 800 100W"}},
 			{Type: "Cab", Params: map[string]any{"CabType": "4x12 Green 25W", "MicType": "Dyn 57"}},
@@ -153,6 +155,9 @@ func TestDescribeReturnsChainAndParams(t *testing.T) {
 	}
 	if summary.Name != "Describe Test" {
 		t.Fatalf("name = %q", summary.Name)
+	}
+	if summary.InputGain != 6 || summary.OutputVolume != 3 {
+		t.Fatalf("input_gain/output_volume = %v/%v, want 6/3", summary.InputGain, summary.OutputVolume)
 	}
 	if len(summary.Modules) != 2 {
 		t.Fatalf("modules = %d, want 2", len(summary.Modules))

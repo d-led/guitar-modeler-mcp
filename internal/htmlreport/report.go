@@ -35,6 +35,8 @@ type pageData struct {
 	Tempo     string
 	Generated string
 	Chain     []moduleInfo
+	Buttons   []rig.ButtonAssign
+	Pedals    []rig.PedalAssign
 }
 
 var page = template.Must(template.New("report").Parse(reportHTML))
@@ -66,6 +68,11 @@ func Render(rf *rig.RigFile, song string, cat *catalog.Catalog) (string, error) 
 		chain = append(chain, moduleInfoFor(name, node, cat))
 	}
 
+	hw, err := rig.HardwareAssignments(rf)
+	if err != nil {
+		return "", err
+	}
+
 	var sb strings.Builder
 	if err := page.Execute(&sb, pageData{
 		Name:      rf.Name(),
@@ -73,6 +80,8 @@ func Render(rf *rig.RigFile, song string, cat *catalog.Catalog) (string, error) 
 		Tempo:     tempo,
 		Generated: time.Now().Format("2006-01-02 15:04"),
 		Chain:     chain,
+		Buttons:   hw.Buttons,
+		Pedals:    hw.Pedals,
 	}); err != nil {
 		return "", err
 	}
@@ -187,6 +196,22 @@ const reportHTML = `<!doctype html>
   @media (prefers-color-scheme: dark) { .chip { background: #2c2c2e; } }
   .chip.off { opacity: .45; text-decoration: line-through; }
   .arrow { color: #999; }
+  .hw { margin-bottom: 26px; }
+  .hw h2 { margin: 0 0 10px; font-size: .8em; text-transform: uppercase; letter-spacing: .08em; color: #888; }
+  .buttons { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+  .btn { border: 1px solid #e3e3e8; border-radius: 12px; padding: 10px 8px; text-align: center; }
+  @media (prefers-color-scheme: dark) { .btn { border-color: #2c2c2e; } }
+  .btn .num { display: inline-block; min-width: 22px; height: 22px; line-height: 22px; border-radius: 999px; background: #e8e8ed; font-size: .74em; font-weight: 700; margin-bottom: 6px; }
+  @media (prefers-color-scheme: dark) { .btn .num { background: #2c2c2e; } }
+  .btn .mod { font-weight: 700; font-size: .9em; overflow-wrap: anywhere; }
+  .btn .op { font-size: .76em; color: #888; }
+  .btn.assigned { background: #34c75918; border-color: #34c75955; }
+  .btn.assigned .num { background: #34c759; color: #fff; }
+  .btn.empty { opacity: .42; }
+  .pedals { margin-top: 12px; font-size: .9em; display: flex; flex-direction: column; gap: 6px; }
+  .pedal { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .pedal .name { font-weight: 700; }
+  .muted { color: #999; }
   .module { border: 1px solid #e3e3e8; border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; }
   @media (prefers-color-scheme: dark) { .module { border-color: #2c2c2e; } }
   .module h2 { margin: 0 0 2px; font-size: 1.1em; }
@@ -209,6 +234,23 @@ const reportHTML = `<!doctype html>
   </div>
   <div class="chain">
     {{range .Chain}}{{if .On}}<span class="chip">{{.Name}}</span>{{else}}<span class="chip off">{{.Name}}</span>{{end}}<span class="arrow">→</span>{{end}}
+  </div>
+  <div class="hw">
+    <h2>Footswitches</h2>
+    <div class="buttons">
+      {{range .Buttons}}<div class="btn {{if .Module}}assigned{{else}}empty{{end}}">
+        <div class="num">{{.Number}}</div>
+        <div class="mod">{{if .Module}}{{.Module}}{{else}}—{{end}}</div>
+        {{if .Operation}}<div class="op">{{.Operation}}</div>{{end}}
+      </div>{{end}}
+    </div>
+    <div class="pedals">
+      {{range .Pedals}}
+      <div class="pedal"><span class="name">{{.Name}}{{if .Mode}} ({{.Mode}}){{end}}</span>
+        {{if .Targets}}{{range .Targets}}<span class="chip">{{.Module}} → {{.Param}}</span>{{end}}{{else}}<span class="muted">unassigned</span>{{end}}
+      </div>
+      {{end}}
+    </div>
   </div>
   {{range .Chain}}
   <div class="module">

@@ -28,6 +28,23 @@ is written, so an invalid preset is never produced.
   actual `footswitches` on every call, so never guess hardware assignments from
   memory: decode the file and read them.
 
+## Workflow discipline
+
+This is a small, well-bounded task: pick models, call `design_rig`, verify.
+Keep it tight and don't spiral:
+
+- **Decide, don't deliberate.** One `search_catalog`/`translate_*` round, pick
+  the first sensible model, move on. Don't re-derive the same amp/pedal choice
+  over and over in prose — the user will correct a wrong pick faster than you
+  can pre-empt it.
+- **One `design_rig` call, then `rig_decode` to verify.** Don't re-plan the
+  chain between calls; the tool's reply already reports the result.
+- **When unsure about a capability, try it once.** A parameter or footswitch
+  the schema doesn't advertise will either work or be rejected with a clear
+  message — testing it costs one turn, reasoning about it costs ten.
+- **Don't re-read `get_guide` or re-list catalogs mid-task.** They are stable
+  for the session; re-calling them is dead time.
+
 ## Tools and workflow
 
 1. `search_catalog` — fuzzy-search every amp, cab, mic and effect by device name
