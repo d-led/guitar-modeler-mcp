@@ -356,3 +356,10 @@ All trademarks, logos and brand names are the property of their respective
 owners. Use of company, product and service names is for identification only and
 implies no endorsement; this project is not affiliated with HeadRush or any
 referenced brand.
+
+This software, its MCP tools, and any output produced by AI agents or the MCP
+server are provided "as is", without warranty of any kind. Presets, setup cards
+and other generated files are for reference only: verify them before use. The
+authors and contributors accept no liability for any damage to hardware, loss
+of data, or other consequences arising from the use or misuse of this software
+or of output produced by AI agents or the MCP server.

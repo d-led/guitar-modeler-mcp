@@ -22,6 +22,14 @@ identification purposes only; use of these names, trademarks and brands does not
 imply endorsement. This project is not affiliated with, endorsed by, or
 sponsored by HeadRush or any of the referenced brands.
 
+This software, its MCP tools, and any output produced by AI agents or the MCP
+server are provided "as is", without warranty of any kind. Presets, setup cards
+and other generated files are for reference only: you are solely responsible
+for verifying them before use. The authors and contributors accept no
+liability for any damage to hardware, loss of data, or other consequences
+arising from the use or misuse of this software or of output produced by AI
+agents or the MCP server.
+
 ## Roadmap
 
 - **Gigboard** — implemented.
