@@ -196,6 +196,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 		Name:        "design_rig",
 		Description: "Dial in a tone: translate hardware into device models, order the effects into a signal chain, write a .rig file and a human-readable HTML report. The chain can be serial (default) or parallel: pass routing=\"SPS-1\" (serial → two parallel paths → serial) with amp2 for a dual-amp rig, or routing=\"PS-1\" (parallel from the input).",
 		InputSchema: objectSchema(map[string]any{
+			"device":     stringSchema("Target hardware modeler. Currently only \"gigboard\" (default) is supported."),
 			"name":       stringSchema("Rig/patch name."),
 			"song":       stringSchema("Optional song the tone is for."),
 			"amp":        stringSchema("Amp: device model or real-hardware description."),
@@ -286,6 +287,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 
 func (r *Registrar) designRig(args map[string]any) (string, error) {
 	req := design.Request{
+		Device:       argString(args, "device"),
 		Name:         argString(args, "name"),
 		Song:         argString(args, "song"),
 		Amp:          argString(args, "amp"),

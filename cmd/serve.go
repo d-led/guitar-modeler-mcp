@@ -14,13 +14,13 @@ func newServeCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "serve",
 		Short: "Run the MCP server over stdio",
-		Long:  "Serve the Model Context Protocol over stdin/stdout so an agent can design and write rigs.",
+		Long:  "Serve the Model Context Protocol over stdin/stdout so an agent can design and write guitar presets.",
 		RunE: func(_ *cobra.Command, _ []string) error {
 			a, err := newApp()
 			if err != nil {
 				return err
 			}
-			server := mcp.NewServer("headrush-gigboard-mcp", version)
+			server := mcp.NewServer("guitar-modeler-mcp", version)
 			tools.NewRegistrar(a.cat, a.builder, a.design).Register(server)
 			return server.Run(context.Background(), os.Stdin, os.Stdout)
 		},

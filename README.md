@@ -1,31 +1,32 @@
-# headrush-gigboard-mcp
+# guitar-modeler-mcp
 
-An MCP server and CLI for designing and writing **HeadRush Gigboard** sound
-presets (`.rig` patch files), written in Go.
+An MCP server and CLI for designing and writing guitar-modeler presets for
+multiple hardware devices, written in Go. The first supported device is the
+**HeadRush Gigboard** (`.rig` patch files); the architecture is a
+device-agnostic design core with per-device backends, so Quad Cortex, Mooer
+GE100 Pro and others can be added as new backends.
 
 Give it a song and a tone description, and it will:
 
-1. translate real-world hardware (amps, cabs, mics) into the HeadRush models
-   that emulate them,
+1. translate real-world hardware (amps, cabs, mics) into the models the device
+   emulates,
 2. order the effects into a musically sensible signal chain,
-3. write a `.rig` patch file you can load onto the device,
+3. write the device's preset file you can load onto the hardware,
 4. produce a human-readable HTML page of the settings used,
-5. decode any existing `.rig` file so an agent can analyze or fix it.
+5. decode an existing preset so an agent can analyze or fix it.
 
 ## How it works
 
-The device model data is embedded in the binary:
+The design core (translation, effect ordering, hardware-control assignment,
+level estimation, report rendering, the agent workflow) is device-agnostic. A
+per-device backend supplies the model catalog and preset file format:
 
-- `internal/catalog` — every amp, cab, mic and effect module, plus the
-  **translation layer** that maps real hardware ("Marshall JCM800", "blackface
-  Deluxe Reverb", …) onto device models. Each entry carries a `modeled_after`
-  string and a `confirmed` flag from the [Gigboard Hints](https://boguz.github.io/gigboardhints/)
-  data, and each module's listing includes **capability keywords** (e.g.
-  `pitch shift`, `reverb`, `delay`) pre-computed from its parameters.
-- `internal/assets/data/blocks` — the factory block definitions captured from
-  the device backup, used as defaults for every effect module.
-- `internal/rig` — builds the exact on-disk `.rig` format (outer JSON envelope
-  whose `content` field is a second JSON document describing the signal chain).
+- **Gigboard backend** — `internal/catalog` (amps/cabs/mics/FX + the translation
+  layer from [Gigboard Hints](https://boguz.github.io/gigboardhints/)), and
+  `internal/rig` (the exact on-disk `.rig` format: outer JSON envelope whose
+  `content` field is a second JSON document describing the signal chain).
+- `internal/assets/data/blocks` — factory block definitions captured from the
+  device backup, used as defaults for every effect module.
 - `internal/docs/agent-guide.md` — the agent-facing guide (signal-chain topology,
   parallel routing constraints, effect categories, workflow). It is embedded in
   the binary and exposed to agents through the `get_guide` MCP tool.
@@ -33,7 +34,7 @@ The device model data is embedded in the binary:
 ## Build
 
 ```sh
-go build -o headrush-gigboard-mcp .
+go build -o guitar-modeler-mcp .
 go test ./...
 ```
 

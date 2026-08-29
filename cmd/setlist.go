@@ -19,7 +19,7 @@ func newSetlistCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "setlist <file.rig>...",
 		Short:   "Write a .setlist binding the given rig files in order",
-		Example: `  headrush-gigboard-mcp setlist --name "Ballad" --out Setlists Rigs/clean.rig Rigs/drive.rig Rigs/solo.rig`,
+		Example: `  guitar-modeler-mcp setlist --name "Ballad" --out Setlists Rigs/clean.rig Rigs/drive.rig Rigs/solo.rig`,
 		Args:    cobra.MinimumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			entries := make([]setlist.Entry, 0, len(args))

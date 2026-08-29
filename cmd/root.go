@@ -39,9 +39,9 @@ func Execute() error {
 
 func newRootCmd() *cobra.Command {
 	root := &cobra.Command{
-		Use:           "headrush-gigboard-mcp",
-		Short:         "Design and write HeadRush Gigboard sound presets",
-		Long:          "headrush-gigboard-mcp exposes an MCP server and CLI for designing HeadRush Gigboard rigs, translating real-world hardware into device models and writing .rig patch files.",
+		Use:           "guitar-modeler-mcp",
+		Short:         "Design and write guitar-modeler presets",
+		Long:          "guitar-modeler-mcp exposes an MCP server and CLI for designing guitar presets: translate real-world hardware into device models and write preset files. The first supported device is the HeadRush Gigboard.",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}

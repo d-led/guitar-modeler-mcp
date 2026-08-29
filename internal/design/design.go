@@ -20,6 +20,9 @@ type FXBlock struct {
 
 // Request is the input to the designer.
 type Request struct {
+	// Device selects the target hardware. "gigboard" (default) is currently
+	// the only supported backend.
+	Device    string  `json:"device,omitempty"`
 	Name      string  `json:"name"`
 	Song      string  `json:"song,omitempty"`
 	Amp       string  `json:"amp"`           // device model or real-hardware description
@@ -84,6 +87,9 @@ const defaultOutputLevel = 6.0
 
 // Design resolves a request into a buildable rig spec.
 func (d *Designer) Design(req Request) (*Result, error) {
+	if req.Device != "" && !strings.EqualFold(req.Device, "gigboard") {
+		return nil, fmt.Errorf("device %q is not supported yet (supported: gigboard)", req.Device)
+	}
 	if strings.TrimSpace(req.Name) == "" {
 		req.Name = "New Rig"
 	}

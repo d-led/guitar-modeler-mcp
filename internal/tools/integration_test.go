@@ -23,7 +23,7 @@ func newIntegrationServer(t *testing.T) *mcp.Server {
 	if err != nil {
 		t.Fatalf("NewBuilder: %v", err)
 	}
-	server := mcp.NewServer("headrush-gigboard-mcp", "test")
+	server := mcp.NewServer("guitar-modeler-mcp", "test")
 	NewRegistrar(cat, builder, design.NewDesigner(cat)).Register(server)
 	return server
 }
@@ -73,7 +73,7 @@ func TestIntegrationInitializeAndToolList(t *testing.T) {
 
 	init := rpc(t, s, 1, "initialize", nil)
 	info := init["result"].(map[string]any)["serverInfo"].(map[string]any)
-	if info["name"] != "headrush-gigboard-mcp" {
+	if info["name"] != "guitar-modeler-mcp" {
 		t.Fatalf("serverInfo.name = %v", info["name"])
 	}
 

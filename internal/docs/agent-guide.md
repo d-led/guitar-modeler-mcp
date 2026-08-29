@@ -1,10 +1,12 @@
-# HeadRush Gigboard — agent guide
+# guitar-modeler-mcp — agent guide
 
-You are designing sound presets for the **HeadRush Gigboard**. A preset is a
-`.rig` file: one line of JSON whose `content` field is a second JSON document
-describing the signal chain (the `Patch`). Use these tools to discover models
-and to write `.rig` files; every parameter you pass is validated before a file
-is written, so an invalid preset is never produced.
+You are designing guitar presets for hardware modelers. The currently supported
+device is the **HeadRush Gigboard**, whose preset is a `.rig` file: one line of
+JSON whose `content` field is a second JSON document describing the signal chain
+(the `Patch`). Use these tools to discover models and to write preset files;
+every parameter you pass is validated before a file is written, so an invalid
+preset is never produced. Pass `device: "gigboard"` on `design_rig` (other
+devices are not wired up yet).
 
 ## Tool contract
 

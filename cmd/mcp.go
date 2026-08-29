@@ -9,7 +9,7 @@ import (
 	"github.com/dmitryledentsov/headrush-gigboard-mcp/internal/install"
 )
 
-const serverName = "headrush-gigboard-mcp"
+const serverName = "guitar-modeler-mcp"
 
 func newMcpCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -30,10 +30,10 @@ func newMcpInstallCmd() *cobra.Command {
 		Use:   "install",
 		Short: "Register this server in an MCP client's config",
 		Long:  "Writes the server entry into the selected client config. Defaults to the VS Code user profile (available in all workspaces).",
-		Example: `  headrush-gigboard-mcp mcp install                  # VS Code user profile (global)
-  headrush-gigboard-mcp mcp install --target workspace   # .vscode/mcp.json here
-  headrush-gigboard-mcp mcp install --target claude      # Claude Desktop
-  headrush-gigboard-mcp mcp install --print              # show config without writing`,
+		Example: `  guitar-modeler-mcp mcp install                  # VS Code user profile (global)
+  guitar-modeler-mcp mcp install --target workspace   # .vscode/mcp.json here
+  guitar-modeler-mcp mcp install --target claude      # Claude Desktop
+  guitar-modeler-mcp mcp install --print              # show config without writing`,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			t, ok := install.ValidTarget(target)
 			if !ok {

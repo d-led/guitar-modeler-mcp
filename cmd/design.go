@@ -15,6 +15,7 @@ import (
 
 func newDesignCmd() *cobra.Command {
 	var (
+		device       string
 		name         string
 		song         string
 		amp          string
@@ -41,7 +42,7 @@ func newDesignCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "design",
 		Short: "Dial in a tone and write a .rig patch plus an HTML report",
-		Example: `  headrush-gigboard-mcp design --name "Brown Sound" --song "Van Halen - Panama" \
+		Example: `  guitar-modeler-mcp design --name "Brown Sound" --song "Van Halen - Panama" \
       --amp "Marshall JCM800" --fx '[{"type":"Tape Echo","enabled":true}]'`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			a, err := newApp()
@@ -65,6 +66,7 @@ func newDesignCmd() *cobra.Command {
 				return err
 			}
 			res, err := a.design.Design(design.Request{
+				Device:       device,
 				Name:         name,
 				Song:         song,
 				Amp:          amp,
@@ -121,6 +123,7 @@ func newDesignCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&name, "name", "New Rig", "rig name")
+	cmd.Flags().StringVar(&device, "device", "gigboard", "target device (currently only gigboard is supported)")
 	cmd.Flags().StringVar(&song, "song", "", "song the tone is for")
 	cmd.Flags().StringVar(&amp, "amp", "", "amp: device model or real-hardware description (required)")
 	cmd.Flags().StringVar(&cab, "cab", "", "cab: device model or description")
