@@ -49,7 +49,7 @@ func (t *Table) GigboardToMooer(file *rig.RigFile) (mooer.Preset, error) {
 				}
 			}
 		case slot == "Gate" || slot == "Noise Filter":
-			p.NoiseGate.Enabled = m.On
+			mooer.SetModule(&p, "ns", 0, m.On)
 		default:
 			if module, name, ok := t.MapFXGigboardToMooer(slot); ok {
 				if index, found := t.mooer.EffectIndex(module, name); found {

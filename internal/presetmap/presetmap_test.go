@@ -208,3 +208,39 @@ func TestGigboardToMooer(t *testing.T) {
 		t.Fatalf("delay values = %+v, want 400ms / noon", got.Delay)
 	}
 }
+
+func TestGigboardToMooerGateGetsNeutralValues(t *testing.T) {
+	cat := catalog.New()
+	builder, err := rig.NewBuilder(cat)
+	if err != nil {
+		t.Fatalf("NewBuilder: %v", err)
+	}
+	file, err := builder.Build(rig.Spec{
+		Name: "Gated",
+		Blocks: []rig.Block{
+			{Type: "Amp", Enabled: true, Params: map[string]any{"Type": "82 Lead 800 100W"}},
+			{Type: "Cab", Enabled: true, Params: map[string]any{"CabType": "4x12 Green 25W", "MicType": "Dyn 57"}},
+			{Type: "Gate", Enabled: true},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+
+	got, err := newTable(t).GigboardToMooer(file)
+	if err != nil {
+		t.Fatalf("GigboardToMooer: %v", err)
+	}
+
+	// An enabled gate must not carry raw zeroes: attack/release sit at noon
+	// and the threshold stays open (0) so the mapped tone is not clamped.
+	if !got.NoiseGate.Enabled {
+		t.Fatal("noise gate should be enabled")
+	}
+	if got.NoiseGate.Attack != 128 || got.NoiseGate.Release != 128 {
+		t.Fatalf("gate attack/release = %d/%d, want noon", got.NoiseGate.Attack, got.NoiseGate.Release)
+	}
+	if got.NoiseGate.Threshold != 0 {
+		t.Fatalf("gate threshold = %d, want 0 (open)", got.NoiseGate.Threshold)
+	}
+}

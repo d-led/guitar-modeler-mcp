@@ -16,8 +16,11 @@ func neutralAmp() Amp {
 	return Amp{Gain: noon, Bass: noon, Mid: noon, Treble: noon, Presence: noon, Master: noon}
 }
 func neutralCab() Cab { return Cab{Mic: 0, Center: noon, Distance: noon, Tube: noon} }
+
+// neutralNoiseGate keeps the threshold at 0 (gate fully open) so an enabled
+// gate never clamps the signal; only its attack/release sit at noon.
 func neutralNoiseGate() NoiseGate {
-	return NoiseGate{Attack: noon, Release: noon, Threshold: noon}
+	return NoiseGate{Attack: noon, Release: noon, Threshold: 0}
 }
 func neutralEQ() EQ {
 	return EQ{
