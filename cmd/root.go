@@ -53,6 +53,7 @@ func newRootCmd() *cobra.Command {
 		newDesignCmd(),
 		newReportCmd(),
 		newDecodeCmd(),
+		newLevelCmd(),
 		newMcpCmd(),
 	)
 	return root

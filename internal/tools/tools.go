@@ -235,6 +235,30 @@ func (r *Registrar) Register(s *mcp.Server) {
 			return r.decodeRig(args)
 		},
 	})
+
+	s.Register(mcp.Tool{
+		Name:        "estimate_rig_level",
+		Description: "Estimate a rig's output level: sum the input gain, amp master, cab out gain, volume pedals, parallel-path mixer and output RigVolume into a net dB figure, and recommend the RigVolume to reach a target level. Use this when a rig sounds too quiet or too loud.",
+		InputSchema: objectSchema(map[string]any{
+			"rig_file":  stringSchema("Path to the .rig file to analyze."),
+			"target_db": numberSchema("Optional target output level in dB (default 0 = unity)."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			path := argString(args, "rig_file")
+			if path == "" {
+				return "", fmt.Errorf("rig_file is required")
+			}
+			file, err := readRigFile(path)
+			if err != nil {
+				return "", err
+			}
+			est, err := rig.EstimateLevel(file, argFloat(args, "target_db"))
+			if err != nil {
+				return "", err
+			}
+			return marshal(est)
+		},
+	})
 }
 
 func (r *Registrar) designRig(args map[string]any) (string, error) {

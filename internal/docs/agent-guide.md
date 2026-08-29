@@ -8,22 +8,28 @@ is written, so an invalid preset is never produced.
 
 ## Tools and workflow
 
-1. `catalog_list_amps` / `translate_amp` — find the amp model for the tone. Each
+1. `search_catalog` — fuzzy-search every amp, cab, mic and effect by device name
+   or the real hardware it emulates (`modeled_after`), in both directions:
+   "JCM800" finds "82 Lead 800 100W" and "Tube Screamer" finds "Green JRC-OD".
+2. `catalog_list_amps` / `translate_amp` — find the amp model for the tone. Each
    amp lists the real hardware it emulates (`modeled_after`) and a `gain`
    character (`clean`, `edge of breakup`, `crunch`, `high gain`, `bass`). Match
    the character to the song: a clean song needs a `clean` amp (search
    `query: "clean"`), a lead song a `crunch`/`high gain` one — don't use a lead
    channel for a clean part.
-2. `catalog_list_cabs`, `catalog_list_mics` — pick a cabinet and microphone.
-3. `catalog_list_fx_categories` then `catalog_list_fx_by_category` — browse
+3. `catalog_list_cabs`, `catalog_list_mics` — pick a cabinet and microphone.
+4. `catalog_list_fx_categories` then `catalog_list_fx_by_category` — browse
    effects by category (see below) and their `capabilities`. To find an effect
    by what it does (e.g. `query: "pitch shift"` or `query: "reverb"`), use
    `catalog_list_fx` with a query instead of listing everything.
-4. `catalog_list_module_params` — read a module's editable parameters, ranges
+5. `catalog_list_module_params` — read a module's editable parameters, ranges
    and enum options before setting them. Pass a `types` list to describe several
    modules in one call.
-5. `design_rig` — resolve everything and write the `.rig` + an HTML report.
-6. `rig_decode` / `render_report` — inspect or re-report an existing preset.
+6. `design_rig` — resolve everything and write the `.rig` + an HTML report.
+7. `rig_decode` / `render_report` — inspect or re-report an existing preset.
+8. `estimate_rig_level` — check a rig's output level (the default amp master of
+   50% is −6 dB, so a fresh rig is usually ~6 dB quiet). Set `output_level` on
+   `design_rig` (or the recommended RigVolume) to compensate.
 
 ## Effect categories
 
