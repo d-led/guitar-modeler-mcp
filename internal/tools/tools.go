@@ -42,6 +42,21 @@ func (r *Registrar) Register(s *mcp.Server) {
 		},
 	})
 	s.Register(mcp.Tool{
+		Name:        "search_catalog",
+		Description: "Fuzzy-search every amp, cab, mic and effect by device name, the real hardware it emulates (modeled_after), category or description. Works in both directions: \"JCM800\" finds \"82 Lead 800 100W\" and vice versa. Use kind to restrict to amp/cab/mic/fx.",
+		InputSchema: objectSchema(map[string]any{
+			"query": stringSchema("Search text, e.g. \"JCM800\", \"Tube Screamer\", \"Twin Reverb\", \"SM57\" or \"Tape Echo\"."),
+			"kind":  stringSchema("Optional: restrict to \"amp\", \"cab\", \"mic\" or \"fx\"."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			query := argString(args, "query")
+			if query == "" {
+				return "", fmt.Errorf("a \"query\" is required")
+			}
+			return marshal(r.cat.Search(query, argString(args, "kind")))
+		},
+	})
+	s.Register(mcp.Tool{
 		Name:        "catalog_list_amps",
 		Description: "List every amp model available on the HeadRush Gigboard, with the real hardware each emulates. Use the optional query to filter.",
 		InputSchema: objectSchema(map[string]any{"query": stringSchema("Optional case-insensitive filter over brand/model/style.")}),
@@ -172,17 +187,17 @@ func (r *Registrar) Register(s *mcp.Server) {
 		Name:        "design_rig",
 		Description: "Dial in a tone: translate hardware into device models, order the effects into a signal chain, write a .rig file and a human-readable HTML report. The chain can be serial (default) or parallel: pass routing=\"SPS-1\" (serial → two parallel paths → serial) with amp2 for a dual-amp rig, or routing=\"PS-1\" (parallel from the input).",
 		InputSchema: objectSchema(map[string]any{
-			"name":        stringSchema("Rig/patch name."),
-			"song":        stringSchema("Optional song the tone is for."),
-			"amp":         stringSchema("Amp: device model or real-hardware description."),
-			"cab":         stringSchema("Optional cab: device model or description."),
-			"mic":         stringSchema("Optional mic: device model or description."),
-			"routing":     stringSchema("Signal-chain topology: \"S\" (serial, default), \"SPS-1\" (serial → parallel → serial) or \"PS-1\" (parallel from the input)."),
-			"amp2":        stringSchema("Optional second amp for a dual-amp parallel rig (device model or description). Same model as amp = same amp on both channels."),
-			"cab2":        stringSchema("Optional cab for the second amp path."),
-			"mic2":        stringSchema("Optional mic for the second amp path."),
-			"tempo":       numberSchema("Optional tempo in BPM."),
-			"input_gain":  numberSchema("Optional input gain in dB."),			"output_level": numberSchema("Optional overall rig output level in dB (RigVolume, 0 = unity)."),			"output_dir":  stringSchema("Directory to write the files into (default: current directory)."),
+			"name":       stringSchema("Rig/patch name."),
+			"song":       stringSchema("Optional song the tone is for."),
+			"amp":        stringSchema("Amp: device model or real-hardware description."),
+			"cab":        stringSchema("Optional cab: device model or description."),
+			"mic":        stringSchema("Optional mic: device model or description."),
+			"routing":    stringSchema("Signal-chain topology: \"S\" (serial, default), \"SPS-1\" (serial → parallel → serial) or \"PS-1\" (parallel from the input)."),
+			"amp2":       stringSchema("Optional second amp for a dual-amp parallel rig (device model or description). Same model as amp = same amp on both channels."),
+			"cab2":       stringSchema("Optional cab for the second amp path."),
+			"mic2":       stringSchema("Optional mic for the second amp path."),
+			"tempo":      numberSchema("Optional tempo in BPM."),
+			"input_gain": numberSchema("Optional input gain in dB."), "output_level": numberSchema("Optional overall rig output level in dB (RigVolume, 0 = unity)."), "output_dir": stringSchema("Directory to write the files into (default: current directory)."),
 			"fx":          arraySchema("Optional effects, in any order; they will be placed sensibly.", fxItemSchema()),
 			"path_a_fx":   arraySchema("Optional effects for parallel path A (shared-amp SPS-1).", fxItemSchema()),
 			"path_b_fx":   arraySchema("Optional effects for parallel path B (shared-amp SPS-1).", fxItemSchema()),
@@ -224,26 +239,26 @@ func (r *Registrar) Register(s *mcp.Server) {
 
 func (r *Registrar) designRig(args map[string]any) (string, error) {
 	req := design.Request{
-		Name:       argString(args, "name"),
-		Song:       argString(args, "song"),
-		Amp:        argString(args, "amp"),
-		Cab:        argString(args, "cab"),
-		Mic:        argString(args, "mic"),
-		Routing:    rig.Routing(argString(args, "routing")),
-		Amp2:       argString(args, "amp2"),
-		Cab2:       argString(args, "cab2"),
-		Mic2:       argString(args, "mic2"),
-		Tempo:      argFloat(args, "tempo"),
-		InputGain:  argFloat(args, "input_gain"),
+		Name:        argString(args, "name"),
+		Song:        argString(args, "song"),
+		Amp:         argString(args, "amp"),
+		Cab:         argString(args, "cab"),
+		Mic:         argString(args, "mic"),
+		Routing:     rig.Routing(argString(args, "routing")),
+		Amp2:        argString(args, "amp2"),
+		Cab2:        argString(args, "cab2"),
+		Mic2:        argString(args, "mic2"),
+		Tempo:       argFloat(args, "tempo"),
+		InputGain:   argFloat(args, "input_gain"),
 		OutputLevel: argFloat(args, "output_level"),
-		FX:         parseFX(args["fx"]),
-		PathAFX:    parseFX(args["path_a_fx"]),
-		PathBFX:    parseFX(args["path_b_fx"]),
-		Para1Level: argFloatPtr(args, "para1_level"),
-		Para2Level: argFloatPtr(args, "para2_level"),
-		Para1Pan:   argFloatPtr(args, "para1_pan"),
-		Para2Pan:   argFloatPtr(args, "para2_pan"),
-		ParaDelay:  argFloatPtr(args, "para_delay"),
+		FX:          parseFX(args["fx"]),
+		PathAFX:     parseFX(args["path_a_fx"]),
+		PathBFX:     parseFX(args["path_b_fx"]),
+		Para1Level:  argFloatPtr(args, "para1_level"),
+		Para2Level:  argFloatPtr(args, "para2_level"),
+		Para1Pan:    argFloatPtr(args, "para1_pan"),
+		Para2Pan:    argFloatPtr(args, "para2_pan"),
+		ParaDelay:   argFloatPtr(args, "para_delay"),
 	}
 	res, err := r.design.Design(req)
 	if err != nil {

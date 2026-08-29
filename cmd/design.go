@@ -15,27 +15,27 @@ import (
 
 func newDesignCmd() *cobra.Command {
 	var (
-		name       string
-		song       string
-		amp        string
-		cab        string
-		mic        string
-		routing    string
-		amp2       string
-		cab2       string
-		mic2       string
+		name        string
+		song        string
+		amp         string
+		cab         string
+		mic         string
+		routing     string
+		amp2        string
+		cab2        string
+		mic2        string
 		tempo       float64
 		inputGain   float64
 		outputLevel float64
 		out         string
-		fxJSON     string
-		pathAFX    string
-		pathBFX    string
-		para1Level float64
-		para2Level float64
-		para1Pan   float64
-		para2Pan   float64
-		paraDelay  float64
+		fxJSON      string
+		pathAFX     string
+		pathBFX     string
+		para1Level  float64
+		para2Level  float64
+		para1Pan    float64
+		para2Pan    float64
+		paraDelay   float64
 	)
 	cmd := &cobra.Command{
 		Use:   "design",
@@ -60,26 +60,26 @@ func newDesignCmd() *cobra.Command {
 				return err
 			}
 			res, err := a.design.Design(design.Request{
-				Name:       name,
-				Song:       song,
-				Amp:        amp,
-				Cab:        cab,
-				Mic:        mic,
-				Routing:    rig.Routing(routing),
-				Amp2:       amp2,
-				Cab2:       cab2,
-				Mic2:       mic2,
+				Name:        name,
+				Song:        song,
+				Amp:         amp,
+				Cab:         cab,
+				Mic:         mic,
+				Routing:     rig.Routing(routing),
+				Amp2:        amp2,
+				Cab2:        cab2,
+				Mic2:        mic2,
 				Tempo:       tempo,
 				InputGain:   inputGain,
 				OutputLevel: outputLevel,
-				FX:         fx,
-				PathAFX:    pathAFXBlocks,
-				PathBFX:    pathBFXBlocks,
-				Para1Level: floatPtr(cmd, "para1-level", para1Level),
-				Para2Level: floatPtr(cmd, "para2-level", para2Level),
-				Para1Pan:   floatPtr(cmd, "para1-pan", para1Pan),
-				Para2Pan:   floatPtr(cmd, "para2-pan", para2Pan),
-				ParaDelay:  floatPtr(cmd, "para-delay", paraDelay),
+				FX:          fx,
+				PathAFX:     pathAFXBlocks,
+				PathBFX:     pathBFXBlocks,
+				Para1Level:  floatPtr(cmd, "para1-level", para1Level),
+				Para2Level:  floatPtr(cmd, "para2-level", para2Level),
+				Para1Pan:    floatPtr(cmd, "para1-pan", para1Pan),
+				Para2Pan:    floatPtr(cmd, "para2-pan", para2Pan),
+				ParaDelay:   floatPtr(cmd, "para-delay", paraDelay),
 			})
 			if err != nil {
 				return err

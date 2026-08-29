@@ -20,15 +20,15 @@ type FXBlock struct {
 
 // Request is the input to the designer.
 type Request struct {
-	Name      string    `json:"name"`
-	Song      string    `json:"song,omitempty"`
-	Amp       string    `json:"amp"`           // device model or real-hardware description
-	Cab       string    `json:"cab,omitempty"` // device model or description
-	Mic       string    `json:"mic,omitempty"` // device model or description
-	Tempo     float64   `json:"tempo,omitempty"`
-	InputGain float64   `json:"input_gain,omitempty"`
+	Name      string  `json:"name"`
+	Song      string  `json:"song,omitempty"`
+	Amp       string  `json:"amp"`           // device model or real-hardware description
+	Cab       string  `json:"cab,omitempty"` // device model or description
+	Mic       string  `json:"mic,omitempty"` // device model or description
+	Tempo     float64 `json:"tempo,omitempty"`
+	InputGain float64 `json:"input_gain,omitempty"`
 	// OutputLevel is the rig's overall output level in dB (RigVolume).
-	OutputLevel float64 `json:"output_level,omitempty"`
+	OutputLevel float64   `json:"output_level,omitempty"`
 	FX          []FXBlock `json:"fx,omitempty"`
 
 	// Routing selects the signal-chain topology: "" or "S" (serial, default),

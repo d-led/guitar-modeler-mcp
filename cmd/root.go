@@ -49,6 +49,7 @@ func newRootCmd() *cobra.Command {
 		newServeCmd(),
 		newCatalogCmd(),
 		newTranslateCmd(),
+		newSearchCmd(),
 		newDesignCmd(),
 		newReportCmd(),
 		newDecodeCmd(),
