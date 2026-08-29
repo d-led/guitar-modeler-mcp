@@ -22,8 +22,8 @@ func TestDefaultDeviceShape(t *testing.T) {
 	if len(d.ModFX) != 16 {
 		t.Fatalf("mod/fx = %d, want 16", len(d.ModFX))
 	}
-	if len(d.Delays) != 3 || len(d.Reverbs) != 3 {
-		t.Fatalf("delays/reverbs = %d/%d, want 3/3", len(d.Delays), len(d.Reverbs))
+	if len(d.Delays) != 6 || len(d.Reverbs) != 5 {
+		t.Fatalf("delays/reverbs = %d/%d, want 6/5", len(d.Delays), len(d.Reverbs))
 	}
 }
 

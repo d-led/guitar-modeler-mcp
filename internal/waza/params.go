@@ -1,15 +1,23 @@
 package waza
 
+import "math"
+
 // The Waza Air .tsl backup stores each patch as a 2335-byte record in the
-// BOSS Katana dense patch layout, so the parameter offsets below match
-// lib-katana's data/tsl-map.csv. The offsets and the type indices were
-// verified against real Waza Air backups and the Katana MIDI implementation
-// (katana_sysex.txt by Steven Hirsch). All single-byte values are 0-100
-// unless noted.
+// BOSS Katana dense patch layout. The offsets, encodings and type indices
+// below are taken from the authoritative reverse-engineering reference
+// (the `waza-tsl` Python package: known_indexes.py / waza_tsl.py), which maps
+// offset -> [name, case, limits] where case is one of:
+//
+//	"listed"  an enum of the given allowed values
+//	"minmax"  a plain byte clamped to [lo, hi]
+//	"scaled"  stored = clamp(round(base + slope*input), lo, hi)
+//	"2bytes"  11-bit value split as [value/128, value%128] over two bytes
+//
+// All single-byte values are 0-100 unless noted.
 const (
-	// Amp (preamp A).
+	// Amp (preamp).
 	offPreampType     = 81
-	offPreampGain     = 82
+	offPreampGain     = 82 // scaled: stored = 20 + 0.8*gain
 	offPreampBass     = 84
 	offPreampMiddle   = 85
 	offPreampTreble   = 86
@@ -17,10 +25,15 @@ const (
 	offPreampLevel    = 88
 
 	// Booster (OD/DS).
-	offBoosterType  = 49
-	offBoosterDrive = 50
-	offBoosterTone  = 52
-	offBoosterLevel = 55
+	offBoosterOnOff  = 48
+	offBoosterType   = 49
+	offBoosterDrive  = 50 // 0-120
+	offBoosterBottom = 51 // scaled: stored = 50 + bottom (bottom -50..+50)
+	offBoosterTone   = 52 // scaled: stored = 50 + tone (tone -50..+50)
+	offBoosterSoloSW = 53
+	offBoosterSoloLv = 54
+	offBoosterLevel  = 55
+	offBoosterMix    = 56
 
 	// Mod (FX1) and FX (FX2).
 	offFX1OnOff = 192
@@ -28,27 +41,36 @@ const (
 	offFX2OnOff = 460
 	offFX2Type  = 461
 
-	// Delay. Time is two bytes: high 4 bits + low 7 bits, in milliseconds.
-	// The block also carries two independent tap lines (Dual Delay 1 & 2);
-	// they share the same 11-bit time encoding.
+	// Delay (single-tap). Time is two bytes in milliseconds: high byte is
+	// value/128, low byte is value%128.
 	offDelayOnOff    = 736
 	offDelayType     = 737
 	offDelayTimeHi   = 738
 	offDelayTimeLo   = 739
 	offDelayFeedback = 740
-	offDelayLevel    = 742
-	offDelayD1TimeHi = 745
-	offDelayD1TimeLo = 746
-	offDelayD1Level  = 749
-	offDelayD2TimeHi = 750
-	offDelayD2TimeLo = 751
-	offDelayD2Level  = 754
+	offDelayLevel    = 742 // 0-120
+
+	// Delay 2 is the second delay block the Waza Air reaches in DLY+REV mode.
+	// A single requested delay turns this off so no second repeat leaks
+	// through from the template.
+	offDelay2OnOff = 2126
 
 	// Reverb.
 	offReverbOnOff = 784
 	offReverbType  = 785
-	offReverbTime  = 786
 	offReverbLevel = 792
+
+	// Gyro (positional audio) and ambience.
+	offGyroType = 854 // OFF/SURROUND/STATIC/STAGE
+	offGyroPos  = 855 // guitar position -180..+180, stored = 60 + pos/3
+	offAmbType  = 853 // STUDIO/STAGE
+	offAmbLevel = 856
+
+	// The DELAY / DLY+REV / REVERB knob, stored once per color slot; a tone
+	// written here sets all three slots to the same mode.
+	offModeGreen  = 2332
+	offModeRed    = 2333
+	offModeYellow = 2334
 )
 
 // ampTypeIndex maps the Waza Air amp name to its Katana preamp_a_type index.
@@ -83,22 +105,44 @@ var modFXTypeIndex = map[string]byte{
 	"HUMANIZER": 28, "CHORUS": 29, "AC GUITAR SIM": 31,
 }
 
-// delayTypeIndex maps a delay name to its Katana delay_type index. The
-// hardware knob quick-selects the first three; the rest are read-only here.
+// delayTypeIndex maps a delay name to its delay type index.
 var delayTypeIndex = map[string]byte{
 	"DIGITAL DELAY": 0,
 	"REVERSE DELAY": 6,
 	"ANALOG DELAY":  7,
 	"TAPE ECHO":     8,
 	"MODULATE":      9,
+	"SDE-3000":      10,
 }
 
-// reverbTypeIndex maps the Waza Air reverb name to its Katana reverb_type
-// index.
+// reverbTypeIndex maps the Waza Air reverb name to its reverb type index.
 var reverbTypeIndex = map[string]byte{
-	"PLATE REVERB":  4,
-	"SPRING REVERB": 5,
-	"HALL REVERB":   3,
+	"ROOM REVERB":     1,
+	"HALL REVERB":     3,
+	"PLATE REVERB":    4,
+	"SPRING REVERB":   5,
+	"MODULATE REVERB": 6,
+}
+
+// gyroTypeIndex maps the POSITION knob to the gyro type index.
+var gyroTypeIndex = map[string]byte{
+	"OFF":      0,
+	"SURROUND": 1,
+	"STATIC":   2,
+	"STAGE":    3,
+}
+
+// ambienceTypeIndex maps the AMBIENCE knob to its type index.
+var ambienceTypeIndex = map[string]byte{
+	"STUDIO": 0,
+	"STAGE":  1,
+}
+
+// modeIndex maps the DELAY / DLY+REV / REVERB knob to its reverb-mode index.
+var modeIndex = map[string]byte{
+	"DELAY":   0,
+	"DLY+REV": 1,
+	"REVERB":  2,
 }
 
 func invert(m map[string]byte) map[byte]string {
@@ -110,11 +154,14 @@ func invert(m map[string]byte) map[byte]string {
 }
 
 var (
-	ampTypeName     = invert(ampTypeIndex)
-	boosterTypeName = invert(boosterTypeIndex)
-	modFXTypeName   = invert(modFXTypeIndex)
-	delayTypeName   = invert(delayTypeIndex)
-	reverbTypeName  = invert(reverbTypeIndex)
+	ampTypeName      = invert(ampTypeIndex)
+	boosterTypeName  = invert(boosterTypeIndex)
+	modFXTypeName    = invert(modFXTypeIndex)
+	delayTypeName    = invert(delayTypeIndex)
+	reverbTypeName   = invert(reverbTypeIndex)
+	gyroTypeName     = invert(gyroTypeIndex)
+	ambienceTypeName = invert(ambienceTypeIndex)
+	modeName         = invert(modeIndex)
 )
 
 // Params is the decoded, human-facing parameter set of one patch. A zero
@@ -140,6 +187,9 @@ type Params struct {
 	DelayLevel    int
 	ReverbType    string
 	ReverbLevel   int
+	Position      string // SURROUND / STATIC / STAGE / OFF
+	Ambience      string // STUDIO / STAGE
+	Mode          string // DELAY / DLY+REV / REVERB
 }
 
 // ReadParams decodes the patch's active parameters into names and values. An
@@ -149,16 +199,21 @@ func (p Patch) ReadParams() Params {
 	raw := p.Raw
 	pr := Params{
 		AmpType:      ampTypeName[raw[offPreampType]],
-		AmpGain:      int(raw[offPreampGain]),
+		AmpGain:      ampGainDecode(raw[offPreampGain]),
 		AmpVolume:    int(raw[offPreampLevel]),
 		AmpBass:      int(raw[offPreampBass]),
 		AmpMiddle:    int(raw[offPreampMiddle]),
 		AmpTreble:    int(raw[offPreampTreble]),
 		AmpPresence:  int(raw[offPreampPresence]),
-		BoosterType:  boosterTypeName[raw[offBoosterType]],
-		BoosterDrive: int(raw[offBoosterDrive]),
-		BoosterTone:  int(raw[offBoosterTone]),
-		BoosterLevel: int(raw[offBoosterLevel]),
+		Position:     gyroTypeName[raw[offGyroType]],
+		Ambience:     ambienceTypeName[raw[offAmbType]],
+		Mode:         modeName[raw[offModeGreen]],
+	}
+	if raw[offBoosterOnOff] != 0 {
+		pr.BoosterType = boosterTypeName[raw[offBoosterType]]
+		pr.BoosterDrive = int(raw[offBoosterDrive])
+		pr.BoosterTone = int(raw[offBoosterTone])
+		pr.BoosterLevel = int(raw[offBoosterLevel])
 	}
 	if raw[offFX1OnOff] != 0 {
 		pr.ModType = modFXTypeName[raw[offFX1Type]]
@@ -193,19 +248,24 @@ func (p Patch) WriteParams(pr Params) Patch {
 			out.Raw[off] = byte(v)
 		}
 	}
-	setByte(offPreampGain, pr.AmpGain)
+	if pr.AmpGain > 0 {
+		out.Raw[offPreampGain] = ampGainEncode(pr.AmpGain)
+	}
 	setByte(offPreampLevel, pr.AmpVolume)
 	setByte(offPreampBass, pr.AmpBass)
 	setByte(offPreampMiddle, pr.AmpMiddle)
 	setByte(offPreampTreble, pr.AmpTreble)
 	setByte(offPreampPresence, pr.AmpPresence)
 
-	if idx, ok := boosterTypeIndex[pr.BoosterType]; ok {
-		out.Raw[offBoosterType] = idx
+	if pr.BoosterType != "" {
+		out.Raw[offBoosterOnOff] = 1
+		out.Raw[offBoosterType] = boosterTypeIndex[pr.BoosterType]
+		setByte(offBoosterDrive, pr.BoosterDrive)
+		setByte(offBoosterTone, pr.BoosterTone)
+		setByte(offBoosterLevel, pr.BoosterLevel)
+	} else {
+		out.Raw[offBoosterOnOff] = 0
 	}
-	setByte(offBoosterDrive, pr.BoosterDrive)
-	setByte(offBoosterTone, pr.BoosterTone)
-	setByte(offBoosterLevel, pr.BoosterLevel)
 
 	if pr.ModType != "" {
 		out.Raw[offFX1OnOff] = 1
@@ -223,24 +283,18 @@ func (p Patch) WriteParams(pr Params) Patch {
 	if pr.DelayType != "" {
 		out.Raw[offDelayOnOff] = 1
 		out.Raw[offDelayType] = delayTypeIndex[pr.DelayType]
+		if pr.DelayTime > 0 {
+			out.Raw[offDelayTimeHi] = byte(pr.DelayTime / 128)
+			out.Raw[offDelayTimeLo] = byte(pr.DelayTime % 128)
+		}
+		setByte(offDelayFeedback, pr.DelayFeedback)
+		setByte(offDelayLevel, pr.DelayLevel)
+		// One requested delay means the second delay block stays off.
+		out.Raw[offDelay2OnOff] = 0
 	} else {
 		out.Raw[offDelayOnOff] = 0
+		out.Raw[offDelay2OnOff] = 0
 	}
-	if pr.DelayTime > 0 {
-		out.Raw[offDelayTimeHi] = byte(pr.DelayTime >> 7)
-		out.Raw[offDelayTimeLo] = byte(pr.DelayTime & 0x7F)
-		// Align the two tap lines with the requested single-tap time, so a
-		// preset written over the template does not keep the template's
-		// double-delay taps (the Waza Air spreads them wide in headphones).
-		out.Raw[offDelayD1TimeHi] = byte(pr.DelayTime >> 7)
-		out.Raw[offDelayD1TimeLo] = byte(pr.DelayTime & 0x7F)
-		out.Raw[offDelayD2TimeHi] = byte(pr.DelayTime >> 7)
-		out.Raw[offDelayD2TimeLo] = byte(pr.DelayTime & 0x7F)
-	}
-	setByte(offDelayFeedback, pr.DelayFeedback)
-	setByte(offDelayLevel, pr.DelayLevel)
-	setByte(offDelayD1Level, pr.DelayLevel)
-	setByte(offDelayD2Level, pr.DelayLevel)
 
 	if pr.ReverbType != "" {
 		out.Raw[offReverbOnOff] = 1
@@ -250,5 +304,39 @@ func (p Patch) WriteParams(pr Params) Patch {
 	}
 	setByte(offReverbLevel, pr.ReverbLevel)
 
+	if idx, ok := gyroTypeIndex[pr.Position]; ok {
+		out.Raw[offGyroType] = idx
+	}
+	if idx, ok := ambienceTypeIndex[pr.Ambience]; ok {
+		out.Raw[offAmbType] = idx
+	}
+	if idx, ok := modeIndex[pr.Mode]; ok {
+		out.Raw[offModeGreen] = idx
+		out.Raw[offModeRed] = idx
+		out.Raw[offModeYellow] = idx
+	}
+
 	return out
+}
+
+// ampGainEncode stores the amp gain knob (0-100) as the Katana gain byte:
+// stored = round(20 + 0.8*gain), clamped to [20, 100].
+func ampGainEncode(gain int) byte {
+	return byte(clamp(int(math.Round(20+0.8*float64(gain))), 20, 100))
+}
+
+// ampGainDecode recovers the amp gain knob (0-100) from a stored gain byte:
+// gain = round((stored - 20) / 0.8).
+func ampGainDecode(stored byte) int {
+	return int(math.Round((float64(stored) - 20) / 0.8))
+}
+
+func clamp(v, lo, hi int) int {
+	if v < lo {
+		return lo
+	}
+	if v > hi {
+		return hi
+	}
+	return v
 }

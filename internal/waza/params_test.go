@@ -25,13 +25,17 @@ func TestReadParamsTemplate(t *testing.T) {
 			t.Fatalf("%s = %d, want 50 (noon)", k, v)
 		}
 	}
-	if p.BoosterType != "CLEAN BOOST" || p.BoosterDrive != 0 || p.BoosterLevel != 0 {
-		t.Fatalf("booster = %q/drive %d/level %d, want a transparent CLEAN BOOST", p.BoosterType, p.BoosterDrive, p.BoosterLevel)
+	if p.BoosterType != "" || p.BoosterDrive != 0 || p.BoosterLevel != 0 {
+		t.Fatalf("booster = %q/drive %d/level %d, want off", p.BoosterType, p.BoosterDrive, p.BoosterLevel)
 	}
 	for name, v := range map[string]string{"mod": p.ModType, "fx": p.FXType, "delay": p.DelayType, "reverb": p.ReverbType} {
 		if v != "" {
 			t.Fatalf("%s type = %q, want empty (off)", name, v)
 		}
+	}
+	// The neutral template keeps the device's spatial defaults.
+	if p.Position != "SURROUND" || p.Ambience != "STAGE" || p.Mode != "REVERB" {
+		t.Fatalf("spatial defaults = %q/%q/%q, want SURROUND/STAGE/REVERB", p.Position, p.Ambience, p.Mode)
 	}
 }
 
@@ -113,10 +117,9 @@ func TestWriteParamsLeavesUnsetUntouched(t *testing.T) {
 	}
 }
 
-// TestWriteParamsAlignsDelayTaps proves the two Dual-Delay tap lines are
-// written to the requested time so a single delay never keeps the template's
-// double-delay taps.
-func TestWriteParamsAlignsDelayTaps(t *testing.T) {
+// TestWriteParamsTurnsDelay2Off proves a single requested delay switches the
+// second delay block off, so the preset never carries a second repeat.
+func TestWriteParamsTurnsDelay2Off(t *testing.T) {
 	tmpl, err := TemplatePatch()
 	if err != nil {
 		t.Fatalf("TemplatePatch: %v", err)
@@ -128,15 +131,76 @@ func TestWriteParamsAlignsDelayTaps(t *testing.T) {
 		t.Fatalf("delay on/off = %d, want 1", out.Raw[offDelayOnOff])
 	}
 	if got := int(out.Raw[offDelayTimeHi])<<7 | int(out.Raw[offDelayTimeLo]); got != 380 {
-		t.Fatalf("main delay time = %d, want 380", got)
+		t.Fatalf("delay time = %d, want 380", got)
 	}
-	for off, what := range map[int]string{offDelayD1TimeHi: "D1", offDelayD2TimeHi: "D2"} {
-		if got := int(out.Raw[off])<<7 | int(out.Raw[off+1]); got != 380 {
-			t.Fatalf("%s tap time = %d, want 380", what, got)
+	if out.Raw[offDelay2OnOff] != 0 {
+		t.Fatalf("delay2 on/off = %d, want 0 (off)", out.Raw[offDelay2OnOff])
+	}
+}
+
+// TestWriteParamsAmpGainScaled proves the amp gain knob is stored with the
+// Katana scaling (stored = 20 + 0.8*gain) rather than the raw knob value.
+func TestWriteParamsAmpGainScaled(t *testing.T) {
+	tmpl, err := TemplatePatch()
+	if err != nil {
+		t.Fatalf("TemplatePatch: %v", err)
+	}
+
+	out := tmpl.WriteParams(Params{AmpType: "CLEAN", AmpGain: 50})
+	if got := out.Raw[offPreampGain]; got != 60 {
+		t.Fatalf("gain byte = %d, want 60 (20 + 0.8*50)", got)
+	}
+	// Reading back recovers the knob value.
+	if got := out.ReadParams().AmpGain; got != 50 {
+		t.Fatalf("gain round-trip = %d, want 50", got)
+	}
+}
+
+// TestWriteParamsBoosterOnOff proves the booster block is switched on only
+// when a booster is selected.
+func TestWriteParamsBoosterOnOff(t *testing.T) {
+	tmpl, err := TemplatePatch()
+	if err != nil {
+		t.Fatalf("TemplatePatch: %v", err)
+	}
+
+	on := tmpl.WriteParams(Params{BoosterType: "T-SCREAM", BoosterDrive: 40})
+	if on.Raw[offBoosterOnOff] != 1 || on.Raw[offBoosterType] != boosterTypeIndex["T-SCREAM"] {
+		t.Fatalf("booster on/type = %d/%d, want 1/%d", on.Raw[offBoosterOnOff], on.Raw[offBoosterType], boosterTypeIndex["T-SCREAM"])
+	}
+
+	off := tmpl.WriteParams(Params{})
+	if off.Raw[offBoosterOnOff] != 0 {
+		t.Fatalf("booster on/off = %d, want 0 (off)", off.Raw[offBoosterOnOff])
+	}
+	if off.ReadParams().BoosterType != "" {
+		t.Fatalf("booster type = %q, want empty (off)", off.ReadParams().BoosterType)
+	}
+}
+
+// TestWriteParamsSpatial proves POSITION, AMBIENCE and MODE reach the gyro,
+// ambience and reverb-mode offsets.
+func TestWriteParamsSpatial(t *testing.T) {
+	tmpl, err := TemplatePatch()
+	if err != nil {
+		t.Fatalf("TemplatePatch: %v", err)
+	}
+
+	out := tmpl.WriteParams(Params{Position: "STAGE", Ambience: "STUDIO", Mode: "DLY+REV"})
+	if out.Raw[offGyroType] != gyroTypeIndex["STAGE"] {
+		t.Fatalf("gyro type = %d, want %d", out.Raw[offGyroType], gyroTypeIndex["STAGE"])
+	}
+	if out.Raw[offAmbType] != ambienceTypeIndex["STUDIO"] {
+		t.Fatalf("ambience type = %d, want %d", out.Raw[offAmbType], ambienceTypeIndex["STUDIO"])
+	}
+	for _, off := range []int{offModeGreen, offModeRed, offModeYellow} {
+		if out.Raw[off] != modeIndex["DLY+REV"] {
+			t.Fatalf("mode at %d = %d, want %d", off, out.Raw[off], modeIndex["DLY+REV"])
 		}
 	}
-	if out.Raw[offDelayD1Level] != 40 || out.Raw[offDelayD2Level] != 40 {
-		t.Fatalf("tap levels = %d/%d, want 40/40", out.Raw[offDelayD1Level], out.Raw[offDelayD2Level])
+	got := out.ReadParams()
+	if got.Position != "STAGE" || got.Ambience != "STUDIO" || got.Mode != "DLY+REV" {
+		t.Fatalf("spatial round-trip = %q/%q/%q", got.Position, got.Ambience, got.Mode)
 	}
 }
 
@@ -153,11 +217,24 @@ func TestTypeIndexMaps(t *testing.T) {
 	if modFXTypeIndex["CHORUS"] != 29 || modFXTypeIndex["FLANGER"] != 20 || modFXTypeIndex["COMP"] != 3 {
 		t.Fatalf("mod/fx type indices wrong: %v", modFXTypeIndex)
 	}
-	if delayTypeIndex["DIGITAL DELAY"] != 0 || delayTypeIndex["ANALOG DELAY"] != 7 || delayTypeIndex["TAPE ECHO"] != 8 {
+	if delayTypeIndex["DIGITAL DELAY"] != 0 || delayTypeIndex["REVERSE DELAY"] != 6 ||
+		delayTypeIndex["ANALOG DELAY"] != 7 || delayTypeIndex["TAPE ECHO"] != 8 ||
+		delayTypeIndex["MODULATE"] != 9 || delayTypeIndex["SDE-3000"] != 10 {
 		t.Fatalf("delay type indices wrong: %v", delayTypeIndex)
 	}
-	if reverbTypeIndex["PLATE REVERB"] != 4 || reverbTypeIndex["SPRING REVERB"] != 5 || reverbTypeIndex["HALL REVERB"] != 3 {
+	if reverbTypeIndex["ROOM REVERB"] != 1 || reverbTypeIndex["HALL REVERB"] != 3 ||
+		reverbTypeIndex["PLATE REVERB"] != 4 || reverbTypeIndex["SPRING REVERB"] != 5 ||
+		reverbTypeIndex["MODULATE REVERB"] != 6 {
 		t.Fatalf("reverb type indices wrong: %v", reverbTypeIndex)
+	}
+	if gyroTypeIndex["OFF"] != 0 || gyroTypeIndex["SURROUND"] != 1 || gyroTypeIndex["STATIC"] != 2 || gyroTypeIndex["STAGE"] != 3 {
+		t.Fatalf("gyro type indices wrong: %v", gyroTypeIndex)
+	}
+	if ambienceTypeIndex["STUDIO"] != 0 || ambienceTypeIndex["STAGE"] != 1 {
+		t.Fatalf("ambience type indices wrong: %v", ambienceTypeIndex)
+	}
+	if modeIndex["DELAY"] != 0 || modeIndex["DLY+REV"] != 1 || modeIndex["REVERB"] != 2 {
+		t.Fatalf("mode indices wrong: %v", modeIndex)
 	}
 }
 

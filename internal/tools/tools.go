@@ -530,7 +530,7 @@ func wazaPatchProps() map[string]any {
 		"amp_treble":        numberSchema("Optional amp treble (0-100)."),
 		"amp_presence":      numberSchema("Optional amp presence (0-100)."),
 		"booster":           stringSchema("Optional BOOSTER effect, e.g. \"T-SCREAM\" or \"TS-808\"."),
-		"booster_drive":     numberSchema("Optional booster drive (0-100)."),
+		"booster_drive":     numberSchema("Optional booster drive (0-120)."),
 		"booster_tone":      numberSchema("Optional booster tone (0-100, 50 = neutral)."),
 		"booster_level":     numberSchema("Optional booster level (0-100)."),
 		"mod":               stringSchema("Optional MOD effect, e.g. \"CHORUS\"."),
@@ -538,7 +538,7 @@ func wazaPatchProps() map[string]any {
 		"delay":             stringSchema("Optional DELAY effect, e.g. \"TAPE ECHO\"."),
 		"delay_time":        numberSchema("Optional delay time in milliseconds."),
 		"delay_feedback":    numberSchema("Optional delay feedback (0-100)."),
-		"delay_level":       numberSchema("Optional delay level (0-100)."),
+		"delay_level":       numberSchema("Optional delay level (0-120)."),
 		"reverb":            stringSchema("Optional REVERB effect, e.g. \"HALL REVERB\"."),
 		"reverb_level":      numberSchema("Optional reverb level (0-100)."),
 		"cabinet_resonance": stringSchema("Optional: VINTAGE, MODERN or DEEP."),
@@ -1363,6 +1363,9 @@ func wazaPatch(tmpl waza.Patch, spec waza.Spec) waza.Patch {
 		DelayLevel:    spec.DelayLevel,
 		ReverbType:    spec.Reverb,
 		ReverbLevel:   spec.ReverbLevel,
+		Position:      spec.Position,
+		Ambience:      spec.Ambience,
+		Mode:          spec.Mode,
 	}).WithName(name)
 }
 
@@ -1400,6 +1403,9 @@ func (r *Registrar) wazaReadTSL(args map[string]any) (string, error) {
 			"delay_level":    params.DelayLevel,
 			"reverb":         params.ReverbType,
 			"reverb_level":   params.ReverbLevel,
+			"position":       params.Position,
+			"ambience":       params.Ambience,
+			"mode":           params.Mode,
 		})
 	}
 	return marshal(map[string]any{
