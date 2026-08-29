@@ -9,13 +9,23 @@ An MCP server and CLI for designing and writing guitar-modeler presets for
 multiple hardware devices, written in Go. The design core is device-agnostic
 and per-device backends supply the model catalog and preset file format.
 
-Supported devices:
+## Supported hardware
 
-- **HeadRush Gigboard** — `.rig` patch files.
-- **Mooer** GE150 Pro Li, GE200, GE150, GE100 Pro — `.mo` files (file-capable
-  models) plus a printable setup card for every model.
-- **BOSS Waza Air** — BOSS TONE STUDIO livesets (`.tsl`) plus a printable setup
-  card.
+### Modelers & amps
+
+| Device | Models | Preset exchange | Extra output |
+|---|---|---|---|
+| HeadRush Gigboard | — | `.rig` (read & write) | HTML report |
+| Mooer | GE150 Pro Li, GE200, GE100 Pro | `.mo` (write) | printable setup card |
+| Mooer GE150 | GE150 | — | card only (no `.mo` for this model) |
+| BOSS Waza Air | — | `.tsl` (read & write) | printable setup card |
+| Yamaha THR | THR-II, THR10, THR10C, THR10X | — | card only |
+
+### Accessories
+
+| Accessory | Works with | Modelled as |
+|---|---|---|
+| XSONIC AIRSTEP BW Edition | BOSS Waza Air | 4 footswitch modes (channel memories CH 1–6 + BOOSTER/MOD/FX/DELAY/REVERB toggles), printable on the setup card |
 
 ## Trademarks & disclaimer
 
