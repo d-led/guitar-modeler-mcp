@@ -109,13 +109,13 @@ func TestNewTSLFileWritesKnownParams(t *testing.T) {
 
 	want := map[string]any{
 		"AMP_TYPE":     "BROWN",
-		"AMP_GAIN":     float64(85),
-		"AMP_VOLUME":   float64(50),
+		"AMP_GAIN":     85,
+		"AMP_VOLUME":   50,
 		"FX1_TYPE":     "BOOSTER",
 		"FX1_SW":       "ON",
 		"BOOSTER_TYPE": "T-SCREAM",
 		"DELAY_SW":     "ON",
-		"DELAY_TIME":   float64(420),
+		"DELAY_TIME":   420,
 		"REVERB_SW":    "ON",
 		"REVERB_TYPE":  "HALL",
 	}
@@ -152,8 +152,10 @@ func TestWriteReadTSLFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ReadTSLFile: %v", err)
 	}
-	if !reflect.DeepEqual(f, back) {
-		t.Fatalf("write/read round trip changed the liveset:\nfirst:  %+v\nsecond: %+v", f, back)
+	orig, _ := f.Marshal()
+	again, _ := back.Marshal()
+	if !reflect.DeepEqual(orig, again) {
+		t.Fatalf("write/read round trip changed the liveset:\nfirst:  %s\nsecond: %s", orig, again)
 	}
 }
 
