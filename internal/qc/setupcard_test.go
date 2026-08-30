@@ -170,3 +170,15 @@ func TestNamedListStillUsesOptionNames(t *testing.T) {
 		t.Errorf("formatWire = %q, want %q", got, "Vibrato")
 	}
 }
+
+func TestFormatWireNeverLeaksFloatNoise(t *testing.T) {
+	// An unmeasured parameter cannot be converted to screen units, but its raw
+	// wire value must still render cleanly — never as float-representation noise.
+	spec := ParamSpec{Name: "OUT LEVEL", Min: 0, Max: 1, Skew: 1, unmeasured: true}
+	if got := formatWire(spec, 0.002); got != "0.002" {
+		t.Errorf("formatWire(unmeasured, 0.002) = %q, want %q", got, "0.002")
+	}
+	if got := formatWireRaw(0.5); got != "0.5" {
+		t.Errorf("formatWireRaw(0.5) = %q, want %q", got, "0.5")
+	}
+}

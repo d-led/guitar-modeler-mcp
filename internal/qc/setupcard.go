@@ -182,12 +182,21 @@ func formatWire(spec ParamSpec, wire float64) string {
 		if idx, err := spec.ValueToOption(wire); err == nil && idx < len(spec.StepNames) {
 			return spec.StepNames[idx]
 		}
-		return strconv.FormatFloat(wire, 'g', -1, 64)
+		return formatWireRaw(wire)
 	}
 	if real, err := spec.Denormalize(wire); err == nil {
 		return formatReal(spec, real)
 	}
-	return strconv.FormatFloat(wire, 'g', -1, 64)
+	return formatWireRaw(wire)
+}
+
+// formatWireRaw renders a raw 0..1 wire value cleanly for the rare parameter
+// whose bounds are unmeasured and therefore cannot be converted to screen
+// units. Three decimals suffice for a wire value, and the fixed-point format
+// never leaks float-representation noise to the card.
+func formatWireRaw(wire float64) string {
+	rounded := math.Round(wire*1000) / 1000
+	return strconv.FormatFloat(rounded, 'f', -1, 64)
 }
 
 // formatReal renders a screen value: the catalog's endpoint labels ("OFF",
