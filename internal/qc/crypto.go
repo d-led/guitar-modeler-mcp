@@ -108,8 +108,11 @@ func Decrypt(serial string, data []byte) ([]byte, error) {
 }
 
 // Encrypt applies the Quad Cortex's file encryption for the given serial, so
-// the result can be loaded by the device or decrypted with the OpenCortex
-// tooling.
+// the result is byte-compatible with the device's own on-disk preset files
+// (the encrypted BinaryPreset the unit stores as <name>.pb) and can be
+// decrypted with the OpenCortex tooling. It is NOT an upload path: the unit's
+// firmware ignores a File CREATE's preset_payload, so this file is a reference
+// archive, not something that can be pushed back onto the device.
 func Encrypt(serial string, data []byte) ([]byte, error) {
 	// CTR is symmetric: encrypting is the same stream operation.
 	return Decrypt(serial, data)

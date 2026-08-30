@@ -88,8 +88,11 @@ file: it reads the firmware version, recalls a preset that is **already in a
 slot on the unit**, switches scenes, and prints (dumps) the preset in a slot.
 It does **not** upload the `.pb`. To get a tone onto the unit, dial it in from
 the HTML card, or place a preset in a slot with Cortex Control and let `qcctl`
-recall it. (pyquadcortex's library does expose a `write_preset`, but the
-`qcctl` CLI does not wire it up.)
+recall it. The whole wire format is the device's native **protobuf**, not JSON:
+`qcctl dump-preset` prints a `BinaryPreset` protobuf, there is no JSON import or
+export anywhere in pyquadcortex, and its `write_preset` is a documented trap —
+a full preset written back wholesale is silently ignored, so only keyed edits
+like `set_param`/`set_bypass`/`set_chain_input` actually persist.
 
 Install `qcctl` once:
 
@@ -107,7 +110,9 @@ Give it a song and a tone description, and it will:
 1. translate real-world hardware (amps, cabs, mics) into the models the device
    emulates,
 2. order the effects into a musically sensible signal chain,
-3. write the device's preset file you can load onto the hardware,
+3. write the device's preset file (`.rig` / `.mo` / `.tsl`) or, for the Quad
+   Cortex, a setup card plus a `.pb` reference archive — the `.pb` is not a
+   file the unit imports,
 4. produce a human-readable HTML page of the settings used,
 5. decode an existing preset so an agent can analyze or fix it.
 

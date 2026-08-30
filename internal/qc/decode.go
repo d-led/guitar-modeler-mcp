@@ -22,7 +22,9 @@ func DecodePreset(serial string, data []byte) (*BinaryPreset, error) {
 }
 
 // EncodePreset marshals a BinaryPreset and encrypts it for the given serial,
-// producing a file the device can load.
+// producing the device's own on-disk preset format (the .pb reference
+// archive). The unit does not import this file over USB — it is for saving
+// and reloading the tone in this tool.
 func EncodePreset(serial string, preset *BinaryPreset) ([]byte, error) {
 	plain, err := proto.Marshal(preset)
 	if err != nil {
