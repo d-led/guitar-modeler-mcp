@@ -146,7 +146,7 @@ func TestSetupCardHTML(t *testing.T) {
 	}
 }
 
-func TestSetupCardOmitsUnsetKnobs(t *testing.T) {
+func TestSetupCardFillsUnsetKnobsAtNoon(t *testing.T) {
 	d := Default()
 	spec := NewSpec()
 	spec.Name = "Bare"
@@ -160,9 +160,11 @@ func TestSetupCardOmitsUnsetKnobs(t *testing.T) {
 	if !strings.Contains(html, "Gain: 42") {
 		t.Fatal("setup card should show the amp gain value")
 	}
-	for _, absent := range []string{"Master:", "Bass:", "Treble:", "Speed:", "Time (ms):"} {
-		if strings.Contains(html, absent) {
-			t.Fatalf("setup card should omit unset knob %q", absent)
+	// The card is self-contained: every amp knob is present, the unset ones at
+	// noon.
+	for _, want := range []string{"Master (noon): 50", "Bass (noon): 50", "Treble (noon): 50"} {
+		if !strings.Contains(html, want) {
+			t.Fatalf("setup card missing unset knob %q", want)
 		}
 	}
 }

@@ -182,7 +182,7 @@ td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;verti
 
 	writeParams(&b, s)
 
-	b.WriteString("<p class=\"inspired\">Knob values are 0&ndash;100 unless noted (ms).</p>")
+	b.WriteString("<p class=\"inspired\">Knob values are 0&ndash;100 unless noted (ms). Knobs not listed keep the factory default (the written .tsl preserves them).</p>")
 
 	if mode != nil {
 		writeAirStepMode(&b, d, *mode)

@@ -58,3 +58,32 @@ func TestSetupCardHTMLShowsRealValues(t *testing.T) {
 		t.Error("setup card should show OUTPUT: 0 dB")
 	}
 }
+
+func TestSetupCardIsSelfContained(t *testing.T) {
+	cat := mustCatalog(t)
+	// No parameter overrides at all: the card must still be a complete
+	// instruction card, showing the chain and every knob's default value.
+	preset, err := BuildPreset(cat, DesignSpec{
+		Name:   "Defaults Only",
+		Blocks: []BlockSpec{{Model: "JCM800"}, {Model: "Tape Delay (M)"}},
+	})
+	if err != nil {
+		t.Fatalf("BuildPreset: %v", err)
+	}
+
+	card := SetupCardHTML(cat, preset)
+	// The signal chain is shown in order.
+	if !strings.Contains(card, "Input → Marshall JCM800 → Tape Delay (M) → Output") {
+		t.Error("setup card missing the signal chain line")
+	}
+	// Unset knobs fall back to their catalog defaults, so the amp's GAIN
+	// (default 5) is printed even though the preset never set it.
+	if !strings.Contains(card, "GAIN: 5") {
+		t.Error("setup card should show the default GAIN: 5 for an unset amp")
+	}
+	// The delay's knobs are present too (its default mix, e.g. MIX: 35 is not
+	// required — but the knob name must be there).
+	if !strings.Contains(card, "MIX:") || !strings.Contains(card, "FEEDBACK:") {
+		t.Error("setup card should list the delay's knobs with defaults")
+	}
+}

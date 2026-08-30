@@ -92,7 +92,7 @@ td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;verti
 	if d.Note != "" {
 		writeNote(&b, d.Note)
 	}
-	b.WriteString("<p class=\"inspired\">Knob values are 0&ndash;100 unless noted (ms).</p>")
+	b.WriteString("<p class=\"inspired\">Knob values are 0&ndash;100 unless noted (ms). Knobs marked (noon) are at 12 o'clock; set them to noon to reproduce the tone.</p>")
 	b.WriteString("</body></html>")
 	return b.String()
 }
