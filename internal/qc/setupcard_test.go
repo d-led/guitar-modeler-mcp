@@ -106,3 +106,33 @@ func TestFormatRealShowsEndpointLabels(t *testing.T) {
 		t.Errorf("formatReal(0) = %q, want 0 dB", got)
 	}
 }
+
+func TestPresetJSONView(t *testing.T) {
+	cat := mustCatalog(t)
+	preset, err := BuildPreset(cat, DesignSpec{
+		Name:   "JSON Tone",
+		Author: "tester",
+		Blocks: []BlockSpec{{Model: "JCM800", Params: map[string]float64{"GAIN": 5}}},
+	})
+	if err != nil {
+		t.Fatalf("BuildPreset: %v", err)
+	}
+	view, err := PresetJSON(cat, preset)
+	if err != nil {
+		t.Fatalf("PresetJSON: %v", err)
+	}
+	for _, want := range []string{
+		`"format": "guitar-modeler-mcp.qc-preset-v1"`,
+		`"name": "JSON Tone"`,
+		`"author": "tester"`,
+		`"rows"`,
+		`"Marshall JCM800"`,
+		`"params"`,
+		`"GAIN": "5"`,
+		"not a qcctl format",
+	} {
+		if !strings.Contains(view, want) {
+			t.Errorf("JSON view missing %q:\n%s", want, view)
+		}
+	}
+}
