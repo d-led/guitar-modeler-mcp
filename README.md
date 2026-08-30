@@ -58,6 +58,7 @@ finer details (CLI, tool list, architecture) for anyone who wants them.
 | Mooer GE150 | GE150 | — | card only (no `.mo` for this model) |
 | BOSS Waza Air | — | `.tsl` (read & write) | printable setup card |
 | Yamaha THR | THR-II, THR10, THR10C, THR10X | — | card only |
+| Neural DSP Quad Cortex | — | — (see [Quad Cortex](quad-cortex.md)) | setup card + `.pb` reference archive |
 
 ### Accessories
 
@@ -73,75 +74,19 @@ identification purposes only; use of these names, trademarks and brands does not
 imply endorsement. This project is not affiliated with, endorsed by, or
 sponsored by HeadRush or any of the referenced brands.
 
-## Roadmap
+## Features
 
-- **Gigboard** — implemented.
-- **Mooer GE150 Pro Li / GE200 / GE150 / GE100 Pro** — implemented. `.mo` files
-  are written only for the file-capable models (GE150 Pro Li, GE200, GE100 Pro);
-  the classic **GE150 is card-only**. `mooer_design` dials in every module's
-  raw knob values (`amp_params`, `cab_params`, and per-effect `params`), so
-  presets carry real gain/EQ/delay/reverb settings rather than neutral noon.
-  The cross-device `map_preset` tool maps Gigboard rigs to and from Mooer
-  presets; mapped parameter values stay neutral (128 = noon) because the two
-  devices scale knobs differently.
-- **BOSS Waza Air** — implemented (`.tsl` backups and setup cards). The
-  `.tsl` reader/writer follows the real backup format — a named set of patches
-  each stored as a 2335-byte Katana-layout record under
-  `data[0][].paramSet["User%Patch"]` — with the offsets and encodings taken
-  from the `waza-tsl` reverse-engineering reference: amp gain scaling, booster
-  on/off plus bottom/solo/direct mix, the second delay block, per-effect knobs
-  for every MOD/FX effect (`mod_params`/`fx_params`), reverb time and
-  pre-delay, the noise suppressor, and the gyro/ambience/mode spatial settings.
-  The **XSONIC AIRSTEP BW** foot controller's four footswitch modes
-  (channel memories CH 1–6 + effect toggles) are modelled and printable on the
-  setup card.
-- **Quad Cortex** — full model catalog (`qc_catalog_list_*`), translation
-  (`qc_translate_*`), per-model parameter listing (`qc_list_model_params`),
-  and a preset workflow with three clear roles. The catalog is parsed from the
-  device's own `ModelRepo.xml`, so every model carries its wire id and every
-  knob its real scale (min/max/skew). `qc_design` builds a serial chain
-  (amp → cab → effects) and writes a **self-contained HTML setup card** (the
-  dial-in instructions) plus a `.pb` **reference archive** for saving and
-  reloading the tone (`qc_decode_preset`, `qc_render_setup_card`) — the `.pb`
-  is *not* a file the unit imports. To put the tone on the unit, dial it in
-  from the card or place it in a slot with Cortex Control; `qc_usb` shells out
-  to the user's `qcctl` (pyquadcortex) to recall a slot, dump a slot's preset,
-  switch scenes and read the firmware version over USB-HID — it does **not**
-  upload the `.pb`. There is no private key: the `.pb`
-  archive uses the device's public `KEY_MATERIAL` + serial (AES-128-CTR), and
-  `qc_usb` speaks the unit's own USB-HID protocol. The parameter scale law and
-  firmware constants are attributed to
-  [pyquadcortex](https://github.com/stokes-audio/pyquadcortex) (MIT); the
-  catalog and preset schema come from
-  [OpenCortex](https://github.com/VanIseghemThomas/OpenCortex) — see
-  `internal/qc/NOTICE.md`.
+Designs and writes presets for the HeadRush Gigboard (`.rig` read/write,
+parallel routing, footswitch scenes, setlists), Mooer GE150 Pro Li / GE200 /
+GE100 Pro (`.mo` write plus a setup card; the classic GE150 is card-only),
+BOSS Waza Air (`.tsl` read/write, setup card, XSONIC AIRSTEP BW footswitch
+modes), Yamaha THR (setup cards) and Neural DSP Quad Cortex (catalog,
+translation, per-model parameters, a setup card plus a `.pb` reference archive,
+and `qcctl` live USB). See [Quad Cortex](quad-cortex.md) for exactly what the
+Quad Cortex workflow can and cannot do; planned work lives in
+[roadmap.md](roadmap.md).
 
-### Quad Cortex live USB (`qc_usb` → `qcctl`)
-
-`qc_usb` shells out to the user's `qcctl` CLI (from
-[pyquadcortex](https://github.com/stokes-audio/pyquadcortex)). `qcctl` has
-exactly four subcommands — `version`, `recall --setlist --slot`,
-`scene --index` and `dump-preset --setlist --slot` — and none of them takes a
-file: it reads the firmware version, recalls a preset that is **already in a
-slot on the unit**, switches scenes, and prints (dumps) the preset in a slot.
-It does **not** upload the `.pb`. To get a tone onto the unit, dial it in from
-the HTML card, or place a preset in a slot with Cortex Control and let `qcctl`
-recall it. The whole wire format is the device's native **protobuf**, not JSON:
-`qcctl dump-preset` prints a `BinaryPreset` protobuf, there is no JSON import or
-export anywhere in pyquadcortex, and its `write_preset` is a documented trap —
-a full preset written back wholesale is silently ignored, so only keyed edits
-like `set_param`/`set_bypass`/`set_chain_input` actually persist.
-
-Install `qcctl` once:
-
-```sh
-pip install pyquadcortex        # macOS also: brew install hidapi
-```
-
-> **Crucial prerequisite:** before running any `qcctl` command, **quit the
-> official Cortex Control desktop application**. It holds an exclusive lock on
-> the hardware's USB interface and will block `qcctl` while it runs.
-> (Wi-Fi on the device can stay active.)
+## Workflow
 
 Give it a song and a tone description, and it will:
 
@@ -254,6 +199,9 @@ guitar-modeler-mcp mcp install --print              # show the config only
 guitar-modeler-mcp mcp uninstall --target vscode
 ```
 
+The complete `--help` output for every command is in [cli.md](cli.md),
+regenerated with `bash scripts/gen-cli-help.sh`.
+
 ## MCP server
 
 Run over stdio:
@@ -315,7 +263,7 @@ guitar-modeler-mcp serve
 | `qc_design` | Build a serial Quad Cortex preset and write a self-contained HTML setup card + a `.pb` reference archive |
 | `qc_decode_preset` | Decrypt and decode a `.pb` reference archive into a readable summary |
 | `qc_render_setup_card` | Re-render the HTML setup card from a `.pb` reference archive |
-| `qc_usb` | Transfer presets / recall slots / read state on the unit by shelling out to `qcctl` (pyquadcortex), after the user confirms |
+| `qc_usb` | Live USB control by shelling out to `qcctl` (pyquadcortex): read the firmware version, recall a slot already on the unit, switch scenes, dump a slot's preset — after the user confirms |
 
 Example agent workflow: list amps → translate the song's amp → `design_rig` with
 effects → read the report → tweak by re-running `design_rig` with parameter
@@ -372,10 +320,12 @@ guitar-modeler-mcp design --name "Always" --amp "67 Black Duo" \
 The scene writes each slot's state directly into the `.rig` (0 = no change,
 1 = on, 2 = off), matching what the device's own scene editor produces.
 
-### Songs with multiple sounds
+### Songs with multiple sounds (Gigboard)
 
-One song with incompatible chains (e.g. clean, drive, solo) is best handled as
-**several rigs bound into a setlist** — design each rig, then bind them:
+Setlists are a **Gigboard-only** feature — the other devices have no setlist
+file format. On the Gigboard, one song with incompatible chains (e.g. clean,
+drive, solo) is best handled as **several rigs bound into a setlist** — design
+each rig, then bind them:
 
 ```sh
 guitar-modeler-mcp design --name "Song Clean" --amp "65 Black SR" --out <card>/Rigs
@@ -383,9 +333,10 @@ guitar-modeler-mcp design --name "Song Drive" --amp "68 Plexiglas 50W" --out <ca
 guitar-modeler-mcp setlist --name "Song" --out <card>/Setlists <card>/Rigs/*.rig
 ```
 
-Copy `Rigs/` and `Setlists/` onto the Gigboard and the whole song travels as one
-bank. Scenes (one rig, blocks toggled) suit variations of the *same* chain;
-setlists suit chains that must be rebuilt.
+Copy `Rigs/` and `Setlists/` onto the Gigboard's SD card and the whole song
+travels as one bank. Scenes (one rig, blocks toggled) suit variations of the
+*same* chain; setlists suit chains that must be rebuilt. On the other devices,
+keep the song's sounds as separate presets.
 
 The builder **validates every parameter** against the device's specifications
 (extracted from `headrush-desktop/renderer/config/modules/*.ts` plus the
