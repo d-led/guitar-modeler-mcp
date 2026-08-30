@@ -34,9 +34,9 @@ func TestSetupCardHTMLRendersChain(t *testing.T) {
 			t.Errorf("setup card missing %q", want)
 		}
 	}
-	// The honest limitation is always printed.
-	if !strings.Contains(card, "not yet confirmed on hardware") {
-		t.Error("setup card missing the hardware-verification caveat")
+	// The honest framing is always printed.
+	if !strings.Contains(card, "not a file the Quad Cortex imports") {
+		t.Error("setup card missing the .pb-is-a-reference-archive note")
 	}
 }
 
@@ -72,9 +72,11 @@ func TestSetupCardIsSelfContained(t *testing.T) {
 	}
 
 	card := SetupCardHTML(cat, preset)
-	// The signal chain is shown in order.
-	if !strings.Contains(card, "Input → Marshall JCM800 → Tape Delay (M) → Output") {
-		t.Error("setup card missing the signal chain line")
+	// The signal chain is shown as a slot-numbered hint.
+	for _, want := range []string{"slotno\">1", "Marshall JCM800", "slotno\">2", "Tape Delay (M)", "class=\"chain\""} {
+		if !strings.Contains(card, want) {
+			t.Errorf("setup card missing chain element %q", want)
+		}
 	}
 	// Unset knobs fall back to their catalog defaults, so the amp's GAIN
 	// (default 5) is printed even though the preset never set it.

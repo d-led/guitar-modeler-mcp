@@ -10,8 +10,8 @@ func TestDefaultDeviceShape(t *testing.T) {
 	if d.Name != "quad-cortex" || d.Display != "Neural DSP Quad Cortex" {
 		t.Fatalf("identity = %q/%q", d.Name, d.Display)
 	}
-	if !d.FileExchange || d.FileExt != ".pb" {
-		t.Fatalf("file exchange = %v/%q, want true/\".pb\"", d.FileExchange, d.FileExt)
+	if d.FileExchange || d.FileExt != "" {
+		t.Fatalf("file exchange = %v/%q, want false (the .pb is a reference archive, not a device import)", d.FileExchange, d.FileExt)
 	}
 	if len(d.Amps) < 50 {
 		t.Fatalf("guitar amps = %d, want a comprehensive list", len(d.Amps))

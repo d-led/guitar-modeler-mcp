@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"html"
 	"strings"
+
+	"github.com/d-led/guitar-modeler-mcp/internal/cardchain"
 )
 
 // Spec is a tone to dial in on a THR: the amp-selector position, the cabinet,
@@ -56,8 +58,11 @@ td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;verti
 .module{font-weight:600;white-space:nowrap}
 .effect{font-weight:600}.off{color:#999}.inspired{color:#666;font-size:.85em}
 .params{color:#444;font-size:.85em;font-variant-numeric:tabular-nums}
+` + cardchain.CSS + `
 </style></head><body>`)
 	fmt.Fprintf(&b, "<h1>%s</h1><h2>%s — setup card</h2>", html.EscapeString(s.Name), html.EscapeString(d.Display))
+
+	b.WriteString(chainHint(d.Chain, s))
 
 	for _, module := range d.Chain {
 		switch module {
@@ -102,6 +107,35 @@ func onOff(on bool) string {
 		return "ON"
 	}
 	return "OFF"
+}
+
+// chainHint renders the fixed signal chain with each slot's selection.
+func chainHint(chain []string, s Spec) string {
+	steps := make([]cardchain.Step, 0, len(chain))
+	for i, module := range chain {
+		steps = append(steps, cardchain.Step{Slot: i + 1, Module: module, Effect: thrEffect(module, s)})
+	}
+	return cardchain.Render(steps)
+}
+
+func thrEffect(module string, s Spec) string {
+	switch module {
+	case "COMPRESSOR":
+		return onOff(s.Compressor)
+	case "NOISE GATE":
+		return onOff(s.NoiseGate)
+	case "AMP":
+		return s.Amp
+	case "CAB":
+		return s.Cab
+	case "MOD":
+		return s.Mod
+	case "ECHO":
+		return s.Echo
+	case "REVERB":
+		return s.Reverb
+	}
+	return ""
 }
 
 // writeModuleCard writes one module as a small table: the module label, its

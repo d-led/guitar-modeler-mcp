@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"html"
 	"strings"
+
+	"github.com/d-led/guitar-modeler-mcp/internal/cardchain"
 )
 
 // ParamDesc is one editable parameter of a module, with its raw device value.
@@ -85,6 +87,16 @@ func reverbParams(r Reverb) []ParamDesc {
 	return []ParamDesc{{"Pre-Delay", r.PreDelay}, {"Level", r.Level}, {"Decay", r.Decay}, {"Tone", r.Tone}}
 }
 
+// chainHint renders the fixed nine-slot chain with each slot's selected model,
+// so the models are attributable to their slot positions at a glance.
+func chainHint(desc []ModuleDesc) string {
+	steps := make([]cardchain.Step, 0, len(desc))
+	for i, d := range desc {
+		steps = append(steps, cardchain.Step{Slot: i + 1, Module: d.Module, Effect: d.Effect})
+	}
+	return cardchain.Render(steps)
+}
+
 // SetupCardHTML renders a printable setup card for a preset on a device. It is
 // the human-readable output for devices without preset file transfer, and the
 // companion report for devices that can also write a .mo file.
@@ -100,8 +112,11 @@ td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;verti
 .module{font-weight:600;white-space:nowrap}
 .effect{font-weight:600}.off{color:#999}.inspired{color:#666;font-size:.85em}
 .params{color:#444;font-size:.85em}
+` + cardchain.CSS + `
 </style></head><body>`)
 	fmt.Fprintf(&b, "<h1>%s</h1><h2>%s — setup card</h2>", html.EscapeString(p.Name), html.EscapeString(m.Display))
+
+	b.WriteString(chainHint(Describe(p, m)))
 
 	for _, d := range Describe(p, m) {
 		state := "ON"

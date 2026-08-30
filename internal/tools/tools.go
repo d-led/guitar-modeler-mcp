@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/d-led/guitar-modeler-mcp/internal/assets"
 	"github.com/d-led/guitar-modeler-mcp/internal/catalog"
@@ -20,6 +21,7 @@ import (
 	"github.com/d-led/guitar-modeler-mcp/internal/params"
 	"github.com/d-led/guitar-modeler-mcp/internal/presetmap"
 	"github.com/d-led/guitar-modeler-mcp/internal/qc"
+	"github.com/d-led/guitar-modeler-mcp/internal/qcctl"
 	"github.com/d-led/guitar-modeler-mcp/internal/rig"
 	"github.com/d-led/guitar-modeler-mcp/internal/setlist"
 	"github.com/d-led/guitar-modeler-mcp/internal/thr"
@@ -568,7 +570,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 
 	s.Register(mcp.Tool{
 		Name:        "qc_decode_preset",
-		Description: "Decrypt and decode a Quad Cortex .pb preset file into a readable summary: the grid rows, each block's model name and each parameter's name with its real (screen) value. The serial is the unit's 9-character serial (empty for cloud files). Note: the crypto and schema are verified, but loading a file onto a unit by copy is not yet confirmed on hardware.",
+		Description: "Decrypt and decode a Quad Cortex .pb reference archive into a readable summary: the grid rows, each block's model name and each parameter's name with its real (screen) value. The serial is the unit's 9-character serial (empty for cloud files). The .pb is this tool's own storage format, not a file the unit imports.",
 		InputSchema: objectSchema(map[string]any{
 			"path":   stringSchema("Path to the encrypted .pb preset file."),
 			"serial": stringSchema("The unit's 9-character serial number, or empty for cloud files."),
@@ -580,7 +582,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 
 	s.Register(mcp.Tool{
 		Name:        "qc_design",
-		Description: "Build a serial Quad Cortex preset — amp, then cab, then the effects in the order given — and write an encrypted .pb file plus a printable HTML setup card. Parameter values are on the screen's own line (GAIN 5 on a 0..10 knob, a dB or % value); list parameters take the option index. The serial is the unit's 9-character serial (empty for cloud). Caveat: the .pb is a valid encrypted BinaryPreset and round-trips through qc_decode_preset, but loading it onto a unit by file copy is not yet confirmed on hardware, and only a single-lane serial chain is modelled.",
+		Description: "Build a serial Quad Cortex preset — amp, then cab, then the effects in the order given — and write a self-contained HTML setup card plus a .pb reference archive. The HTML card is the dial-in instructions; the .pb is for saving and reloading the tone in this tool, NOT a file the unit imports. To transfer the preset onto the unit, use qc_usb (qcctl). Parameter values are on the screen's own line (GAIN 5 on a 0..10 knob, a dB or % value); list parameters take the option index. The serial is the unit's 9-character serial (empty for cloud).",
 		InputSchema: objectSchema(map[string]any{
 			"name":               stringSchema("Preset name (becomes the file name)."),
 			"serial":             stringSchema("The unit's 9-character serial number, or empty for cloud files."),
@@ -593,7 +595,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 			"fx":                 arraySchema("Effects after the cab, in signal order.", qcFXItemSchema()),
 			"author":             stringSchema("Optional author name."),
 			"volume":             numberSchema("Optional preset output level (default 1.0 = unity)."),
-			"output_dir":         stringSchema("Directory to write the .pb into (default: current directory)."),
+			"output_dir":         stringSchema("Directory to write the .pb and card into (default: current directory)."),
 		}),
 		Handler: func(_ context.Context, args map[string]any) (string, error) {
 			return r.qcDesign(args)
@@ -602,7 +604,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 
 	s.Register(mcp.Tool{
 		Name:        "qc_render_setup_card",
-		Description: "Decode an existing Quad Cortex .pb preset and write a printable HTML setup card next to it. The serial is the unit's 9-character serial (empty for cloud files).",
+		Description: "Decode a Quad Cortex .pb reference archive and write a printable HTML setup card next to it. The serial is the unit's 9-character serial (empty for cloud files).",
 		InputSchema: objectSchema(map[string]any{
 			"path":       stringSchema("Path to the encrypted .pb preset file."),
 			"serial":     stringSchema("The unit's 9-character serial number, or empty for cloud files."),
@@ -610,6 +612,21 @@ func (r *Registrar) Register(s *mcp.Server) {
 		}),
 		Handler: func(_ context.Context, args map[string]any) (string, error) {
 			return r.qcRenderSetupCard(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "qc_usb",
+		Description: "Control a connected Quad Cortex over USB by shelling out to the user's qcctl (pyquadcortex). This is the way to actually load/recall presets and read state on the unit — the .pb is only a reference archive. Ask the user first: it needs a USB-connected Quad Cortex, qcctl installed (pip install pyquadcortex; macOS also `brew install hidapi`), Cortex Control quit, and it can change the device — only set confirm:true after they agree.",
+		InputSchema: objectSchema(map[string]any{
+			"command": stringSchema("qcctl command: version, recall, scene or dump-preset."),
+			"slot":    stringSchema("Slot name for recall/dump-preset, e.g. 28C."),
+			"scene":   numberSchema("Scene number for scene (e.g. 3)."),
+			"setlist": stringSchema("Optional setlist path for recall/dump-preset."),
+			"confirm": boolSchema("Set true only after the user has confirmed live USB control."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.qcUSB(args)
 		},
 	})
 }
@@ -1932,6 +1949,34 @@ func (r *Registrar) qcRenderSetupCard(args map[string]any) (string, error) {
 		return "", fmt.Errorf("write setup card: %w", err)
 	}
 	return marshal(map[string]any{"card": cardPath, "name": preset.Name, "caveat": qc.Caveat})
+}
+
+// qcUSB shells out to qcctl for live Quad Cortex control. It refuses to run
+// until the user has confirmed, because it talks to a physical unit.
+func (r *Registrar) qcUSB(args map[string]any) (string, error) {
+	if !argBool(args, "confirm", false) {
+		return "", fmt.Errorf("live USB control can change the device: ask the user first (USB-connected Quad Cortex, qcctl installed, Cortex Control quit), then call again with confirm: true")
+	}
+	cmd := qcctl.Command{
+		Sub:     argString(args, "command"),
+		Slot:    argString(args, "slot"),
+		Scene:   argInt(args, "scene", -1),
+		Setlist: argString(args, "setlist"),
+	}
+	argv, err := cmd.Argv()
+	if err != nil {
+		return "", err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	out, err := qcctl.Run(ctx, cmd)
+	if err != nil {
+		return "", err
+	}
+	return marshal(map[string]any{
+		"command": strings.Join(argv, " "),
+		"output":  out,
+	})
 }
 
 // qcDesign builds a serial preset (amp, then cab, then the effects in the

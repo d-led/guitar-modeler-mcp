@@ -52,8 +52,8 @@ func Default() Device {
 	d := Device{
 		Name:         "quad-cortex",
 		Display:      "Neural DSP Quad Cortex",
-		FileExchange: true,
-		FileExt:      ".pb",
+		FileExchange: false, // no device-importable file: .pb is our own reference archive
+		FileExt:      "",
 		Topology:     "free 4-lane grid; each lane is a serial chain that can split and merge",
 		Catalog:      cat,
 		Effects:      map[string][]Item{},

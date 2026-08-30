@@ -6,14 +6,20 @@ import (
 	"math"
 	"strconv"
 	"strings"
+
+	"github.com/d-led/guitar-modeler-mcp/internal/cardchain"
 )
 
-// Caveat is the honest limitation of the file route, surfaced to agents in
-// the tool description and printed on every setup card.
-const Caveat = "The .pb is a valid encrypted BinaryPreset and round-trips " +
-	"through qc_decode_preset, but loading it onto a unit by copying the file " +
-	"is not yet confirmed on hardware. qc_design builds a single-lane serial " +
-	"chain; split/parallel routing is not modelled yet."
+// Caveat is the honest framing of the Quad Cortex outputs, surfaced to agents
+// in the tool descriptions and printed on every setup card: the HTML card is
+// the instructions to dial the tone in by hand, the .pb is a reference
+// archive for this tool (not a file the unit imports), and live transfer goes
+// over USB via qcctl.
+const Caveat = "The HTML card is the setup instructions; reproduce the tone " +
+	"from it. The .pb is this tool's reference archive for saving and " +
+	"reloading the tone — it is not a file the Quad Cortex imports. To " +
+	"transfer the preset live, use qc_usb (qcctl). qc_design builds a " +
+	"single-lane serial chain; split/parallel routing is not modelled yet."
 
 // SetupCardHTML renders a self-contained, printable setup card for a decoded
 // preset: the signal chain (in order), each block's name and the hardware it
@@ -32,7 +38,7 @@ table{width:100%;border-collapse:collapse;margin-bottom:.5rem}
 td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;vertical-align:top}
 .block{font-weight:600}.inspired{color:#666;font-size:.85em}
 .params{color:#444;font-size:.85em;font-variant-numeric:tabular-nums}
-.chain{color:#333;font-size:.9em;margin:0 0 1rem}
+` + cardchain.CSS + `
 .note{color:#8a5a00;background:#fff7e6;border:1px solid #f0d9a8;padding:.6rem .8rem;border-radius:6px;font-size:.85em}
 </style></head><body>`)
 	fmt.Fprintf(&b, "<h1>%s</h1><h2>Neural DSP Quad Cortex — setup card</h2>", html.EscapeString(preset.Name))
@@ -42,14 +48,10 @@ td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;verti
 	}
 	fmt.Fprintf(&b, "<p class=\"inspired\">volume %.3g · pan %.3g</p>", preset.Volume, preset.Pan)
 
-	chain := chainNames(cat, preset)
-	if chain != "" {
-		fmt.Fprintf(&b, "<p class=\"chain\">%s</p>", html.EscapeString(chain))
-	}
-
 	for _, c := range preset.Chains {
 		row := c.GetRow() + 1 // screen rows are 1..4
 		fmt.Fprintf(&b, "<h3>Row %d</h3>", row)
+		b.WriteString(rowChain(cat, c))
 		for _, model := range c.Models {
 			writeBlock(&b, cat, model)
 		}
@@ -60,20 +62,14 @@ td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;verti
 	return b.String()
 }
 
-// chainNames renders the preset's signal path as one line: "Input → A → B →
-// Output". Rows after the first are appended as separate chains.
-func chainNames(cat *Catalog, preset *BinaryPreset) string {
-	var chains []string
-	for _, c := range preset.Chains {
-		names := make([]string, 0, len(c.Models)+2)
-		names = append(names, "Input")
-		for _, model := range c.Models {
-			names = append(names, modelName(cat, model))
-		}
-		names = append(names, "Output")
-		chains = append(chains, strings.Join(names, " → "))
+// rowChain renders one grid row as a slot-numbered chain: each model sits in
+// its column position so it is attributable to a slot at a glance.
+func rowChain(cat *Catalog, c *Chain) string {
+	steps := make([]cardchain.Step, 0, len(c.Models))
+	for i, model := range c.Models {
+		steps = append(steps, cardchain.Step{Slot: i + 1, Effect: modelName(cat, model)})
 	}
-	return strings.Join(chains, "  ·  ")
+	return cardchain.Render(steps)
 }
 
 func modelName(cat *Catalog, model *Model) string {

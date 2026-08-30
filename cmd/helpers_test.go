@@ -97,7 +97,7 @@ func TestSupportedDevices(t *testing.T) {
 	if g := byName["thr"]; g.FileExchange || g.Description != "Yamaha THR-II" {
 		t.Fatalf("thr entry = %+v, want card-only", g)
 	}
-	if g := byName["quad-cortex"]; !g.FileExchange || g.FileExt != ".pb" || g.Description != "Neural DSP Quad Cortex" {
-		t.Fatalf("quad-cortex entry = %+v, want .pb file exchange", g)
+	if g := byName["quad-cortex"]; g.FileExchange || g.FileExt != "" || g.Description != "Neural DSP Quad Cortex" {
+		t.Fatalf("quad-cortex entry = %+v, want no device file exchange (card + USB only)", g)
 	}
 }

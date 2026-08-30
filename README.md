@@ -58,15 +58,19 @@ sponsored by HeadRush or any of the referenced brands.
   (channel memories CH 1–6 + effect toggles) are modelled and printable on the
   setup card.
 - **Quad Cortex** — full model catalog (`qc_catalog_list_*`), translation
-  (`qc_translate_*`), per-model parameter listing (`qc_list_model_params`) and
-  **preset file exchange** (`qc_design`, `qc_decode_preset`). The catalog is
-  parsed from the device's own `ModelRepo.xml`, so every model carries its wire
-  id and every knob its real scale (min/max/skew) — `qc_design` places a
-  serial chain (amp → cab → effects) and writes a loadable `.pb` file, and
-  `qc_decode_preset` reads one back with model and parameter names resolved.
-  The file format is a `BinaryPreset` protobuf encrypted with the device's own
-  symmetric scheme (public `KEY_MATERIAL` + serial, AES-128-CTR — no private
-  key). The parameter scale law and firmware constants are attributed to
+  (`qc_translate_*`), per-model parameter listing (`qc_list_model_params`),
+  and a preset workflow with three clear roles. The catalog is parsed from the
+  device's own `ModelRepo.xml`, so every model carries its wire id and every
+  knob its real scale (min/max/skew). `qc_design` builds a serial chain
+  (amp → cab → effects) and writes a **self-contained HTML setup card** (the
+  dial-in instructions) plus a `.pb` **reference archive** for saving and
+  reloading the tone (`qc_decode_preset`, `qc_render_setup_card`) — the `.pb`
+  is *not* a file the unit imports. To actually put the tone on the unit,
+  `qc_usb` shells out to the user's `qcctl` (pyquadcortex) for live USB
+  transfer, after the user confirms. There is no private key: the `.pb`
+  archive uses the device's public `KEY_MATERIAL` + serial (AES-128-CTR), and
+  `qc_usb` speaks the unit's own USB-HID protocol. The parameter scale law and
+  firmware constants are attributed to
   [pyquadcortex](https://github.com/stokes-audio/pyquadcortex) (MIT); the
   catalog and preset schema come from
   [OpenCortex](https://github.com/VanIseghemThomas/OpenCortex) — see
@@ -251,9 +255,10 @@ guitar-modeler-mcp serve
 | `qc_catalog_list_amps` / `_cabs` / `_fx` | List the Quad Cortex amps, cabs and effects (with wire ids and the real hardware each is based on) |
 | `qc_translate_amp` / `qc_translate_cab` | Real hardware → the exact Quad Cortex model |
 | `qc_list_model_params` | Describe one Quad Cortex model's parameters (min/max/default/steps, so values are set on the screen's own line) |
-| `qc_design` | Build a serial Quad Cortex preset and write an encrypted `.pb` + a printable HTML setup card |
-| `qc_decode_preset` | Decrypt and decode a `.pb` preset into a readable summary |
-| `qc_render_setup_card` | Decode a `.pb` preset and write a printable HTML setup card |
+| `qc_design` | Build a serial Quad Cortex preset and write a self-contained HTML setup card + a `.pb` reference archive |
+| `qc_decode_preset` | Decrypt and decode a `.pb` reference archive into a readable summary |
+| `qc_render_setup_card` | Re-render the HTML setup card from a `.pb` reference archive |
+| `qc_usb` | Transfer presets / recall slots / read state on the unit by shelling out to `qcctl` (pyquadcortex), after the user confirms |
 
 Example agent workflow: list amps → translate the song's amp → `design_rig` with
 effects → read the report → tweak by re-running `design_rig` with parameter

@@ -100,7 +100,7 @@ func TestIntegrationInitializeAndToolList(t *testing.T) {
 		"thr_catalog_list_amps", "thr_catalog_list_fx", "thr_setup_card",
 		"qc_catalog_list_amps", "qc_catalog_list_cabs", "qc_catalog_list_fx",
 		"qc_translate_amp", "qc_translate_cab", "qc_list_model_params",
-		"qc_decode_preset", "qc_design", "qc_render_setup_card",
+		"qc_decode_preset", "qc_design", "qc_render_setup_card", "qc_usb",
 	} {
 		if !names[want] {
 			t.Errorf("missing tool %q in tools/list", want)
@@ -769,7 +769,7 @@ func TestIntegrationQuadCortexDesignAndDecode(t *testing.T) {
 	if b, err := os.ReadFile(card); err != nil || !strings.Contains(string(b), "QC Integration Tone") {
 		t.Fatalf("qc_design setup card missing or empty: %v", err)
 	}
-	if caveat, _ := designed["caveat"].(string); !strings.Contains(caveat, "not yet confirmed on hardware") {
+	if caveat, _ := designed["caveat"].(string); !strings.Contains(caveat, "not a file the Quad Cortex imports") {
 		t.Fatalf("qc_design caveat missing the hardware note: %v", caveat)
 	}
 
@@ -800,6 +800,36 @@ func TestIntegrationQuadCortexDesignAndDecode(t *testing.T) {
 	result := resp["result"].(map[string]any)
 	if isErr, _ := result["isError"].(bool); !isErr {
 		t.Fatalf("expected isError for wrong serial, got: %v", resp)
+	}
+}
+
+func TestIntegrationQCUSBRequiresConfirmation(t *testing.T) {
+	s := newIntegrationServer(t)
+
+	// Without confirm the tool must refuse, before even looking for qcctl.
+	resp := rpc(t, s, 1, "tools/call", map[string]any{
+		"name":      "qc_usb",
+		"arguments": map[string]any{"command": "version"},
+	})
+	result := resp["result"].(map[string]any)
+	if isErr, _ := result["isError"].(bool); !isErr {
+		t.Fatalf("expected isError without confirm, got: %v", resp)
+	}
+	if text, _ := result["content"].([]any); len(text) > 0 {
+		block := text[0].(map[string]any)
+		if !strings.Contains(block["text"].(string), "confirm") {
+			t.Fatalf("qc_usb refusal should mention confirm: %v", block["text"])
+		}
+	}
+
+	// An unknown command is refused even with confirm.
+	resp = rpc(t, s, 2, "tools/call", map[string]any{
+		"name":      "qc_usb",
+		"arguments": map[string]any{"command": "wipe", "confirm": true},
+	})
+	result = resp["result"].(map[string]any)
+	if isErr, _ := result["isError"].(bool); !isErr {
+		t.Fatalf("expected isError for unknown command, got: %v", resp)
 	}
 }
 

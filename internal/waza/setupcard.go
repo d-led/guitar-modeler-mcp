@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"html"
 	"strings"
+
+	"github.com/d-led/guitar-modeler-mcp/internal/cardchain"
 )
 
 // Spec is a tone to dial in on the Waza Air: the selected amp, effects and
@@ -131,6 +133,33 @@ func (d Device) inspired(name string, items []Item) string {
 	return ""
 }
 
+// chainHint renders the fixed signal chain with each slot's selected effect.
+func chainHint(chain []string, s Spec) string {
+	steps := make([]cardchain.Step, 0, len(chain))
+	for i, module := range chain {
+		steps = append(steps, cardchain.Step{Slot: i + 1, Module: module, Effect: effectFor(module, s)})
+	}
+	return cardchain.Render(steps)
+}
+
+func effectFor(module string, s Spec) string {
+	switch module {
+	case "BOOSTER":
+		return s.Booster
+	case "AMP":
+		return s.Amp
+	case "MOD":
+		return s.Mod
+	case "FX":
+		return s.FX
+	case "DELAY":
+		return s.Delay
+	case "REVERB":
+		return s.Reverb
+	}
+	return ""
+}
+
 // SetupCardHTML renders a printable setup card for a resolved Spec.
 func (d Device) SetupCardHTML(s Spec) string {
 	return d.setupCardHTML(s, nil)
@@ -153,8 +182,11 @@ table{width:100%;border-collapse:collapse;margin-bottom:1rem}
 td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;vertical-align:top}
 .module{font-weight:600;white-space:nowrap}
 .effect{font-weight:600}.inspired{color:#666;font-size:.85em}
+` + cardchain.CSS + `
 </style></head><body>`)
 	fmt.Fprintf(&b, "<h1>%s</h1><h2>%s — setup card</h2>", html.EscapeString(s.Name), html.EscapeString(d.Display))
+
+	b.WriteString(chainHint(d.Chain, s))
 
 	for _, module := range d.Chain {
 		var effect, inspired string
