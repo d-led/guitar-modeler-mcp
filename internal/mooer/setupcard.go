@@ -24,20 +24,38 @@ type ModuleDesc struct {
 	Params     []ParamDesc
 }
 
-// Describe flattens a preset into a display-ready list of module descriptions,
-// resolving effect_type indices to names via the model's catalog.
+// Describe flattens a preset into a display-ready list of module descriptions
+// in the model's chain order (ModuleOrder), resolving effect_type indices to
+// names via the model's catalog.
 func Describe(p Preset, m Model) []ModuleDesc {
-	return []ModuleDesc{
-		describeModule("FX", "fx", p.FX.Enabled, p.FX.Type, m, fxParams(p.FX)),
-		describeModule("DS/OD", "od", p.Drive.Enabled, p.Drive.Type, m, driveParams(p.Drive)),
-		describeModule("AMP", "amp", p.Amp.Enabled, p.Amp.Type, m, ampParams(p.Amp)),
-		describeModule("CAB", "cab", p.Cab.Enabled, p.Cab.Type, m, cabParams(p.Cab)),
-		describeModule("NS", "ns", p.NoiseGate.Enabled, p.NoiseGate.Type, m, nsParams(p.NoiseGate)),
-		describeModule("EQ", "eq", p.EQ.Enabled, p.EQ.Type, m, eqParams(p.EQ)),
-		describeModule("MOD", "mod", p.Mod.Enabled, p.Mod.Type, m, modParams(p.Mod)),
-		describeModule("DELAY", "delay", p.Delay.Enabled, p.Delay.Type, m, delayParams(p.Delay)),
-		describeModule("REVERB", "reverb", p.Reverb.Enabled, p.Reverb.Type, m, reverbParams(p.Reverb)),
+	order := m.ModuleOrder
+	if len(order) == 0 {
+		order = ModuleOrder
 	}
+	desc := make([]ModuleDesc, 0, len(order))
+	for _, module := range order {
+		switch module {
+		case "fx":
+			desc = append(desc, describeModule("FX", module, p.FX.Enabled, p.FX.Type, m, fxParams(p.FX)))
+		case "od":
+			desc = append(desc, describeModule("DS/OD", module, p.Drive.Enabled, p.Drive.Type, m, driveParams(p.Drive)))
+		case "amp":
+			desc = append(desc, describeModule("AMP", module, p.Amp.Enabled, p.Amp.Type, m, ampParams(p.Amp)))
+		case "cab":
+			desc = append(desc, describeModule("CAB", module, p.Cab.Enabled, p.Cab.Type, m, cabParams(p.Cab)))
+		case "ns":
+			desc = append(desc, describeModule("NS", module, p.NoiseGate.Enabled, p.NoiseGate.Type, m, nsParams(p.NoiseGate)))
+		case "eq":
+			desc = append(desc, describeModule("EQ", module, p.EQ.Enabled, p.EQ.Type, m, eqParams(p.EQ)))
+		case "mod":
+			desc = append(desc, describeModule("MOD", module, p.Mod.Enabled, p.Mod.Type, m, modParams(p.Mod)))
+		case "delay":
+			desc = append(desc, describeModule("DELAY", module, p.Delay.Enabled, p.Delay.Type, m, delayParams(p.Delay)))
+		case "reverb":
+			desc = append(desc, describeModule("REVERB", module, p.Reverb.Enabled, p.Reverb.Type, m, reverbParams(p.Reverb)))
+		}
+	}
+	return desc
 }
 
 func describeModule(label, module string, enabled bool, index uint8, m Model, params []ParamDesc) ModuleDesc {

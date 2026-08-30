@@ -119,7 +119,7 @@ func blockParams(m *ModelSpec, model *Model) []string {
 		if wire, ok := wireByIndex[uint32(i)]; ok {
 			value = formatWire(spec, wire)
 		} else {
-			value = formatDefault(spec)
+			value = formatDefault(spec) + " (default)"
 		}
 		out = append(out, spec.Name+": "+value)
 	}
@@ -163,8 +163,15 @@ func formatWire(spec ParamSpec, wire float64) string {
 	return strconv.FormatFloat(wire, 'g', -1, 64)
 }
 
-// formatReal rounds a screen value for its unit and appends the unit.
+// formatReal renders a screen value: the catalog's endpoint labels ("OFF",
+// "MIN", ...) at the bounds, or the rounded value plus its unit otherwise.
 func formatReal(spec ParamSpec, real float64) string {
+	if spec.MinLabel != "" && real <= spec.Min {
+		return spec.MinLabel
+	}
+	if spec.MaxLabel != "" && real >= spec.Max {
+		return spec.MaxLabel
+	}
 	rounded := roundForDisplay(real, spec.Units)
 	text := strconv.FormatFloat(rounded, 'f', -1, 64)
 	if spec.Units != "" {

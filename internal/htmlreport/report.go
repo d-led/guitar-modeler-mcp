@@ -5,9 +5,11 @@ package htmlreport
 import (
 	"fmt"
 	"html/template"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/d-led/guitar-modeler-mcp/internal/cardchain"
 	"github.com/d-led/guitar-modeler-mcp/internal/catalog"
 	"github.com/d-led/guitar-modeler-mcp/internal/rig"
 )
@@ -35,6 +37,8 @@ type pageData struct {
 	Tempo     string
 	Generated string
 	Chain     []moduleInfo
+	ChainCSS  template.CSS
+	ChainHTML template.HTML
 	Buttons   []rig.ButtonAssign
 	Pedals    []rig.PedalAssign
 }
@@ -80,6 +84,8 @@ func Render(rf *rig.RigFile, song string, cat *catalog.Catalog) (string, error) 
 		Tempo:     tempo,
 		Generated: time.Now().Format("2006-01-02 15:04"),
 		Chain:     chain,
+		ChainCSS:  template.CSS(cardchain.CSS),
+		ChainHTML: template.HTML(chainHTML(patch)),
 		Buttons:   hw.Buttons,
 		Pedals:    hw.Pedals,
 	}); err != nil {
@@ -174,6 +180,82 @@ func formatNumber(v float64) string {
 	return strings.TrimRight(fmt.Sprintf("%.2f", v), "0")
 }
 
+// chainHTML renders the rig's signal chain as a numbered cardchain fragment.
+func chainHTML(patch rig.Patch) string {
+	routing, slots := chainLayout(patch)
+	if len(slots) == 0 {
+		return ""
+	}
+	return cardchain.Render(chainSteps(routing, slots))
+}
+
+// chainLayout reads the routing topology and the 11 grid slots (with "Empty
+// Slot" placeholders) from the Chain node.
+func chainLayout(patch rig.Patch) (string, []string) {
+	chain, ok := patch.Children["Chain"]
+	if !ok {
+		return "", nil
+	}
+	routing := ""
+	if it, ok := chain.Children["Routing"]; ok && it.Str != nil {
+		routing = *it.Str
+	}
+	slots := make([]string, 0, 11)
+	for i := 1; i <= 11; i++ {
+		it, ok := chain.Children["ModuleType"+strconv.Itoa(i)]
+		if !ok || it.Str == nil {
+			continue
+		}
+		slots = append(slots, *it.Str)
+	}
+	return routing, slots
+}
+
+// chainSteps lays the 11 grid slots out into a numbered chain, honouring the
+// Gigboard's three routing topologies: S (serial), SPS-1 (3 shared slots → two
+// parallel paths of 3 → 2 shared slots) and PS-1 (two parallel paths at the
+// input → 3 shared slots). Parallel paths become a junction with branches A
+// and B, each branch keeping its own absolute slot numbers.
+func chainSteps(routing string, slots []string) []cardchain.Step {
+	mk := func(names []string, start int) []cardchain.Step {
+		steps := make([]cardchain.Step, 0, len(names))
+		for i, n := range names {
+			steps = append(steps, slotStep(start+i, n))
+		}
+		return steps
+	}
+	junction := func(a, b []cardchain.Step) cardchain.Step {
+		return cardchain.Step{Branches: []cardchain.Branch{
+			{Label: "A", Steps: a},
+			{Label: "B", Steps: b},
+		}}
+	}
+
+	switch routing {
+	case "SPS-1":
+		if len(slots) >= 9 {
+			steps := mk(slots[0:3], 1)
+			steps = append(steps, junction(mk(slots[3:6], 4), mk(slots[6:9], 7)))
+			return append(steps, mk(slots[9:], 10)...)
+		}
+	case "PS-1":
+		if len(slots) >= 8 {
+			steps := []cardchain.Step{junction(mk(slots[0:3], 1), mk(slots[3:8], 4))}
+			return append(steps, mk(slots[8:], 9)...)
+		}
+	}
+	return mk(slots, 1)
+}
+
+func slotStep(pos int, name string) cardchain.Step {
+	empty := name == "" || name == "Empty Slot"
+	effect := name
+	if empty {
+		effect = ""
+	}
+	return cardchain.Step{Slot: pos, Effect: effect, Off: empty}
+}
+
 const reportHTML = `<!doctype html>
 <html lang="en">
 <head>
@@ -223,6 +305,7 @@ const reportHTML = `<!doctype html>
   .param .v { font-weight: 600; }
   .disclaimer { max-width: 860px; margin: 24px auto 0; padding-top: 16px; border-top: 1px solid #e3e3e8; font-size: .78em; color: #888; }
   @media (prefers-color-scheme: dark) { .disclaimer { border-color: #2c2c2e; } }
+  {{.ChainCSS}}
 </style>
 </head>
 <body>
@@ -232,9 +315,7 @@ const reportHTML = `<!doctype html>
   <div class="meta">
     {{if .Tempo}}<div><div class="label">Tempo</div><div>{{.Tempo}} BPM</div></div>{{end}}
   </div>
-  <div class="chain">
-    {{range .Chain}}{{if .On}}<span class="chip">{{.Name}}</span>{{else}}<span class="chip off">{{.Name}}</span>{{end}}<span class="arrow">→</span>{{end}}
-  </div>
+  {{.ChainHTML}}
   <div class="hw">
     <h2>Footswitches</h2>
     <div class="buttons">

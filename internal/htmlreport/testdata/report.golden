@@ -47,6 +47,16 @@
   .param .v { font-weight: 600; }
   .disclaimer { max-width: 860px; margin: 24px auto 0; padding-top: 16px; border-top: 1px solid #e3e3e8; font-size: .78em; color: #888; }
   @media (prefers-color-scheme: dark) { .disclaimer { border-color: #2c2c2e; } }
+  .chain{display:flex;flex-wrap:wrap;align-items:center;gap:.3rem .5rem;margin:0 0 1.25rem}
+.chain .slot{display:inline-flex;align-items:center;gap:.4rem;background:#f4f4f4;border:1px solid #ddd;border-radius:6px;padding:.2rem .55rem;font-size:.85em;min-width:0}
+.chain .slotno{font-weight:700;color:#fff;background:#6b6b73;border-radius:50%;min-width:1.45em;height:1.45em;line-height:1.45em;text-align:center;flex:none;display:inline-flex;align-items:center;justify-content:center}
+.chain .name{overflow-wrap:anywhere}
+.chain .arrow{color:#aaa;flex:none}
+.chain .off{opacity:.55}
+.chain .par{display:flex;flex-direction:column;gap:.3rem;border:1px solid #ddd;border-radius:8px;padding:.4rem .5rem;background:#fafafa}
+.chain .branch{display:flex;flex-wrap:wrap;align-items:center;gap:.3rem .5rem}
+.chain .parlabel{font-size:.75em;font-weight:700;color:#888;min-width:1.1em;flex:none}
+.chain .mark{color:#bbb;flex:none;font-size:1.1em;line-height:1}
 </style>
 </head>
 <body>
@@ -56,9 +66,7 @@
   <div class="meta">
     <div><div class="label">Tempo</div><div>0 BPM</div></div>
   </div>
-  <div class="chain">
-    <span class="chip">Amp</span><span class="arrow">→</span><span class="chip">Cab</span><span class="arrow">→</span><span class="chip">Spring Reverb</span><span class="arrow">→</span>
-  </div>
+  <div class="chain"><span class="slot"><span class="slotno">1</span><span class="name">Amp</span></span><span class="arrow">→</span><span class="slot"><span class="slotno">2</span><span class="name">Cab</span></span><span class="arrow">→</span><span class="slot"><span class="slotno">3</span><span class="name">Spring Reverb</span></span><span class="arrow">→</span><span class="slot off"><span class="slotno">4</span><span class="name">empty</span></span><span class="arrow">→</span><span class="slot off"><span class="slotno">5</span><span class="name">empty</span></span><span class="arrow">→</span><span class="slot off"><span class="slotno">6</span><span class="name">empty</span></span><span class="arrow">→</span><span class="slot off"><span class="slotno">7</span><span class="name">empty</span></span><span class="arrow">→</span><span class="slot off"><span class="slotno">8</span><span class="name">empty</span></span><span class="arrow">→</span><span class="slot off"><span class="slotno">9</span><span class="name">empty</span></span><span class="arrow">→</span><span class="slot off"><span class="slotno">10</span><span class="name">empty</span></span><span class="arrow">→</span><span class="slot off"><span class="slotno">11</span><span class="name">empty</span></span></div>
   <div class="hw">
     <h2>Footswitches</h2>
     <div class="buttons">

@@ -111,7 +111,8 @@ func applyParams(m *ModelSpec, block BlockSpec, model *Model) error {
 	apply := func(name string, value any) error {
 		spec, index, ok := m.Param(name)
 		if !ok {
-			return fmt.Errorf("unknown parameter %q", name)
+			return fmt.Errorf("%s: unknown parameter %q (available: %s)",
+				m.Name, name, strings.Join(m.KnobNames(), ", "))
 		}
 		if seen[index] {
 			return fmt.Errorf("parameter %q set twice", name)
@@ -134,7 +135,8 @@ func applyParams(m *ModelSpec, block BlockSpec, model *Model) error {
 	for name, v := range block.EncodedParams {
 		_, index, ok := m.Param(name)
 		if !ok {
-			return fmt.Errorf("unknown parameter %q", name)
+			return fmt.Errorf("%s: unknown parameter %q (available: %s)",
+				m.Name, name, strings.Join(m.KnobNames(), ", "))
 		}
 		if seen[index] {
 			return fmt.Errorf("parameter %q set twice", name)

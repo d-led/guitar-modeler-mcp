@@ -176,6 +176,19 @@ func (m ModelSpec) Param(name string) (ParamSpec, int, bool) {
 	return ParamSpec{}, 0, false
 }
 
+// KnobNames returns the editable parameter names in catalog order, excluding
+// wire placeholders, so error messages can list what a model accepts.
+func (m ModelSpec) KnobNames() []string {
+	names := make([]string, 0, len(m.Params))
+	for _, p := range m.Params {
+		if p.padding {
+			continue
+		}
+		names = append(names, p.Name)
+	}
+	return names
+}
+
 // Catalog is the parsed ModelRepo, keyed by wire hash.
 type Catalog struct {
 	byID   map[int]*ModelSpec

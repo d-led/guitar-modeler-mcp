@@ -89,3 +89,13 @@ func TestSetupCardIsSelfContained(t *testing.T) {
 		t.Error("setup card should list the delay's knobs with defaults")
 	}
 }
+
+func TestFormatRealShowsEndpointLabels(t *testing.T) {
+	spec := ParamSpec{Name: "OUTPUT", Units: "dB", Min: -60, Max: 12, MinLabel: "OFF"}
+	if got := formatReal(spec, -60); got != "OFF" {
+		t.Errorf("formatReal at min = %q, want OFF", got)
+	}
+	if got := formatReal(spec, 0); got != "0 dB" {
+		t.Errorf("formatReal(0) = %q, want 0 dB", got)
+	}
+}
