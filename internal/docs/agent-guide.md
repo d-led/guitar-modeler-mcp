@@ -398,6 +398,38 @@ index into that module's own list.
    preset (GE150 Pro Li) plus a setup card; a `.mo` maps back to a Gigboard
    `.rig`.
 
+## Cross-modeler ingredient matching
+
+`map_ingredients` ports a preset's *blocks* from one modeler to another by
+their **ingredients** — the kind (amp/bassamp/cab/fx) plus a static set of
+feature tags (`drive`, `fuzz`, `delay`, `reverb`, `pitch`, `tape`, `analog`,
+…). It is deterministic: the tag rules are encoded in source, and matching is
+a scored overlap, not an LLM guess.
+
+- Arguments: `source_device`, `target_device` (names from `device_list`) and
+  `blocks` — the source preset's block names in signal order.
+- It returns a mapping table (source → target + score + reason), an overall
+  **coverage** fraction and per-kind coverage. Unmatched blocks are listed with
+  a reason; they are never silently dropped.
+- For each matched block it also maps the **knobs** by canonical name
+  (`GAIN`↔`DRIVE`, `LEVEL`↔`OUTPUT`, `MIX`↔`DIRECT MIX`, …): a `params` list of
+  `{source, target, canonical}` links. These are *name* links — carry the
+  source value across yourself with the target's own scale (each device
+  numbers its knobs differently), and treat them as the starting point, not a
+  finished conversion.
+- The matching intentionally refuses spurious substitutions: a plain delay will
+  not "cover" a harmonizer, but a delay that also pitch-shifts (carrying both
+  `delay` and `pitch`) will — that is the cookbook case of a sub-feature
+  standing in for a whole block.
+
+Use it as a first pass when porting a tone: run `map_ingredients`, present the
+table and coverage to the user, then refine the actual target blocks with the
+per-device design tools (`design_rig`, `mooer_design`, `waza_write_tsl`,
+`thr_setup_card`, `qc_design`) for any blocks the user wants to adjust. The
+signal-chain *shape* (shorter chains, missing parallel paths) is a separate
+concern and is not yet modelled — say so when the target device has fewer
+slots than the source chain.
+
 The setup card is the deliverable for models without file exchange (the
 non-pro GE150): it lists every module's effect, on/off state, the real hardware
 it emulates, and the raw parameter values, so the player can dial it in by hand.

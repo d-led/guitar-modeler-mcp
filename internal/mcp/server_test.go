@@ -2,9 +2,11 @@ package mcp
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"log"
 	"strings"
 	"testing"
 )
@@ -84,6 +86,35 @@ func TestRunHandlesInitializeListAndCall(t *testing.T) {
 	}
 	if callResp.Result.IsError {
 		t.Fatal("unexpected isError")
+	}
+}
+
+func TestRunLogsToolCallByNameOnly(t *testing.T) {
+	var logs bytes.Buffer
+	s := NewServer("test", "1")
+	s.Log = log.New(&logs, "mcp: ", 0) // no timestamps, so assertions are exact
+	s.Register(Tool{
+		Name:        "echo",
+		Description: "echoes",
+		InputSchema: map[string]any{"type": "object", "properties": map[string]any{"secret": map[string]any{"type": "string"}}},
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return "ok", nil
+		},
+	})
+
+	var out strings.Builder
+	input := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"echo","arguments":{"secret":"do-not-log-this"}}}
+`
+	if err := s.Run(context.Background(), strings.NewReader(input), &out); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	got := logs.String()
+	if got != "mcp: tool called: echo\n" {
+		t.Fatalf("log output = %q, want exactly the tool name", got)
+	}
+	if strings.Contains(got, "do-not-log-this") {
+		t.Fatal("arguments leaked into the log")
 	}
 }
 

@@ -11,6 +11,7 @@ import (
 
 	"github.com/d-led/guitar-modeler-mcp/internal/assets"
 	"github.com/d-led/guitar-modeler-mcp/internal/catalog"
+	"github.com/d-led/guitar-modeler-mcp/internal/cookbook"
 	"github.com/d-led/guitar-modeler-mcp/internal/design"
 	"github.com/d-led/guitar-modeler-mcp/internal/docs"
 	"github.com/d-led/guitar-modeler-mcp/internal/htmlreport"
@@ -377,6 +378,19 @@ func (r *Registrar) Register(s *mcp.Server) {
 		}),
 		Handler: func(_ context.Context, args map[string]any) (string, error) {
 			return r.mapPreset(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "map_ingredients",
+		Description: "Port a preset's blocks from one modeler to another by matching their \"ingredients\" (kind + feature tags such as drive, delay, pitch, tape) algorithmically — no agent guessing. Given the source device, target device and the source block names, it returns a mapping table with a score and reason per block, a per-block knob mapping (source/target/canonical parameter names), plus overall and per-kind coverage. Mismatches are listed, never silently dropped. Device names come from device_list.",
+		InputSchema: objectSchema(map[string]any{
+			"source_device": stringSchema("Source device name (gigboard, ge200, ge150pro, ge150, ge100pro, wazaair, thr, thr10, thr10c, thr10x, quad-cortex)."),
+			"target_device": stringSchema("Target device name, same list as source_device."),
+			"blocks":        arraySchema("The source preset's block names, in signal order.", stringSchema("One block name.")),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.mapIngredients(args)
 		},
 	})
 
@@ -1392,6 +1406,31 @@ func (r *Registrar) renderSetupCard(args map[string]any) (string, error) {
 		return "", err
 	}
 	return fmt.Sprintf("Wrote setup card to %s", cardPath), nil
+}
+
+func (r *Registrar) mapIngredients(args map[string]any) (string, error) {
+	srcName := argString(args, "source_device")
+	tgtName := argString(args, "target_device")
+	if srcName == "" || tgtName == "" {
+		return "", fmt.Errorf("source_device and target_device are required")
+	}
+	src, err := cookbook.Ingredients(srcName)
+	if err != nil {
+		return "", err
+	}
+	tgt, err := cookbook.Ingredients(tgtName)
+	if err != nil {
+		return "", err
+	}
+	blocks := argStrings(args["blocks"])
+	if len(blocks) == 0 {
+		return "", fmt.Errorf("blocks is required: the source preset's block names")
+	}
+	plan, err := cookbook.Map(src, tgt, tgtName, blocks)
+	if err != nil {
+		return "", err
+	}
+	return marshal(plan)
 }
 
 func (r *Registrar) mapPreset(args map[string]any) (string, error) {

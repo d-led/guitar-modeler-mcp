@@ -94,7 +94,7 @@ func TestIntegrationInitializeAndToolList(t *testing.T) {
 		"design_rig", "render_report", "rig_decode", "estimate_rig_level",
 		"create_setlist",
 		"device_list", "mooer_catalog_list_amps", "mooer_catalog_list_cabs", "mooer_catalog_list_fx",
-		"mooer_design", "render_setup_card", "map_preset",
+		"mooer_design", "render_setup_card", "map_preset", "map_ingredients",
 		"waza_catalog_list_amps", "waza_catalog_list_fx", "waza_setup_card", "waza_write_tsl", "waza_read_tsl",
 		"waza_catalog_list_modes",
 		"thr_catalog_list_amps", "thr_catalog_list_fx", "thr_setup_card",
@@ -800,5 +800,59 @@ func TestIntegrationQuadCortexDesignAndDecode(t *testing.T) {
 	result := resp["result"].(map[string]any)
 	if isErr, _ := result["isError"].(bool); !isErr {
 		t.Fatalf("expected isError for wrong serial, got: %v", resp)
+	}
+}
+
+func TestIntegrationMapIngredients(t *testing.T) {
+	s := newIntegrationServer(t)
+
+	out := resultText(t, rpc(t, s, 1, "tools/call", map[string]any{
+		"name": "map_ingredients",
+		"arguments": map[string]any{
+			"source_device": "gigboard",
+			"target_device": "quad-cortex",
+			"blocks":        []any{"82 Lead 800 100W", "Green JRC-OD", "Tape Echo", "Not A Real Block"},
+		},
+	}))
+
+	var plan struct {
+		Matches  []map[string]any `json:"matches"`
+		Coverage float64          `json:"coverage"`
+	}
+	if err := json.Unmarshal([]byte(out), &plan); err != nil {
+		t.Fatalf("map_ingredients output not JSON: %s", out)
+	}
+	if plan.Coverage != 0.75 {
+		t.Fatalf("coverage = %g, want 0.75 (3 of 4 blocks)", plan.Coverage)
+	}
+	// The JCM800 amp should map to the Quad Cortex's Marshall JCM800, and its
+	// knobs should come along as name links.
+	var ampTarget string
+	var ampParams []any
+	for _, m := range plan.Matches {
+		if m["source"] == "82 Lead 800 100W" {
+			ampTarget, _ = m["target"].(string)
+			ampParams, _ = m["params"].([]any)
+		}
+	}
+	if !strings.Contains(ampTarget, "JCM800") {
+		t.Fatalf("JCM800 amp mapped to %q, want a JCM800 target", ampTarget)
+	}
+	if len(ampParams) == 0 {
+		t.Fatalf("JCM800 amp mapping carried no parameters: %s", out)
+	}
+
+	// A bad device must refuse.
+	resp := rpc(t, s, 2, "tools/call", map[string]any{
+		"name": "map_ingredients",
+		"arguments": map[string]any{
+			"source_device": "boss-katana",
+			"target_device": "quad-cortex",
+			"blocks":        []any{"x"},
+		},
+	})
+	result := resp["result"].(map[string]any)
+	if isErr, _ := result["isError"].(bool); !isErr {
+		t.Fatalf("expected isError for unknown device, got: %v", resp)
 	}
 }

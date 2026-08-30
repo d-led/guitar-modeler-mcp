@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
+	"os"
 )
 
 // Tool describes one callable tool.
@@ -24,11 +26,19 @@ type Server struct {
 	name    string
 	version string
 	tools   []Tool
+	// Log records each tool call by name (not its arguments) so operators can
+	// see whether the MCP is being used at all. nil disables logging.
+	Log *log.Logger
 }
 
-// NewServer creates an MCP server.
+// NewServer creates an MCP server. Tool calls are logged to stderr by default,
+// one line per call with the tool's name only; pass a nil Log to silence it.
 func NewServer(name, version string) *Server {
-	return &Server{name: name, version: version}
+	return &Server{
+		name:    name,
+		version: version,
+		Log:     log.New(os.Stderr, "mcp: ", log.LstdFlags),
+	}
 }
 
 // Register adds a tool to the server.
@@ -158,6 +168,9 @@ func (s *Server) callTool(ctx context.Context, params json.RawMessage) (any, *rp
 	for _, t := range s.tools {
 		if t.Name != call.Name {
 			continue
+		}
+		if s.Log != nil {
+			s.Log.Printf("tool called: %s", call.Name)
 		}
 		text, err := t.Handler(ctx, call.Arguments)
 		if err != nil {

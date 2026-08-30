@@ -242,6 +242,7 @@ guitar-modeler-mcp serve
 | `mooer_design` | Build a Mooer preset: writes `.mo` (file-capable models) + a printable setup card |
 | `render_setup_card` | Render a setup card from an existing `.mo` |
 | `map_preset` | Convert a preset across devices: Gigboard `.rig` ↔ Mooer `.mo` |
+| `map_ingredients` | Port a preset's blocks to another modeler by matching feature tags; returns a mapping table with per-block knob links and coverage % |
 | `waza_catalog_list_amps` / `_fx` | List the Waza Air's amps and effects (with the real hardware each emulates) |
 | `waza_write_tsl` | Write a BOSS TONE STUDIO `.tsl` liveset for the Waza Air from a tone description |
 | `waza_read_tsl` | Read a Waza Air `.tsl` and report the first patch's tone |
@@ -257,6 +258,10 @@ guitar-modeler-mcp serve
 Example agent workflow: list amps → translate the song's amp → `design_rig` with
 effects → read the report → tweak by re-running `design_rig` with parameter
 overrides or by decoding and fixing an existing file.
+
+Every tool call is logged to stderr as `mcp: tool called: <name>` — the name
+only, never the arguments — so you can see at a glance whether and when the MCP
+is being used.
 
 ## Signal chain & parallel routing
 
