@@ -21,6 +21,7 @@ type paramKV struct {
 
 type moduleInfo struct {
 	Name        string
+	Slot        int // 1-based grid slot, matching the chain picture
 	Category    string
 	Description string
 	On          bool
@@ -72,6 +73,26 @@ func Render(rf *rig.RigFile, song string, cat *catalog.Catalog) (string, error) 
 		chain = append(chain, moduleInfoFor(name, node, cat))
 	}
 
+	// Lay the module cards out in grid-slot order and stamp each with its slot
+	// number, so the circled numbers in the text match the chain picture.
+	byName := make(map[string]moduleInfo, len(chain))
+	for _, info := range chain {
+		byName[info.Name] = info
+	}
+	_, slots := chainLayout(patch)
+	modules := make([]moduleInfo, 0, len(chain))
+	for i, slotName := range slots {
+		if slotName == "" || slotName == "Empty Slot" {
+			continue
+		}
+		info, ok := byName[slotName]
+		if !ok {
+			continue
+		}
+		info.Slot = i + 1
+		modules = append(modules, info)
+	}
+
 	hw, err := rig.HardwareAssignments(rf)
 	if err != nil {
 		return "", err
@@ -83,7 +104,7 @@ func Render(rf *rig.RigFile, song string, cat *catalog.Catalog) (string, error) 
 		Song:      song,
 		Tempo:     tempo,
 		Generated: time.Now().Format("2006-01-02 15:04"),
-		Chain:     chain,
+		Chain:     modules,
 		ChainCSS:  template.CSS(cardchain.CSS),
 		ChainHTML: template.HTML(chainHTML(patch)),
 		Buttons:   hw.Buttons,
@@ -334,7 +355,7 @@ const reportHTML = `<!doctype html>
   </div>
   {{range .Chain}}
   <div class="module">
-    <h2>{{.Name}}</h2>
+    <h2>{{if .Slot}}<span class="slotbadge">{{.Slot}}</span>{{end}}{{.Name}}</h2>
     <div class="cat">{{.Category}}</div>
     {{if .Amp}}<div class="desc">{{.Amp.Brand}} {{.Amp.RealModel}}{{if .Amp.Wattage}} · {{.Amp.Wattage}}{{end}}{{if .Amp.Style}} · {{range $i, $s := .Amp.Style}}{{if $i}}, {{end}}{{$s}}{{end}}{{end}}</div>
     {{else if .Cab}}<div class="desc">{{.Cab.Speakers}} · {{.Cab.SpeakersRef}}{{if .Mic}} · mic {{.Mic.RealModel}}{{end}}</div>

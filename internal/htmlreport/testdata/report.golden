@@ -99,7 +99,7 @@
   </div>
   
   <div class="module">
-    <h2>Amp</h2>
+    <h2><span class="slotbadge">1</span>Amp</h2>
     <div class="cat"></div>
     <div class="desc">Marshall JCM800 2203 · 100W · rock, hard rock</div>
     
@@ -109,7 +109,7 @@
   </div>
   
   <div class="module">
-    <h2>Cab</h2>
+    <h2><span class="slotbadge">2</span>Cab</h2>
     <div class="cat"></div>
     <div class="desc">4x12 · Celestion Greenback 25W · mic Shure SM57</div>
     
@@ -119,7 +119,7 @@
   </div>
   
   <div class="module">
-    <h2>Spring Reverb</h2>
+    <h2><span class="slotbadge">3</span>Spring Reverb</h2>
     <div class="cat">reverb</div>
     <div class="desc">Spring tank reverb.</div>
     <div class="params">
