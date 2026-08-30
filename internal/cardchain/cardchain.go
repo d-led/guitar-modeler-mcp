@@ -45,7 +45,8 @@ const CSS = `.chain{display:flex;flex-wrap:wrap;align-items:center;gap:.3rem .5r
 .chain .par{display:flex;flex-direction:column;gap:.3rem;border:1px solid #ddd;border-radius:8px;padding:.4rem .5rem;background:#fafafa}
 .chain .branch{display:flex;flex-wrap:wrap;align-items:center;gap:.3rem .5rem}
 .chain .parlabel{font-size:.75em;font-weight:700;color:#888;min-width:1.1em;flex:none}
-.chain .mark{color:#bbb;flex:none;font-size:1.1em;line-height:1}`
+.chain .mark{color:#bbb;flex:none;font-size:1.1em;line-height:1}
+.slotbadge{display:inline-flex;align-items:center;justify-content:center;min-width:1.45em;height:1.45em;border-radius:50%;background:#6b6b73;color:#fff;font-weight:700;font-size:.8em;margin-right:.45em;vertical-align:middle}`
 
 // Render returns the numbered chain visualisation as an HTML fragment: serial
 // steps joined by arrows, and parallel junctions drawn as stacked branches

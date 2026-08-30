@@ -5,9 +5,47 @@
 > guarantee compatibility with every device or firmware version. Well-meant
 > contributions (fixes, corrections, new devices) are always welcome.
 
-An MCP server and CLI for designing and writing guitar-modeler presets for
-multiple hardware devices, written in Go. The design core is device-agnostic
-and per-device backends supply the model catalog and preset file format.
+**What it does:** designs guitar presets for real modelers — HeadRush Gigboard,
+Mooer GE150 Pro / GE200 / GE100 Pro, BOSS Waza Air, Yamaha THR and Neural DSP
+Quad Cortex. Describe a tone ("Master of Puppets rhythm for a Mooer GE200") and
+it writes the device's preset file plus a printable setup card.
+
+**How to use it:** download the binary, install it into your AI assistant, and
+ask for a tone. No programming needed.
+
+## Quick start
+
+1. **Download** the binary for your computer:
+
+   | Computer      | Download |
+   | ------------- | -------- |
+   | macOS (Intel & Apple Silicon) | [guitar-modeler-mcp-macos-universal.zip](https://nightly.link/d-led/guitar-modeler-mcp/workflows/ci/main/guitar-modeler-mcp-macos-universal.zip) |
+   | Windows       | [guitar-modeler-mcp-windows-amd64.zip](https://nightly.link/d-led/guitar-modeler-mcp/workflows/ci/main/guitar-modeler-mcp-windows-amd64.zip) |
+   | Linux (Intel/AMD) | [guitar-modeler-mcp-linux-amd64.zip](https://nightly.link/d-led/guitar-modeler-mcp/workflows/ci/main/guitar-modeler-mcp-linux-amd64.zip) |
+   | Linux (ARM)   | [guitar-modeler-mcp-linux-arm64.zip](https://nightly.link/d-led/guitar-modeler-mcp/workflows/ci/main/guitar-modeler-mcp-linux-arm64.zip) |
+
+2. **Unzip** it. On macOS/Linux make it runnable:
+
+   ```sh
+   chmod +x guitar-modeler-mcp
+   ```
+
+3. **Install it into your AI assistant** (one command):
+
+   ```sh
+   guitar-modeler-mcp mcp install            # VS Code / GitHub Copilot (global)
+   guitar-modeler-mcp mcp install --target claude   # Claude Desktop
+   ```
+
+4. **Ask your assistant** for the tone you want, e.g.:
+
+   > "Create a Master of Puppets rhythm preset for my Mooer GE200."
+
+   The assistant drives the tools and hands you the device's preset file plus a
+   printable setup card.
+
+That's it. The rest of this document lists the supported hardware and the
+finer details (CLI, tool list, architecture) for anyone who wants them.
 
 ## Supported hardware
 
@@ -149,23 +187,11 @@ Requires Go 1.27+.
 ## Releases
 
 Binaries are built with [GoReleaser](https://goreleaser.com) and published as
-GitHub release artifacts when a `v*.*.*` tag is pushed:
+GitHub release artifacts when a `v*.*.*` tag is pushed (Linux `amd64`/`arm64`,
+Windows `amd64`, macOS universal). Nightly "latest" builds are linked from
+[Quick start](#quick-start) above.
 
-- Linux `amd64` / `arm64`
-- Windows `amd64`
-- macOS universal (`amd64` + `arm64`)
-
-Each push to `main` also builds and uploads fresh "latest" per-platform
-binaries as CI build artifacts, served via [nightly.link](https://nightly.link/):
-
-| Platform        | Download |
-| --------------- | -------- |
-| Linux amd64     | [guitar-modeler-mcp-linux-amd64](https://nightly.link/d-led/guitar-modeler-mcp/workflows/ci/main/guitar-modeler-mcp-linux-amd64.zip) |
-| Linux arm64     | [guitar-modeler-mcp-linux-arm64](https://nightly.link/d-led/guitar-modeler-mcp/workflows/ci/main/guitar-modeler-mcp-linux-arm64.zip) |
-| Windows amd64   | [guitar-modeler-mcp-windows-amd64.exe](https://nightly.link/d-led/guitar-modeler-mcp/workflows/ci/main/guitar-modeler-mcp-windows-amd64.zip) |
-| macOS universal | [guitar-modeler-mcp-macos-universal](https://nightly.link/d-led/guitar-modeler-mcp/workflows/ci/main/guitar-modeler-mcp-macos-universal.zip) |
-
-Unzip, make executable (`chmod +x guitar-modeler-mcp`), then run it.
+To publish a release:
 
 ```sh
 git tag v1.0.0

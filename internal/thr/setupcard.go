@@ -64,34 +64,34 @@ td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;verti
 
 	b.WriteString(chainHint(d.Chain, s))
 
-	for _, module := range d.Chain {
+	for i, module := range d.Chain {
 		switch module {
 		case "COMPRESSOR":
-			writeModuleCard(&b, module, onOff(s.Compressor), "", s.Compressor, compressorKnobs(s.CompParams))
+			writeModuleCard(&b, module, onOff(s.Compressor), "", s.Compressor, compressorKnobs(s.CompParams), i+1)
 		case "NOISE GATE":
-			writeModuleCard(&b, module, onOff(s.NoiseGate), "", s.NoiseGate, gateKnobs(s.GateParams))
+			writeModuleCard(&b, module, onOff(s.NoiseGate), "", s.NoiseGate, gateKnobs(s.GateParams), i+1)
 		case "AMP":
 			if cell, ok := d.ampCell(s.Amp); ok {
-				writeModuleCard(&b, module, cell.Name, cell.InspiredBy, true, ampKnobs(s.AmpParams))
+				writeModuleCard(&b, module, cell.Name, cell.InspiredBy, true, ampKnobs(s.AmpParams), i+1)
 				if cell.Description != "" {
 					writeNote(&b, cell.Description)
 				}
 			} else {
-				writeModuleCard(&b, module, "OFF", "", false, nil)
+				writeModuleCard(&b, module, "OFF", "", false, nil, i+1)
 			}
 		case "CAB":
-			writeModuleCard(&b, module, s.Cab, "", true, nil)
+			writeModuleCard(&b, module, s.Cab, "", true, nil, i+1)
 		case "MOD":
-			writeModuleCard(&b, module, s.Mod, "", true, modKnobs(s.ModParams))
+			writeModuleCard(&b, module, s.Mod, "", true, modKnobs(s.ModParams), i+1)
 		case "ECHO":
-			writeModuleCard(&b, module, s.Echo, "", true, echoKnobs(s.EchoParams))
+			writeModuleCard(&b, module, s.Echo, "", true, echoKnobs(s.EchoParams), i+1)
 		case "REVERB":
-			writeModuleCard(&b, module, s.Reverb, "", true, reverbKnobs(s.ReverbParams))
+			writeModuleCard(&b, module, s.Reverb, "", true, reverbKnobs(s.ReverbParams), i+1)
 		}
 	}
 
 	if knobs := levelKnobs(s.Levels); len(knobs) > 0 {
-		writeModuleCard(&b, "LEVELS", "", "", true, knobs)
+		writeModuleCard(&b, "LEVELS", "", "", true, knobs, 0)
 	}
 
 	if d.Note != "" {
@@ -141,7 +141,7 @@ func thrEffect(module string, s Spec) string {
 // writeModuleCard writes one module as a small table: the module label, its
 // selection or on/off state, the real hardware it emulates (when known), and
 // the knob values that were specified. Unset knobs are omitted.
-func writeModuleCard(b *strings.Builder, module, effect, inspired string, enabled bool, knobs []knob) {
+func writeModuleCard(b *strings.Builder, module, effect, inspired string, enabled bool, knobs []knob, slot int) {
 	if effect == "" {
 		effect = "OFF"
 	}
@@ -149,7 +149,11 @@ func writeModuleCard(b *strings.Builder, module, effect, inspired string, enable
 	if !enabled {
 		class = " class=\"off\""
 	}
-	fmt.Fprintf(b, "<table><tr><td class=\"module\"%s>%s</td><td class=\"effect\">%s</td></tr>", class, html.EscapeString(module), html.EscapeString(effect))
+	badge := ""
+	if slot > 0 {
+		badge = fmt.Sprintf("<span class=\"slotbadge\">%d</span>", slot)
+	}
+	fmt.Fprintf(b, "<table><tr><td class=\"module\"%s>%s%s</td><td class=\"effect\">%s</td></tr>", class, badge, html.EscapeString(module), html.EscapeString(effect))
 	if inspired != "" {
 		fmt.Fprintf(b, "<tr><td></td><td><span class=\"inspired\">based on %s</span></td></tr>", html.EscapeString(inspired))
 	}

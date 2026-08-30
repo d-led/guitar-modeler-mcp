@@ -39,7 +39,6 @@ table{width:100%;border-collapse:collapse;margin-bottom:.5rem}
 td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;vertical-align:top}
 .block{font-weight:600}.inspired{color:#666;font-size:.85em}
 .params{color:#444;font-size:.85em;font-variant-numeric:tabular-nums}
-.slotbadge{display:inline-flex;align-items:center;justify-content:center;min-width:1.45em;height:1.45em;border-radius:50%;background:#6b6b73;color:#fff;font-weight:700;font-size:.8em;margin-right:.45em;vertical-align:middle}
 ` + cardchain.CSS + `
 .note{color:#8a5a00;background:#fff7e6;border:1px solid #f0d9a8;padding:.6rem .8rem;border-radius:6px;font-size:.85em}
 </style></head><body>`)

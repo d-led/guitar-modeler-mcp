@@ -140,14 +140,14 @@ td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;verti
 
 	b.WriteString(chainHint(Describe(p, m)))
 
-	for _, d := range Describe(p, m) {
+	for i, d := range Describe(p, m) {
 		state := "ON"
 		class := ""
 		if !d.Enabled {
 			state = "OFF"
 			class = " class=\"off\""
 		}
-		fmt.Fprintf(&b, "<table><tr><th class=\"module\"%s>%s</th><th>%s</th></tr>", class, html.EscapeString(d.Module), state)
+		fmt.Fprintf(&b, "<table><tr><th class=\"module\"%s><span class=\"slotbadge\">%d</span>%s</th><th>%s</th></tr>", class, i+1, html.EscapeString(d.Module), state)
 		fmt.Fprintf(&b, "<tr><td class=\"effect\">%s</td><td>", html.EscapeString(d.Effect))
 		if d.InspiredBy != "" {
 			fmt.Fprintf(&b, "<span class=\"inspired\">based on %s</span>", html.EscapeString(d.InspiredBy))

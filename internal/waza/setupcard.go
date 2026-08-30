@@ -188,7 +188,7 @@ td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;verti
 
 	b.WriteString(chainHint(d.Chain, s))
 
-	for _, module := range d.Chain {
+	for i, module := range d.Chain {
 		var effect, inspired string
 		switch module {
 		case "BOOSTER":
@@ -204,7 +204,7 @@ td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;verti
 		case "REVERB":
 			effect, inspired = s.Reverb, d.inspired(s.Reverb, d.Reverbs)
 		}
-		writeModule(&b, module, effect, inspired)
+		writeModule(&b, module, effect, inspired, i+1)
 	}
 
 	writeSetting(&b, "CABINET RESONANCE", s.CabResonance)
@@ -313,11 +313,11 @@ func writeAirStepMode(b *strings.Builder, d Device, m AirStepMode) {
 	b.WriteString("</table>")
 }
 
-func writeModule(b *strings.Builder, module, effect, inspired string) {
+func writeModule(b *strings.Builder, module, effect, inspired string, slot int) {
 	if effect == "" {
 		effect = "OFF"
 	}
-	fmt.Fprintf(b, "<table><tr><td class=\"module\">%s</td><td class=\"effect\">%s</td></tr>", html.EscapeString(module), html.EscapeString(effect))
+	fmt.Fprintf(b, "<table><tr><td class=\"module\"><span class=\"slotbadge\">%d</span>%s</td><td class=\"effect\">%s</td></tr>", slot, html.EscapeString(module), html.EscapeString(effect))
 	if inspired != "" {
 		fmt.Fprintf(b, "<tr><td></td><td><span class=\"inspired\">based on %s</span></td></tr>", html.EscapeString(inspired))
 	}
