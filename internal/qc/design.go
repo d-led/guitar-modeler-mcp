@@ -109,7 +109,7 @@ func applyParams(m *ModelSpec, block BlockSpec, model *Model) error {
 	}
 
 	apply := func(name string, value any) error {
-		spec, index, ok := m.Param(name)
+		spec, index, ok := m.ResolveParam(name)
 		if !ok {
 			return fmt.Errorf("%s: unknown parameter %q (available: %s)",
 				m.Name, name, strings.Join(m.KnobNames(), ", "))
@@ -133,7 +133,7 @@ func applyParams(m *ModelSpec, block BlockSpec, model *Model) error {
 		}
 	}
 	for name, v := range block.EncodedParams {
-		_, index, ok := m.Param(name)
+		_, index, ok := m.ResolveParam(name)
 		if !ok {
 			return fmt.Errorf("%s: unknown parameter %q (available: %s)",
 				m.Name, name, strings.Join(m.KnobNames(), ", "))

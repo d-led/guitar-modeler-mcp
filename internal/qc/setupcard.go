@@ -17,8 +17,9 @@ import (
 // over USB via qcctl.
 const Caveat = "The HTML card is the setup instructions; reproduce the tone " +
 	"from it. The .pb is this tool's reference archive for saving and " +
-	"reloading the tone — it is not a file the Quad Cortex imports. To " +
-	"transfer the preset live, use qc_usb (qcctl). qc_design builds a " +
+	"reloading the tone — it is not a file the Quad Cortex imports, and " +
+	"qcctl cannot upload it: qc_usb only recalls/dumps preset slots, " +
+	"switches scenes and reads the firmware version. qc_design builds a " +
 	"single-lane serial chain; split/parallel routing is not modelled yet."
 
 // SetupCardHTML renders a self-contained, printable setup card for a decoded
@@ -38,6 +39,7 @@ table{width:100%;border-collapse:collapse;margin-bottom:.5rem}
 td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;vertical-align:top}
 .block{font-weight:600}.inspired{color:#666;font-size:.85em}
 .params{color:#444;font-size:.85em;font-variant-numeric:tabular-nums}
+.slotbadge{display:inline-flex;align-items:center;justify-content:center;min-width:1.45em;height:1.45em;border-radius:50%;background:#6b6b73;color:#fff;font-weight:700;font-size:.8em;margin-right:.45em;vertical-align:middle}
 ` + cardchain.CSS + `
 .note{color:#8a5a00;background:#fff7e6;border:1px solid #f0d9a8;padding:.6rem .8rem;border-radius:6px;font-size:.85em}
 </style></head><body>`)
@@ -52,8 +54,8 @@ td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;verti
 		row := c.GetRow() + 1 // screen rows are 1..4
 		fmt.Fprintf(&b, "<h3>Row %d</h3>", row)
 		b.WriteString(rowChain(cat, c))
-		for _, model := range c.Models {
-			writeBlock(&b, cat, model)
+		for i, model := range c.Models {
+			writeBlock(&b, cat, model, i+1)
 		}
 	}
 
@@ -79,9 +81,10 @@ func modelName(cat *Catalog, model *Model) string {
 	return fmt.Sprintf("model %d", model.GetHash())
 }
 
-// writeBlock renders one grid block as a table: its model name, the hardware
-// it is based on, and every knob with a value.
-func writeBlock(b *strings.Builder, cat *Catalog, model *Model) {
+// writeBlock renders one grid block as a table: a circled slot number that
+// matches the chain hint above, its model name, the hardware it is based on,
+// and every knob with a value.
+func writeBlock(b *strings.Builder, cat *Catalog, model *Model, slot int) {
 	name := modelName(cat, model)
 	based := ""
 	var params []string
@@ -90,7 +93,7 @@ func writeBlock(b *strings.Builder, cat *Catalog, model *Model) {
 		params = blockParams(m, model)
 	}
 
-	fmt.Fprintf(b, "<table><tr><td class=\"block\">%s</td><td></td></tr>", html.EscapeString(name))
+	fmt.Fprintf(b, "<table><tr><td class=\"block\"><span class=\"slotbadge\">%d</span>%s</td><td></td></tr>", slot, html.EscapeString(name))
 	if based != "" {
 		fmt.Fprintf(b, "<tr><td></td><td class=\"inspired\">based on %s</td></tr>", html.EscapeString(based))
 	}

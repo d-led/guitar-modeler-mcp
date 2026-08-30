@@ -582,7 +582,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 
 	s.Register(mcp.Tool{
 		Name:        "qc_design",
-		Description: "Build a serial Quad Cortex preset — amp, then cab, then the effects in the order given — and write a self-contained HTML setup card plus a .pb reference archive. The HTML card is the dial-in instructions; the .pb is for saving and reloading the tone in this tool, NOT a file the unit imports. To transfer the preset onto the unit, use qc_usb (qcctl). Parameter values are on the screen's own line (GAIN 5 on a 0..10 knob, a dB or % value); list parameters take the option index. The serial is the unit's 9-character serial (empty for cloud).",
+		Description: "Build a serial Quad Cortex preset — amp, then cab, then the effects in the order given — and write a self-contained HTML setup card plus a .pb reference archive. The HTML card is the dial-in instructions; the .pb is for saving and reloading the tone in this tool, NOT a file the unit imports. To put the tone on the unit, dial it in from the card or place a preset in a slot with Cortex Control — qc_usb (qcctl) can recall that slot but cannot upload the .pb. Parameter values are on the screen's own line (GAIN 5 on a 0..10 knob, a dB or % value); list parameters take the option index. Knob names are case-insensitive, and common synonyms resolve automatically (GAIN→VOLUME, MIDDLE→MID, DRIVE→OVERDRIVE, LEVEL→OUTPUT, TIME→DELAY TIME, RATE→CHR RATE, DEPTH→VIB DEPTH); if a model rejects a name, run qc_list_model_params to see its exact knob list. The serial is the unit's 9-character serial (empty for cloud).",
 		InputSchema: objectSchema(map[string]any{
 			"name":               stringSchema("Preset name (becomes the file name)."),
 			"serial":             stringSchema("The unit's 9-character serial number, or empty for cloud files."),
@@ -617,7 +617,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 
 	s.Register(mcp.Tool{
 		Name:        "qc_usb",
-		Description: "Control a connected Quad Cortex over USB by shelling out to the user's qcctl (pyquadcortex). This is the way to actually load/recall presets and read state on the unit — the .pb is only a reference archive. Ask the user first: it needs a USB-connected Quad Cortex, qcctl installed (pip install pyquadcortex; macOS also `brew install hidapi`), Cortex Control quit, and it can change the device — only set confirm:true after they agree.",
+		Description: "Control a connected Quad Cortex over USB by shelling out to the user's qcctl (pyquadcortex). qcctl has only four subcommands — version, recall --setlist --slot, scene --index, dump-preset --setlist --slot — so it reads the firmware version, recalls a preset already in a slot on the unit, switches scenes, and dumps the preset in a slot. It does NOT upload a .pb file: the .pb is only a reference archive; to put a tone on the unit, dial it in from the HTML card or place a preset in a slot with Cortex Control, then recall it. Prerequisites: install qcctl once (`pip install pyquadcortex`; macOS also `brew install hidapi`), and quit the official Cortex Control desktop app first — it holds an exclusive lock on the USB interface and blocks qcctl while running (device Wi-Fi may stay on). Ask the user first: it needs a USB-connected Quad Cortex and it can change the device — only set confirm:true after they agree.",
 		InputSchema: objectSchema(map[string]any{
 			"command": stringSchema("qcctl command: version, recall, scene or dump-preset."),
 			"slot":    stringSchema("Slot name for recall/dump-preset, e.g. 28C."),

@@ -65,9 +65,11 @@ sponsored by HeadRush or any of the referenced brands.
   (amp → cab → effects) and writes a **self-contained HTML setup card** (the
   dial-in instructions) plus a `.pb` **reference archive** for saving and
   reloading the tone (`qc_decode_preset`, `qc_render_setup_card`) — the `.pb`
-  is *not* a file the unit imports. To actually put the tone on the unit,
-  `qc_usb` shells out to the user's `qcctl` (pyquadcortex) for live USB
-  transfer, after the user confirms. There is no private key: the `.pb`
+  is *not* a file the unit imports. To put the tone on the unit, dial it in
+  from the card or place it in a slot with Cortex Control; `qc_usb` shells out
+  to the user's `qcctl` (pyquadcortex) to recall a slot, dump a slot's preset,
+  switch scenes and read the firmware version over USB-HID — it does **not**
+  upload the `.pb`. There is no private key: the `.pb`
   archive uses the device's public `KEY_MATERIAL` + serial (AES-128-CTR), and
   `qc_usb` speaks the unit's own USB-HID protocol. The parameter scale law and
   firmware constants are attributed to
@@ -75,6 +77,30 @@ sponsored by HeadRush or any of the referenced brands.
   catalog and preset schema come from
   [OpenCortex](https://github.com/VanIseghemThomas/OpenCortex) — see
   `internal/qc/NOTICE.md`.
+
+### Quad Cortex live USB (`qc_usb` → `qcctl`)
+
+`qc_usb` shells out to the user's `qcctl` CLI (from
+[pyquadcortex](https://github.com/stokes-audio/pyquadcortex)). `qcctl` has
+exactly four subcommands — `version`, `recall --setlist --slot`,
+`scene --index` and `dump-preset --setlist --slot` — and none of them takes a
+file: it reads the firmware version, recalls a preset that is **already in a
+slot on the unit**, switches scenes, and prints (dumps) the preset in a slot.
+It does **not** upload the `.pb`. To get a tone onto the unit, dial it in from
+the HTML card, or place a preset in a slot with Cortex Control and let `qcctl`
+recall it. (pyquadcortex's library does expose a `write_preset`, but the
+`qcctl` CLI does not wire it up.)
+
+Install `qcctl` once:
+
+```sh
+pip install pyquadcortex        # macOS also: brew install hidapi
+```
+
+> **Crucial prerequisite:** before running any `qcctl` command, **quit the
+> official Cortex Control desktop application**. It holds an exclusive lock on
+> the hardware's USB interface and will block `qcctl` while it runs.
+> (Wi-Fi on the device can stay active.)
 
 Give it a song and a tone description, and it will:
 

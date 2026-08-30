@@ -189,6 +189,46 @@ func (m ModelSpec) KnobNames() []string {
 	return names
 }
 
+// paramSynonyms maps a common knob name to the catalog names that could mean
+// the same knob, in preference order. It is consulted only after an exact
+// (case-insensitive) name match fails, so a model's own catalog names always
+// win. This lets agents write natural names (GAIN on a Fender amp whose knob
+// is VOLUME, MIDDLE for MID, TIME for DELAY TIME) without guessing.
+var paramSynonyms = map[string][]string{
+	"GAIN":      {"VOLUME", "DRIVE", "OVERDRIVE", "INPUT GAIN", "GAIN 1"},
+	"VOLUME":    {"LEVEL", "OUTPUT", "MASTER"},
+	"LEVEL":     {"VOLUME", "OUTPUT", "MIX", "EFFECT LEVEL"},
+	"OUTPUT":    {"LEVEL", "VOLUME", "MASTER"},
+	"DRIVE":     {"OVERDRIVE", "GAIN", "DIST", "DISTORTION"},
+	"OVERDRIVE": {"DRIVE", "GAIN"},
+	"MIDDLE":    {"MID"},
+	"MID":       {"MIDDLE"},
+	"RATE":      {"CHR RATE", "SPEED", "RATE 1"},
+	"SPEED":     {"RATE", "CHR RATE"},
+	"DEPTH":     {"VIB DEPTH", "DEPTH 1"},
+	"TIME":      {"DELAY TIME", "TIME 1"},
+	"FEEDBACK":  {"REGEN", "F.BACK", "REPEAT"},
+	"MIX":       {"MIX 1", "LEVEL", "EFFECT LEVEL", "WET"},
+	"DECAY":     {"DECAY TIME", "REVERB TIME"},
+	"TONE":      {"TONE 1"},
+	"MASTER":    {"VOLUME", "OUTPUT"},
+}
+
+// ResolveParam finds a parameter by name: an exact case-insensitive match
+// first, then the common synonyms above. It returns the resolved spec and its
+// wire index.
+func (m ModelSpec) ResolveParam(name string) (ParamSpec, int, bool) {
+	if spec, i, ok := m.Param(name); ok {
+		return spec, i, true
+	}
+	for _, candidate := range paramSynonyms[strings.ToUpper(name)] {
+		if spec, i, ok := m.Param(candidate); ok {
+			return spec, i, true
+		}
+	}
+	return ParamSpec{}, 0, false
+}
+
 // Catalog is the parsed ModelRepo, keyed by wire hash.
 type Catalog struct {
 	byID   map[int]*ModelSpec

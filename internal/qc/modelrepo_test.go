@@ -32,6 +32,40 @@ func TestParseModelRepo(t *testing.T) {
 	}
 }
 
+func TestResolveParamSynonyms(t *testing.T) {
+	c := mustCatalog(t)
+	twin, ok := c.Find("Fender Twin Reverb")
+	if !ok {
+		t.Fatal("Fender Twin Reverb not found")
+	}
+
+	// Exact names win, even when a synonym list would also apply.
+	if spec, _, ok := twin.ResolveParam("TREBLE"); !ok || spec.Name != "TREBLE" {
+		t.Errorf("exact TREBLE = %q, want TREBLE", spec.Name)
+	}
+	// The Fender Twin's gain knob is named VOLUME; MIDDLE is the catalog MID.
+	if spec, _, ok := twin.ResolveParam("GAIN"); !ok || spec.Name != "VOLUME" {
+		t.Errorf("GAIN → %q, want VOLUME", spec.Name)
+	}
+	if spec, _, ok := twin.ResolveParam("MIDDLE"); !ok || spec.Name != "MID" {
+		t.Errorf("MIDDLE → %q, want MID", spec.Name)
+	}
+	// PRESENCE has no synonym fallback: it is genuinely absent on this amp.
+	if _, _, ok := twin.ResolveParam("PRESENCE"); ok {
+		t.Error("PRESENCE should not resolve on the Fender Twin Reverb")
+	}
+
+	// DRIVE is not the TS808's knob name — the synonym maps it to OVERDRIVE,
+	// which is exactly the guess the agent makes and previously had to retry.
+	ts, ok := c.Find("Ibanez TS808")
+	if !ok {
+		t.Fatal("Ibanez TS808 not found")
+	}
+	if spec, _, ok := ts.ResolveParam("DRIVE"); !ok || spec.Name != "OVERDRIVE" {
+		t.Errorf("DRIVE → %q, want OVERDRIVE", spec.Name)
+	}
+}
+
 func TestParseSkew(t *testing.T) {
 	cases := []struct {
 		raw  string

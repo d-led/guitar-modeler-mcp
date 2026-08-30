@@ -86,12 +86,24 @@ are supported:
   - **.pb = a reference archive** for saving and reloading the tone in this
     tool (`qc_decode_preset`, `qc_render_setup_card`). It is **not** a file the
     Quad Cortex imports — never claim it can be loaded onto the unit.
-  - **`qc_usb` = the actual transfer.** It shells out to the user's `qcctl`
-    (pyquadcortex) to recall/save presets and read state live over USB. Ask
-    the user first: it needs a USB-connected unit, `qcctl` installed
-    (`pip install pyquadcortex`; macOS also `brew install hidapi`), Cortex
+  - **`qc_usb` = live unit control, not a .pb upload.** It shells out to the
+    user's `qcctl` (pyquadcortex), whose only subcommands are `version`,
+    `recall --setlist --slot`, `scene --index` and `dump-preset --setlist
+    --slot`: it reads the firmware version, recalls a preset **already in a
+    slot on the unit**, switches scenes, and dumps the preset in a slot. It
+    cannot upload a `.pb` — to put a tone on the unit, dial it in from the
+    HTML card or place it in a slot with Cortex Control, then recall it. Ask
+    the user first: it needs a USB-connected unit, `qcctl` installed, Cortex
     Control quit, and it can change the device — so only run it with
     `confirm: true` after they agree.
+
+    Install `qcctl` once: `pip install pyquadcortex` (macOS also
+    `brew install hidapi`).
+
+    **Crucial prerequisite:** before any `qcctl` command the user must quit
+    the official **Cortex Control** desktop application — it holds an
+    exclusive lock on the USB interface and blocks `qcctl` while it runs.
+    Wi-Fi on the device may stay on.
 
   The wire is free-form (4 lanes that split and merge), but `qc_design` covers
   the common single-lane case; for parallel/dual-amp rigs, describe the

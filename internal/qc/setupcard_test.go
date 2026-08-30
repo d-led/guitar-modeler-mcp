@@ -78,6 +78,13 @@ func TestSetupCardIsSelfContained(t *testing.T) {
 			t.Errorf("setup card missing chain element %q", want)
 		}
 	}
+	// Each block's parameter table repeats the circled slot number, so the
+	// values correlate with the chain hint above.
+	for _, want := range []string{"slotbadge\">1</span>Marshall JCM800", "slotbadge\">2</span>Tape Delay (M)"} {
+		if !strings.Contains(card, want) {
+			t.Errorf("setup card missing block slot badge %q", want)
+		}
+	}
 	// Unset knobs fall back to their catalog defaults, so the amp's GAIN
 	// (default 5) is printed even though the preset never set it.
 	if !strings.Contains(card, "GAIN: 5") {
