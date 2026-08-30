@@ -152,6 +152,14 @@ func (p ParamSpec) ValueToOption(wire float64) (int, error) {
 	return idx, nil
 }
 
+// isList reports whether the parameter is a named option list (switch,
+// comboBox or rotarySwitch with stepNames). A parameter that merely carries a
+// step count for display resolution — e.g. MIX with steps=1001, or CHR RATE
+// with steps=101 — has no option names and is a continuous knob.
+func (p ParamSpec) isList() bool {
+	return len(p.StepNames) > 0
+}
+
 // ModelSpec is one block type: an amp, a pedal, a cab or a capture. It is
 // named ModelSpec because the protobuf package already owns the name Model.
 type ModelSpec struct {

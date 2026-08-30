@@ -157,7 +157,7 @@ func encodeValue(spec ParamSpec, value any) (float64, error) {
 	if spec.padding {
 		return 0, fmt.Errorf("%s is a wire placeholder, not a knob", spec.Name)
 	}
-	if spec.Steps > 0 {
+	if spec.isList() {
 		var idx int
 		switch v := value.(type) {
 		case int:

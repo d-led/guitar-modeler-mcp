@@ -167,7 +167,7 @@ func isKnob(spec ParamSpec) bool {
 
 // formatDefault renders a catalog default value in screen units.
 func formatDefault(spec ParamSpec) string {
-	if spec.Steps > 0 {
+	if spec.isList() {
 		if idx, err := spec.ValueToOption(spec.Default); err == nil && idx < len(spec.StepNames) {
 			return spec.StepNames[idx]
 		}
@@ -176,9 +176,9 @@ func formatDefault(spec ParamSpec) string {
 }
 
 // formatWire renders one parameter's wire value in the parameter's own units,
-// or the selected option name for a list parameter.
+// or the selected option name for a named list parameter.
 func formatWire(spec ParamSpec, wire float64) string {
-	if spec.Steps > 0 {
+	if spec.isList() {
 		if idx, err := spec.ValueToOption(wire); err == nil && idx < len(spec.StepNames) {
 			return spec.StepNames[idx]
 		}

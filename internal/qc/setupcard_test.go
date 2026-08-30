@@ -1,6 +1,7 @@
 package qc
 
 import (
+	"math"
 	"strings"
 	"testing"
 )
@@ -134,5 +135,38 @@ func TestPresetJSONView(t *testing.T) {
 		if !strings.Contains(view, want) {
 			t.Errorf("JSON view missing %q:\n%s", want, view)
 		}
+	}
+}
+
+func TestSteppedFloatIsContinuousNotList(t *testing.T) {
+	// A stepped float (MIX steps=1001, no option names) is a continuous knob,
+	// not an option list: it must encode a real value and render it in units.
+	spec := ParamSpec{Name: "MIX", Min: 0, Max: 100, Skew: 1, Steps: 1001, Units: "%"}
+	if spec.isList() {
+		t.Fatal("a stepped float without option names must not be a list")
+	}
+	wire, err := encodeValue(spec, 2.5)
+	if err != nil {
+		t.Fatalf("encodeValue: %v", err)
+	}
+	if math.Abs(wire-0.025) > 1e-9 {
+		t.Fatalf("encodeValue(2.5) = %v, want 0.025", wire)
+	}
+	if got := formatWire(spec, wire); got != "2.5 %" {
+		t.Errorf("formatWire = %q, want %q", got, "2.5 %")
+	}
+}
+
+func TestNamedListStillUsesOptionNames(t *testing.T) {
+	spec := ParamSpec{Name: "MODE", Min: 0, Max: 1, Steps: 2, StepNames: []string{"Chorus", "Vibrato"}}
+	if !spec.isList() {
+		t.Fatal("a switch with step names must be a list")
+	}
+	wire, err := encodeValue(spec, 1)
+	if err != nil {
+		t.Fatalf("encodeValue: %v", err)
+	}
+	if got := formatWire(spec, wire); got != "Vibrato" {
+		t.Errorf("formatWire = %q, want %q", got, "Vibrato")
 	}
 }
