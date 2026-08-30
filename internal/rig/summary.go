@@ -1,6 +1,8 @@
 package rig
 
 import (
+	"encoding/base64"
+	"encoding/binary"
 	"fmt"
 	"strconv"
 	"strings"
@@ -26,22 +28,39 @@ type Summary struct {
 
 // FootswitchSummary is one assigned stomp switch.
 type FootswitchSummary struct {
-	Switch    string `json:"switch"` // FS5..FS8
-	Module    string `json:"module"`
-	Operation string `json:"operation"`
-	Mode      string `json:"mode,omitempty"`  // "Toggle" or "Scene"
-	Label     string `json:"label,omitempty"` // on-screen text, e.g. "DRIVE"
+	Switch    string        `json:"switch"` // FS5..FS8
+	Module    string        `json:"module"`
+	Operation string        `json:"operation"`
+	Mode      string        `json:"mode,omitempty"`  // "Toggle" or "Scene"
+	Label     string        `json:"label,omitempty"` // on-screen text, e.g. "DRIVE"
+	Scene     *SceneSummary `json:"scene,omitempty"` // the snapshot a Scene switch recalls
+}
+
+// SceneSummary is the block on/off snapshot a Scene-mode switch recalls: the
+// blocks it turns on and the blocks it turns off (unlisted blocks are unchanged).
+type SceneSummary struct {
+	On  []string `json:"on,omitempty"`  // blocks the scene turns on
+	Off []string `json:"off,omitempty"` // blocks the scene turns off
 }
 
 // FootswitchLine renders the assigned stomp switches as a one-liner
-// ("FS5=Wham (On), FS6=Amp (On)") or a "none assigned" message.
+// ("FS5=DRIVE (Scene on [Green JRC-OD] off [BBD Delay])") or a "none assigned"
+// message.
 func FootswitchLine(fs []FootswitchSummary) string {
 	if len(fs) == 0 {
 		return "none assigned"
 	}
 	parts := make([]string, 0, len(fs))
 	for _, f := range fs {
-		parts = append(parts, fmt.Sprintf("%s=%s (%s)", f.Switch, f.Module, f.Operation))
+		name := f.Module
+		if f.Label != "" {
+			name = f.Label
+		}
+		detail := f.Operation
+		if f.Mode == "Scene" && f.Scene != nil {
+			detail = fmt.Sprintf("Scene on [%s] off [%s]", strings.Join(f.Scene.On, ", "), strings.Join(f.Scene.Off, ", "))
+		}
+		parts = append(parts, fmt.Sprintf("%s=%s (%s)", f.Switch, name, detail))
 	}
 	return strings.Join(parts, ", ")
 }
@@ -166,15 +185,46 @@ func footswitchAssignments(content *Content) []FootswitchSummary {
 		if module == "" || module == "Unassigned" {
 			continue
 		}
-		out = append(out, FootswitchSummary{
+		summary := FootswitchSummary{
 			Switch:    "FS" + n,
 			Module:    module,
 			Operation: childString(children, "Operation"+n),
 			Mode:      childString(children, "ModeNew"+n),
 			Label:     childString(children, "UserFootSwitchText"+n),
-		})
+		}
+		if summary.Mode == "Scene" {
+			summary.Scene = decodeSceneState(children, n)
+		}
+		out = append(out, summary)
 	}
 	return out
+}
+
+// decodeSceneState parses a Scene blob (base64, type 24) into the blocks it
+// turns on and off. The blob is 11 records of 36 bytes: a 4-byte little-endian
+// header (0 = no change, 1 = on, 2 = off) followed by a 32-byte module name.
+func decodeSceneState(children map[string]any, n string) *SceneSummary {
+	raw, ok := children["Scene"+n].(map[string]any)
+	if !ok {
+		return nil
+	}
+	state, _ := raw["state"].(string)
+	blob, err := base64.StdEncoding.DecodeString(state)
+	if err != nil || len(blob) < sceneSlots*sceneSlotSize {
+		return nil
+	}
+	s := &SceneSummary{}
+	for i := 0; i < sceneSlots; i++ {
+		rec := blob[i*sceneSlotSize : (i+1)*sceneSlotSize]
+		name := strings.TrimRight(string(rec[4:]), "\x00")
+		switch binary.LittleEndian.Uint32(rec[:4]) {
+		case uint32(sceneOn):
+			s.On = append(s.On, name)
+		case uint32(sceneOff):
+			s.Off = append(s.Off, name)
+		}
+	}
+	return s
 }
 
 // chainSlots returns the ModuleType1..ModuleType11 values of the Chain node,

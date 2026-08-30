@@ -169,3 +169,45 @@ func TestDescribeReturnsChainAndParams(t *testing.T) {
 		t.Fatalf("amp type = %v", summary.Modules[0].Params["Type"])
 	}
 }
+
+func TestDescribeDecodesSceneSnapshot(t *testing.T) {
+	b := newTestBuilder(t)
+	file, err := b.Build(Spec{
+		Name: "Scene Describe",
+		Blocks: []Block{
+			{Type: "Green JRC-OD", Enabled: true},
+			{Type: "Amp", Params: map[string]any{"Type": "65 Black SR"}},
+			{Type: "Cab", Params: map[string]any{"CabType": "1x12 Black Panel Lux"}},
+			{Type: "BBD Delay", Enabled: true},
+		},
+		Footswitches: []Footswitch{{
+			Module: "Green JRC-OD",
+			Mode:   "Scene",
+			Label:  "DRIVE",
+			Scene:  &SceneSnapshot{On: []string{"Green JRC-OD"}, Off: []string{"BBD Delay"}},
+		}},
+	})
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	summary, err := Describe(file)
+	if err != nil {
+		t.Fatalf("Describe: %v", err)
+	}
+	if len(summary.Footswitches) != 1 {
+		t.Fatalf("footswitches = %d, want 1", len(summary.Footswitches))
+	}
+	fs := summary.Footswitches[0]
+	if fs.Label != "DRIVE" || fs.Mode != "Scene" {
+		t.Fatalf("footswitch = %+v, want label DRIVE mode Scene", fs)
+	}
+	if fs.Scene == nil {
+		t.Fatal("scene snapshot not decoded")
+	}
+	if len(fs.Scene.On) != 1 || fs.Scene.On[0] != "Green JRC-OD" {
+		t.Fatalf("scene on = %v, want [Green JRC-OD]", fs.Scene.On)
+	}
+	if len(fs.Scene.Off) != 1 || fs.Scene.Off[0] != "BBD Delay" {
+		t.Fatalf("scene off = %v, want [BBD Delay]", fs.Scene.Off)
+	}
+}

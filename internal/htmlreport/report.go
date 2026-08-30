@@ -321,9 +321,7 @@ const reportHTML = `<!doctype html>
     <div class="buttons">
       {{range .Buttons}}<div class="btn {{if .Module}}assigned{{else}}empty{{end}}">
         <div class="num">{{.Number}}</div>
-        <div class="mod">{{if .Label}}{{.Label}}{{else if .Module}}{{.Module}}{{else}}—{{end}}</div>
-        {{if .Operation}}<div class="op">{{.Operation}}</div>{{end}}
-        {{if .Mode}}<div class="op">{{.Mode}}</div>{{end}}
+        <div class="mod">{{if .Label}}{{.Label}}{{else if .Module}}{{.Module}}{{else}}—{{end}}</div>{{if .Operation}}<div class="op">{{.Operation}}</div>{{end}}{{if .Mode}}<div class="op">{{.Mode}}</div>{{end}}
       </div>{{end}}
     </div>
     <div class="pedals">
