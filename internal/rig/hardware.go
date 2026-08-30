@@ -7,7 +7,8 @@ type ButtonAssign struct {
 	Number    int    `json:"number"` // 1..4
 	Module    string `json:"module"` // module instance name, "" = unassigned
 	Operation string `json:"operation"`
-	Mode      string `json:"mode"` // "Toggle" or "Scene"
+	Mode      string `json:"mode"`  // "Toggle" or "Scene"
+	Label     string `json:"label"` // on-screen switch text (UserFootSwitchText), e.g. "DRIVE"
 }
 
 // PedalTarget is one expression-pedal assignment: the module, its parameter
@@ -45,11 +46,20 @@ func HardwareAssignments(rf *RigFile) (Hardware, error) {
 	h := Hardware{}
 	children := namedChildren(content.FootSwitch, "FootSwitch")
 	for i, n := range []string{"5", "6", "7", "8"} {
+		module := assignedName(childString(children, "Module"+n))
+		// Mode and label only belong to an assigned switch; the template may
+		// still carry a stale value on an unassigned button.
+		mode, label := "", ""
+		if module != "" {
+			mode = childString(children, "ModeNew"+n)
+			label = childString(children, "UserFootSwitchText"+n)
+		}
 		h.Buttons = append(h.Buttons, ButtonAssign{
 			Number:    i + 1,
-			Module:    assignedName(childString(children, "Module"+n)),
+			Module:    module,
 			Operation: childString(children, "Operation"+n),
-			Mode:      childString(children, "ModeNew"+n),
+			Mode:      mode,
+			Label:     label,
 		})
 	}
 	h.Pedals = append(h.Pedals,

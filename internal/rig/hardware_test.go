@@ -55,3 +55,37 @@ func TestHardwareAssignmentsButtonsAndPedals(t *testing.T) {
 		t.Fatalf("expected no pedal targets: %+v %+v", hw.Pedals[0].Targets, hw.Pedals[1].Targets)
 	}
 }
+
+func TestHardwareAssignmentsSceneLabel(t *testing.T) {
+	b, err := NewBuilder(catalog.New())
+	if err != nil {
+		t.Fatalf("NewBuilder: %v", err)
+	}
+	file, err := b.Build(Spec{
+		Name: "Scene Rig",
+		Blocks: []Block{
+			{Type: "Green JRC-OD", Enabled: true},
+			{Type: "Amp", Params: map[string]any{"Type": "65 Black SR"}},
+			{Type: "Cab", Params: map[string]any{"CabType": "1x12 Black Panel Lux"}},
+			{Type: "BBD Delay", Enabled: true},
+		},
+		Footswitches: []Footswitch{{
+			Module: "Green JRC-OD",
+			Mode:   "Scene",
+			Label:  "DRIVE",
+			Scene:  &SceneSnapshot{On: []string{"Green JRC-OD"}, Off: []string{"BBD Delay"}},
+		}},
+	})
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+
+	hw, err := HardwareAssignments(file)
+	if err != nil {
+		t.Fatalf("HardwareAssignments: %v", err)
+	}
+	got := hw.Buttons[0]
+	if got.Label != "DRIVE" || got.Mode != "Scene" || got.Module != "Green JRC-OD" {
+		t.Fatalf("button 1 = %+v, want label DRIVE, mode Scene, module Green JRC-OD", got)
+	}
+}
