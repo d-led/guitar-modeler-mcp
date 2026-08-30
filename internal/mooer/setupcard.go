@@ -134,6 +134,10 @@ td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;verti
 </style></head><body>`)
 	fmt.Fprintf(&b, "<h1>%s</h1><h2>%s — setup card</h2>", html.EscapeString(p.Name), html.EscapeString(m.Display))
 
+	if stored, truncated := StoredName(p.Name); truncated {
+		fmt.Fprintf(&b, "<p class=\"inspired\">Note: the device stores preset names up to %d characters; this preset reads as %q on the unit.</p>", NameLimit, html.EscapeString(stored))
+	}
+
 	b.WriteString(chainHint(Describe(p, m)))
 
 	for _, d := range Describe(p, m) {

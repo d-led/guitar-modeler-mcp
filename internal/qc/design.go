@@ -187,30 +187,39 @@ func encodeValue(spec ParamSpec, value any) (float64, error) {
 
 // WritePresetWithCard renders and encrypts a preset for the given serial and
 // writes it to <outputDir>/<name>.pb together with a printable HTML setup card
-// <outputDir>/<name>.html. It returns both paths.
-func WritePresetWithCard(serial string, spec DesignSpec, outputDir string) (pbPath, cardPath string, err error) {
+// <outputDir>/<name>.html and a human-readable JSON view
+// <outputDir>/<name>.json. It returns all three paths.
+func WritePresetWithCard(serial string, spec DesignSpec, outputDir string) (pbPath, cardPath, jsonPath string, err error) {
 	cat, err := defaultCatalog()
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 	preset, err := BuildPreset(cat, spec)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 	data, err := EncodePreset(serial, preset)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 	stem := sanitizeName(spec.Name)
 	pbPath = filepath.Join(outputDir, stem+".pb")
 	if err := os.WriteFile(pbPath, data, 0o644); err != nil {
-		return "", "", fmt.Errorf("write preset: %w", err)
+		return "", "", "", fmt.Errorf("write preset: %w", err)
 	}
 	cardPath = filepath.Join(outputDir, stem+".html")
 	if err := os.WriteFile(cardPath, []byte(SetupCardHTML(cat, preset)), 0o644); err != nil {
-		return "", "", fmt.Errorf("write setup card: %w", err)
+		return "", "", "", fmt.Errorf("write setup card: %w", err)
 	}
-	return pbPath, cardPath, nil
+	view, err := PresetJSON(cat, preset)
+	if err != nil {
+		return "", "", "", err
+	}
+	jsonPath = filepath.Join(outputDir, stem+".json")
+	if err := os.WriteFile(jsonPath, []byte(view), 0o644); err != nil {
+		return "", "", "", fmt.Errorf("write preset JSON view: %w", err)
+	}
+	return pbPath, cardPath, jsonPath, nil
 }
 
 func sanitizeName(name string) string {

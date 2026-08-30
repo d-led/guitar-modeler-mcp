@@ -32,6 +32,20 @@ const (
 	tailSize = PresetSize - offTail // 353
 )
 
+// NameLimit is the fixed length of a preset's name field in the .mo record:
+// 14 ASCII bytes at offset 0x0C, null-padded. The device itself stores no
+// more than this, so a longer name is truncated on the hardware.
+const NameLimit = nameSize
+
+// StoredName returns the name exactly as the device stores it — the first
+// NameLimit bytes. The second result reports whether the input was truncated.
+func StoredName(name string) (string, bool) {
+	if len(name) <= NameLimit {
+		return name, false
+	}
+	return name[:NameLimit], true
+}
+
 // Preset is one stored sound: the fixed nine-module chain plus the effect
 // order, name and the opaque tail bytes the device keeps after the modules.
 type Preset struct {

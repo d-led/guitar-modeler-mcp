@@ -103,28 +103,52 @@ func writeBlock(b *strings.Builder, cat *Catalog, model *Model, slot int) {
 	b.WriteString("</table>")
 }
 
-// blockParams returns every knob of a model with its value, in the model's
-// parameter order. Knobs the preset sets explicitly show that value; the rest
-// show the catalog default, so the card is self-contained.
-func blockParams(m *ModelSpec, model *Model) []string {
+// paramKV is one knob with its formatted value and whether the preset set it
+// explicitly (versus falling back to the catalog default).
+type paramKV struct {
+	name  string
+	value string
+	set   bool
+}
+
+// blockParamKVs returns every knob of a model with its value, in the model's
+// parameter order. Knobs the preset sets explicitly carry their value; the
+// rest carry the catalog default, so the card and the JSON view are both
+// self-contained.
+func blockParamKVs(m *ModelSpec, model *Model) []paramKV {
 	wireByIndex := map[uint32]float64{}
 	for _, p := range model.Params {
 		if len(p.ParamValues) > 0 {
 			wireByIndex[p.GetIndex()] = float64(p.ParamValues[0].GetFloatValue())
 		}
 	}
-	var out []string
+	var out []paramKV
 	for i, spec := range m.Params {
 		if !isKnob(spec) {
 			continue
 		}
-		var value string
+		value := formatDefault(spec)
+		set := false
 		if wire, ok := wireByIndex[uint32(i)]; ok {
 			value = formatWire(spec, wire)
-		} else {
-			value = formatDefault(spec) + " (default)"
+			set = true
 		}
-		out = append(out, spec.Name+": "+value)
+		out = append(out, paramKV{name: spec.Name, value: value, set: set})
+	}
+	return out
+}
+
+// blockParams returns every knob as a "NAME: value" string, marking the
+// catalog defaults, in the model's parameter order.
+func blockParams(m *ModelSpec, model *Model) []string {
+	kvs := blockParamKVs(m, model)
+	out := make([]string, 0, len(kvs))
+	for _, kv := range kvs {
+		value := kv.value
+		if !kv.set {
+			value += " (default)"
+		}
+		out = append(out, kv.name+": "+value)
 	}
 	return out
 }

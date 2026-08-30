@@ -582,7 +582,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 
 	s.Register(mcp.Tool{
 		Name:        "qc_design",
-		Description: "Build a serial Quad Cortex preset — amp, then cab, then the effects in the order given — and write a self-contained HTML setup card plus a .pb reference archive. The HTML card is the dial-in instructions; the .pb is for saving and reloading the tone in this tool, NOT a file the unit imports. To put the tone on the unit, dial it in from the card or place a preset in a slot with Cortex Control — qc_usb (qcctl) can recall that slot but cannot upload the .pb. Parameter values are on the screen's own line (GAIN 5 on a 0..10 knob, a dB or % value); list parameters take the option index. Knob names are case-insensitive, and common synonyms resolve automatically (GAIN→VOLUME, MIDDLE→MID, DRIVE→OVERDRIVE, LEVEL→OUTPUT, TIME→DELAY TIME, RATE→CHR RATE, DEPTH→VIB DEPTH); if a model rejects a name, run qc_list_model_params to see its exact knob list. The serial is the unit's 9-character serial (empty for cloud).",
+		Description: "Build a serial Quad Cortex preset — amp, then cab, then the effects in the order given — and write a self-contained HTML setup card, a .pb reference archive, and a human-readable .json view. The HTML card is the dial-in instructions; the .pb is for saving and reloading the tone in this tool, NOT a file the unit imports; the .json is this tool's own readable view of the same preset (also not a device or upload format). To put the tone on the unit, dial it in from the card or place a preset in a slot with Cortex Control — qc_usb (qcctl) can recall that slot but cannot upload the .pb. Parameter values are on the screen's own line (GAIN 5 on a 0..10 knob, a dB or % value); list parameters take the option index. Knob names are case-insensitive, and common synonyms resolve automatically (GAIN→VOLUME, MIDDLE→MID, DRIVE→OVERDRIVE, LEVEL→OUTPUT, TIME→DELAY TIME, RATE→CHR RATE, DEPTH→VIB DEPTH); if a model rejects a name, run qc_list_model_params to see its exact knob list. The serial is the unit's 9-character serial (empty for cloud).",
 		InputSchema: objectSchema(map[string]any{
 			"name":               stringSchema("Preset name (becomes the file name)."),
 			"serial":             stringSchema("The unit's 9-character serial number, or empty for cloud files."),
@@ -604,7 +604,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 
 	s.Register(mcp.Tool{
 		Name:        "qc_render_setup_card",
-		Description: "Decode a Quad Cortex .pb reference archive and write a printable HTML setup card next to it. The serial is the unit's 9-character serial (empty for cloud files).",
+		Description: "Decode a Quad Cortex .pb reference archive and write a printable HTML setup card plus a human-readable .json view next to it. The serial is the unit's 9-character serial (empty for cloud files).",
 		InputSchema: objectSchema(map[string]any{
 			"path":       stringSchema("Path to the encrypted .pb preset file."),
 			"serial":     stringSchema("The unit's 9-character serial number, or empty for cloud files."),
@@ -1390,6 +1390,10 @@ func (r *Registrar) writeMooerOutput(m mooer.Model, p mooer.Preset, outDir strin
 	}
 	fmt.Fprintf(&b, "Setup card: %s\n", cardPath)
 
+	if stored, truncated := mooer.StoredName(p.Name); truncated {
+		fmt.Fprintf(&b, "Note: the %s stores preset names up to %d characters; this preset reads as %q on the unit.\n", m.Display, mooer.NameLimit, stored)
+	}
+
 	for _, d := range mooer.Describe(p, m) {
 		state := "off"
 		if d.Enabled {
@@ -1948,7 +1952,15 @@ func (r *Registrar) qcRenderSetupCard(args map[string]any) (string, error) {
 	if err := os.WriteFile(cardPath, []byte(qc.SetupCardHTML(d.Catalog, preset)), 0o644); err != nil {
 		return "", fmt.Errorf("write setup card: %w", err)
 	}
-	return marshal(map[string]any{"card": cardPath, "name": preset.Name, "caveat": qc.Caveat})
+	view, err := qc.PresetJSON(d.Catalog, preset)
+	if err != nil {
+		return "", err
+	}
+	jsonPath := filepath.Join(outDir, stem+".json")
+	if err := os.WriteFile(jsonPath, []byte(view), 0o644); err != nil {
+		return "", fmt.Errorf("write preset JSON view: %w", err)
+	}
+	return marshal(map[string]any{"card": cardPath, "json": jsonPath, "name": preset.Name, "caveat": qc.Caveat})
 }
 
 // qcUSB shells out to qcctl for live Quad Cortex control. It refuses to run
@@ -2018,13 +2030,14 @@ func (r *Registrar) qcDesign(args map[string]any) (string, error) {
 	if outDir == "" {
 		outDir = "."
 	}
-	pbPath, cardPath, err := qc.WritePresetWithCard(argString(args, "serial"), spec, outDir)
+	pbPath, cardPath, jsonPath, err := qc.WritePresetWithCard(argString(args, "serial"), spec, outDir)
 	if err != nil {
 		return "", err
 	}
 	return marshal(map[string]any{
 		"path":   pbPath,
 		"card":   cardPath,
+		"json":   jsonPath,
 		"name":   spec.Name,
 		"blocks": len(blocks),
 		"caveat": qc.Caveat,
