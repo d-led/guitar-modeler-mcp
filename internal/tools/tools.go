@@ -1479,7 +1479,7 @@ func (r *Registrar) writeMooerOutput(m mooer.Model, p mooer.Preset, outDir strin
 		}
 		fmt.Fprintf(&b, "- %s: %s (%s)\n", d.Module, d.Effect, state)
 	}
-	fmt.Fprintf(&b, "Parameter values are neutral defaults (raw 0-255, 128 = noon); source knob positions are not copied across devices.\n")
+	fmt.Fprintf(&b, "Parameter values are neutral defaults (raw 0-100, 50 = noon); source knob positions are not copied across devices.\n")
 	return b.String(), nil
 }
 
@@ -2266,60 +2266,60 @@ func mooerFXItemSchema() map[string]any {
 	})
 }
 
-// mooerAmpParamsSchema is the amp knob schema (raw 0-255, 128 = noon).
+// mooerAmpParamsSchema is the amp knob schema (raw 0-100, 50 = noon).
 func mooerAmpParamsSchema() map[string]any {
 	return objectSchema(map[string]any{
-		"gain":     numberSchema("Amp gain, raw 0-255 (128 = noon)."),
-		"bass":     numberSchema("Amp bass, raw 0-255 (128 = noon)."),
-		"mid":      numberSchema("Amp middle, raw 0-255 (128 = noon)."),
-		"treble":   numberSchema("Amp treble, raw 0-255 (128 = noon)."),
-		"presence": numberSchema("Amp presence, raw 0-255 (128 = noon)."),
-		"master":   numberSchema("Amp master volume, raw 0-255 (128 = noon)."),
+		"gain":     numberSchema("Amp gain, raw 0-100 (50 = noon)."),
+		"bass":     numberSchema("Amp bass, raw 0-100 (50 = noon)."),
+		"mid":      numberSchema("Amp middle, raw 0-100 (50 = noon)."),
+		"treble":   numberSchema("Amp treble, raw 0-100 (50 = noon)."),
+		"presence": numberSchema("Amp presence, raw 0-100 (50 = noon)."),
+		"master":   numberSchema("Amp master volume, raw 0-100 (50 = noon)."),
 	})
 }
 
-// mooerCabParamsSchema is the cab knob schema (raw 0-255, 128 = noon).
+// mooerCabParamsSchema is the cab knob schema (raw 0-100, 50 = noon).
 func mooerCabParamsSchema() map[string]any {
 	return objectSchema(map[string]any{
 		"mic":      numberSchema("Cab microphone index."),
-		"center":   numberSchema("Mic position, raw 0-255 (128 = center)."),
-		"distance": numberSchema("Mic distance, raw 0-255 (128 = noon)."),
-		"tube":     numberSchema("Tube power-amp drive, raw 0-255 (128 = noon)."),
+		"center":   numberSchema("Mic position, raw 0-100 (50 = center)."),
+		"distance": numberSchema("Mic distance, raw 0-100 (50 = noon)."),
+		"tube":     numberSchema("Tube power-amp drive, raw 0-100 (50 = noon)."),
 	})
 }
 
 // mooerModuleParamsSchema is the per-effect knob schema shared by every module.
-// All values are the device's raw 0-255 scale (128 = noon) unless noted.
+// All values are the device's raw 0-100 scale (50 = noon) unless noted.
 func mooerModuleParamsSchema() map[string]any {
 	return objectSchema(map[string]any{
-		"gain":        numberSchema("Drive/effect gain, raw 0-255 (128 = noon)."),
-		"volume":      numberSchema("Output volume, raw 0-255 (128 = noon)."),
-		"tone":        numberSchema("Tone, raw 0-255 (128 = noon)."),
-		"level":       numberSchema("Effect level, raw 0-255 (128 = noon)."),
-		"rate":        numberSchema("Modulation rate, raw 0-255 (128 = noon)."),
-		"depth":       numberSchema("Modulation depth, raw 0-255 (128 = noon)."),
-		"feedback":    numberSchema("Delay feedback, raw 0-255 (128 = noon)."),
+		"gain":        numberSchema("Drive/effect gain, raw 0-100 (50 = noon)."),
+		"volume":      numberSchema("Output volume, raw 0-100 (50 = noon)."),
+		"tone":        numberSchema("Tone, raw 0-100 (50 = noon)."),
+		"level":       numberSchema("Effect level, raw 0-100 (50 = noon)."),
+		"rate":        numberSchema("Modulation rate, raw 0-100 (50 = noon)."),
+		"depth":       numberSchema("Modulation depth, raw 0-100 (50 = noon)."),
+		"feedback":    numberSchema("Delay feedback, raw 0-100 (50 = noon)."),
 		"time_ms":     numberSchema("Delay time in milliseconds."),
 		"subdivision": numberSchema("Delay subdivision index."),
-		"decay":       numberSchema("Reverb decay, raw 0-255 (128 = noon)."),
-		"pre_delay":   numberSchema("Reverb pre-delay, raw 0-255 (128 = noon)."),
-		"threshold":   numberSchema("Noise-gate threshold, raw 0-255."),
-		"attack":      numberSchema("Attack, raw 0-255 (128 = noon)."),
-		"release":     numberSchema("Release, raw 0-255 (128 = noon)."),
-		"q":           numberSchema("Q, raw 0-255 (128 = noon)."),
-		"position":    numberSchema("Position, raw 0-255 (128 = noon)."),
-		"peak":        numberSchema("Peak, raw 0-255 (128 = noon)."),
-		"band1":       numberSchema("EQ band 1, raw 0-255 (128 = flat)."),
-		"band2":       numberSchema("EQ band 2, raw 0-255 (128 = flat)."),
-		"band3":       numberSchema("EQ band 3, raw 0-255 (128 = flat)."),
-		"band4":       numberSchema("EQ band 4, raw 0-255 (128 = flat)."),
-		"band5":       numberSchema("EQ band 5, raw 0-255 (128 = flat)."),
-		"band6":       numberSchema("EQ band 6, raw 0-255 (128 = flat)."),
-		"band7":       numberSchema("EQ band 7, raw 0-255 (128 = flat)."),
-		"band8":       numberSchema("EQ band 8, raw 0-255 (128 = flat)."),
-		"band9":       numberSchema("EQ band 9, raw 0-255 (128 = flat)."),
-		"band10":      numberSchema("EQ band 10, raw 0-255 (128 = flat)."),
-		"band11":      numberSchema("EQ band 11, raw 0-255 (128 = flat)."),
-		"band12":      numberSchema("EQ band 12, raw 0-255 (128 = flat)."),
+		"decay":       numberSchema("Reverb decay, raw 0-100 (50 = noon)."),
+		"pre_delay":   numberSchema("Reverb pre-delay, raw 0-100 (50 = noon)."),
+		"threshold":   numberSchema("Noise-gate threshold, raw 0-100."),
+		"attack":      numberSchema("Attack, raw 0-100 (50 = noon)."),
+		"release":     numberSchema("Release, raw 0-100 (50 = noon)."),
+		"q":           numberSchema("Q, raw 0-100 (50 = noon)."),
+		"position":    numberSchema("Position, raw 0-100 (50 = noon)."),
+		"peak":        numberSchema("Peak, raw 0-100 (50 = noon)."),
+		"band1":       numberSchema("EQ band 1, raw 0-100 (50 = flat)."),
+		"band2":       numberSchema("EQ band 2, raw 0-100 (50 = flat)."),
+		"band3":       numberSchema("EQ band 3, raw 0-100 (50 = flat)."),
+		"band4":       numberSchema("EQ band 4, raw 0-100 (50 = flat)."),
+		"band5":       numberSchema("EQ band 5, raw 0-100 (50 = flat)."),
+		"band6":       numberSchema("EQ band 6, raw 0-100 (50 = flat)."),
+		"band7":       numberSchema("EQ band 7, raw 0-100 (50 = flat)."),
+		"band8":       numberSchema("EQ band 8, raw 0-100 (50 = flat)."),
+		"band9":       numberSchema("EQ band 9, raw 0-100 (50 = flat)."),
+		"band10":      numberSchema("EQ band 10, raw 0-100 (50 = flat)."),
+		"band11":      numberSchema("EQ band 11, raw 0-100 (50 = flat)."),
+		"band12":      numberSchema("EQ band 12, raw 0-100 (50 = flat)."),
 	})
 }

@@ -1,10 +1,10 @@
 package mooer
 
-// noon is the centre value of the device's raw 0–255 parameter scale, used as
-// the neutral default for "amount" knobs (gain, tone, level, depth, …).
-// Selector indices (effect type, mic, subdivision) keep 0, the first option,
-// which is a valid selection rather than a minimum amount.
-const noon = 0x80 // 128
+// noon is the centre value of the device's 0–100 parameter scale, used as the
+// neutral default for "amount" knobs (gain, tone, level, depth, …). Selector
+// indices (effect type, mic, subdivision) keep 0, the first option, which is a
+// valid selection rather than a minimum amount.
+const noon = 50
 
 // neutralDelayTime is a musical, playable delay time in milliseconds for a
 // preset whose exact time was not translated from another device.

@@ -202,7 +202,7 @@ td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;verti
 		b.WriteString("</table>")
 	}
 
-	b.WriteString("<p class=\"inspired\">Values are the device's raw parameter values (0&ndash;255 unless noted).</p>")
+	b.WriteString("<p class=\"inspired\">Values are the device's raw parameter values (0&ndash;100 unless noted).</p>")
 	b.WriteString("</body></html>")
 	return b.String()
 }

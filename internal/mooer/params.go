@@ -3,7 +3,7 @@ package mooer
 import "strings"
 
 // Params holds raw device parameter values keyed by canonical name. Values are
-// in the device's raw 0-255 scale (128 = noon) unless noted (delay time is
+// in the device's raw 0-100 scale (50 = noon) unless noted (delay time is
 // milliseconds).
 type Params map[string]float64
 
@@ -42,8 +42,8 @@ func clampByte(v float64) uint8 {
 	switch {
 	case v < 0:
 		return 0
-	case v > 255:
-		return 255
+	case v > 100:
+		return 100
 	default:
 		return uint8(v)
 	}

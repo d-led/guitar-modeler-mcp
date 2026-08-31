@@ -170,10 +170,10 @@ func TestSetupCardHighlightsNonDefaultParams(t *testing.T) {
 	p := New()
 	p.Name = "Dialed"
 	index, _ := m.AmpIndex("PLX 100")
-	p.Amp = Amp{Enabled: true, Type: index, Gain: 200, Bass: noon, Mid: noon, Treble: noon, Presence: noon, Master: noon}
+	p.Amp = Amp{Enabled: true, Type: index, Gain: 80, Bass: noon, Mid: noon, Treble: noon, Presence: noon, Master: noon}
 
 	html := SetupCardHTML(m, p)
-	if !strings.Contains(html, `<span class="hl">Gain: 200</span>`) {
+	if !strings.Contains(html, `<span class="hl">Gain: 80</span>`) {
 		t.Fatal("expected the dialled Gain to be highlighted")
 	}
 	if strings.Contains(html, `<span class="hl">Bass:`) {
@@ -248,11 +248,11 @@ func TestBuildPresetAppliesNeutralDefaults(t *testing.T) {
 		t.Fatalf("BuildPreset: %v", err)
 	}
 
-	// Amount knobs land on noon (128), selectors on the first option (0).
-	if p.Amp.Gain != 128 || p.Amp.Master != 128 || p.Amp.Treble != 128 {
-		t.Fatalf("amp values = %+v, want noon (128)", p.Amp)
+	// Amount knobs land on noon (50), selectors on the first option (0).
+	if p.Amp.Gain != 50 || p.Amp.Master != 50 || p.Amp.Treble != 50 {
+		t.Fatalf("amp values = %+v, want noon (50)", p.Amp)
 	}
-	if p.Cab.Mic != 0 || p.Cab.Center != 128 {
+	if p.Cab.Mic != 0 || p.Cab.Center != 50 {
 		t.Fatalf("cab values = %+v, want mic 0 / noon", p.Cab)
 	}
 }
@@ -265,42 +265,39 @@ func TestBuildPresetAppliesParams(t *testing.T) {
 	p, err := m.BuildPreset(Spec{
 		Name:      "MoP Rhythm",
 		Amp:       "MARK III DS",
-		AmpParams: Params{"gain": 191, "bass": 179, "mid": 64, "treble": 191, "presence": 166, "master": 200},
+		AmpParams: Params{"gain": 75, "bass": 70, "mid": 25, "treble": 75, "presence": 65, "master": 78},
 		Cab:       "REC 412",
 		CabParams: Params{"mic": 1, "distance": 90},
 		FX: []FXSpec{
-			{Module: "od", Type: "808", Enabled: true, Params: Params{"Gain": 20, "Tone": 179, "Volume": 217}},
+			{Module: "od", Type: "808", Enabled: true, Params: Params{"Gain": 20, "Tone": 70, "Volume": 85}},
 			{Module: "ns", Type: "NOISE GATE", Enabled: true, Params: Params{"Threshold": 40}},
-			{Module: "eq", Type: "EQ-G", Enabled: true, Params: Params{"band1": 160, "band3": 96}},
+			{Module: "eq", Type: "EQ-G", Enabled: true, Params: Params{"band1": 60, "band3": 46}},
 			{Module: "delay", Type: "DIGITAL", Enabled: true, Params: Params{"Time (ms)": 400, "feedback": 76}},
 		},
 	})
 	if err != nil {
 		t.Fatalf("BuildPreset: %v", err)
 	}
-	if p.Amp.Gain != 191 || p.Amp.Bass != 179 || p.Amp.Mid != 64 || p.Amp.Treble != 191 || p.Amp.Presence != 166 || p.Amp.Master != 200 {
+	if p.Amp.Gain != 75 || p.Amp.Bass != 70 || p.Amp.Mid != 25 || p.Amp.Treble != 75 || p.Amp.Presence != 65 || p.Amp.Master != 78 {
 		t.Fatalf("amp params not applied: %+v", p.Amp)
 	}
 	if p.Cab.Mic != 1 || p.Cab.Distance != 90 {
 		t.Fatalf("cab params not applied: %+v", p.Cab)
 	}
-	if p.Drive.Gain != 20 || p.Drive.Tone != 179 || p.Drive.Volume != 217 {
+	if p.Drive.Gain != 20 || p.Drive.Tone != 70 || p.Drive.Volume != 85 {
 		t.Fatalf("drive params not applied: %+v", p.Drive)
 	}
 	if !p.NoiseGate.Enabled || p.NoiseGate.Threshold != 40 {
 		t.Fatalf("noise gate = %+v", p.NoiseGate)
 	}
-	if !p.EQ.Enabled || p.EQ.Bands[0] != 160 || p.EQ.Bands[2] != 96 {
+	if !p.EQ.Enabled || p.EQ.Bands[0] != 60 || p.EQ.Bands[2] != 46 {
 		t.Fatalf("eq params not applied: %+v", p.EQ)
 	}
 	if p.Delay.TimeMS != 400 || p.Delay.Feedback != 76 {
 		t.Fatalf("delay params not applied: %+v", p.Delay)
 	}
 	// Unspecified knobs stay at their neutral value, not zero.
-	if p.Amp.Gain != 191 && p.Drive.Volume != 217 && p.Amp.Mid != 64 {
-		t.Fatalf("unexpected values: %+v", p.Amp)
-	}
-	if p.Cab.Center != 128 || p.Cab.Tube != 128 {
+	if p.Cab.Center != 50 || p.Cab.Tube != 50 {
 		t.Fatalf("unspecified cab knobs should stay at noon: %+v", p.Cab)
 	}
 }
@@ -312,7 +309,7 @@ func TestSetModuleNeutralDelay(t *testing.T) {
 	if !p.Delay.Enabled || p.Delay.Type != 2 {
 		t.Fatalf("delay = %+v, want enabled type 2", p.Delay)
 	}
-	if p.Delay.Level != 128 || p.Delay.Feedback != 128 || p.Delay.TimeMS != 400 || p.Delay.Subdivision != 0 {
+	if p.Delay.Level != 50 || p.Delay.Feedback != 50 || p.Delay.TimeMS != 400 || p.Delay.Subdivision != 0 {
 		t.Fatalf("delay values = %+v, want noon/400ms/subdivision 0", p.Delay)
 	}
 }

@@ -198,13 +198,13 @@ func TestGigboardToMooer(t *testing.T) {
 	}
 
 	// Structural mapping must leave neutral parameter values, not zeroes.
-	if got.Amp.Gain != 128 || got.Amp.Master != 128 {
-		t.Fatalf("amp values = %+v, want noon (128)", got.Amp)
+	if got.Amp.Gain != 50 || got.Amp.Master != 50 {
+		t.Fatalf("amp values = %+v, want noon (50)", got.Amp)
 	}
-	if got.Cab.Mic != 0 || got.Cab.Center != 128 {
+	if got.Cab.Mic != 0 || got.Cab.Center != 50 {
 		t.Fatalf("cab values = %+v, want mic 0 / noon", got.Cab)
 	}
-	if got.Delay.TimeMS != 400 || got.Delay.Level != 128 {
+	if got.Delay.TimeMS != 400 || got.Delay.Level != 50 {
 		t.Fatalf("delay values = %+v, want 400ms / noon", got.Delay)
 	}
 }
@@ -237,7 +237,7 @@ func TestGigboardToMooerGateGetsNeutralValues(t *testing.T) {
 	if !got.NoiseGate.Enabled {
 		t.Fatal("noise gate should be enabled")
 	}
-	if got.NoiseGate.Attack != 128 || got.NoiseGate.Release != 128 {
+	if got.NoiseGate.Attack != 50 || got.NoiseGate.Release != 50 {
 		t.Fatalf("gate attack/release = %d/%d, want noon", got.NoiseGate.Attack, got.NoiseGate.Release)
 	}
 	if got.NoiseGate.Threshold != 0 {
