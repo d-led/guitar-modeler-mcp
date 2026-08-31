@@ -7,27 +7,23 @@ import (
 
 func TestDefaultDeviceShape(t *testing.T) {
 	d := Default()
-	if d.Name != "thr" || d.Display != "Yamaha THR-II" {
-		t.Fatalf("identity = %q/%q", d.Name, d.Display)
-	}
-	if d.FileExchange {
-		t.Fatal("thr should be card-only")
-	}
-	if len(d.AmpTypes) != 8 {
-		t.Fatalf("amp types = %d, want 8", len(d.AmpTypes))
-	}
-	if len(d.AmpModes) != 3 {
-		t.Fatalf("amp modes = %d, want 3", len(d.AmpModes))
-	}
+	wantEq(t, "name", d.Name, "thr")
+	wantEq(t, "display", d.Display, "Yamaha THR-II")
+	wantEq(t, "file exchange", d.FileExchange, false)
+	wantEq(t, "amp types", len(d.AmpTypes), 8)
+	wantEq(t, "amp modes", len(d.AmpModes), 3)
 	// 8 types × 3 modes = 24 cells, including three FLAT positions.
-	if len(d.Amps) != 24 {
-		t.Fatalf("amps = %d, want 24", len(d.Amps))
-	}
-	if len(d.Modulation) != 4 || len(d.Echo) != 2 || len(d.Reverb) != 4 {
-		t.Fatalf("modulation/echo/reverb = %d/%d/%d, want 4/2/4", len(d.Modulation), len(d.Echo), len(d.Reverb))
-	}
-	if len(d.Cabs) != 16 {
-		t.Fatalf("cabs = %d, want 16", len(d.Cabs))
+	wantEq(t, "amps", len(d.Amps), 24)
+	wantEq(t, "modulation", len(d.Modulation), 4)
+	wantEq(t, "echo", len(d.Echo), 2)
+	wantEq(t, "reverb", len(d.Reverb), 4)
+	wantEq(t, "cabs", len(d.Cabs), 16)
+}
+
+func wantEq[T comparable](t *testing.T, name string, got, want T) {
+	t.Helper()
+	if got != want {
+		t.Fatalf("%s = %v, want %v", name, got, want)
 	}
 }
 

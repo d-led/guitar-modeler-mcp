@@ -15,20 +15,23 @@ func TestNewSetlistOrdersRigs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
-	if len(s.Rigs) != 3 || len(s.RigNames) != 3 {
-		t.Fatalf("rigs/names = %d/%d, want 3/3", len(s.Rigs), len(s.RigNames))
-	}
-	if s.RigNames[0] != "Clean" || s.RigNames[2] != "Solo" {
-		t.Fatalf("rig_names order = %v, want [Clean Drive Solo]", s.RigNames)
-	}
-	if s.Rigs[0] != "11111111-1111-4111-8111-111111111111" {
-		t.Fatalf("rigs[0] = %q", s.Rigs[0])
-	}
-	if s.Author != "UserName" || s.Version != "1.0.0" || s.Readonly {
-		t.Fatalf("unexpected envelope: author=%q version=%q readonly=%v", s.Author, s.Version, s.Readonly)
-	}
+	wantEq(t, "rigs count", len(s.Rigs), 3)
+	wantEq(t, "rig_names count", len(s.RigNames), 3)
+	wantEq(t, "rig_names[0]", s.RigNames[0], "Clean")
+	wantEq(t, "rig_names[2]", s.RigNames[2], "Solo")
+	wantEq(t, "rigs[0]", s.Rigs[0], "11111111-1111-4111-8111-111111111111")
+	wantEq(t, "author", s.Author, "UserName")
+	wantEq(t, "version", s.Version, "1.0.0")
+	wantEq(t, "readonly", s.Readonly, false)
 	if s.ID == "" || s.CreatedAt == 0 {
 		t.Fatal("id/created_at not populated")
+	}
+}
+
+func wantEq[T comparable](t *testing.T, name string, got, want T) {
+	t.Helper()
+	if got != want {
+		t.Fatalf("%s = %v, want %v", name, got, want)
 	}
 }
 
