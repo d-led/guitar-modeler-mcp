@@ -189,42 +189,48 @@ type Spec struct {
 // parameter type of any existing default value.
 func applyParams(children map[string]*Item, params map[string]any) {
 	for key, v := range params {
-		existing := children[key]
-		switch val := v.(type) {
-		case float64:
-			if existing != nil && existing.Type == 0 {
-				existing.Value = &val
-			} else {
-				children[key] = num(val)
-			}
-		case int:
-			f := float64(val)
-			if existing != nil && existing.Type == 0 {
-				existing.Value = &f
-			} else {
-				children[key] = num(f)
-			}
-		case int64:
-			f := float64(val)
-			if existing != nil && existing.Type == 0 {
-				existing.Value = &f
-			} else {
-				children[key] = num(f)
-			}
-		case bool:
-			if existing != nil && (existing.Type == 1 || existing.Type == 3) {
-				existing.State = &val
-			} else {
-				children[key] = boolean(val)
-			}
-		case string:
-			if existing != nil && (existing.Type == 4 || existing.Type == 8) {
-				existing.Str = &val
-			} else {
-				children[key] = str(val)
-			}
-		}
+		setParam(children, key, v)
 	}
+}
+
+func setParam(children map[string]*Item, key string, v any) {
+	existing := children[key]
+	switch val := v.(type) {
+	case float64:
+		setNumber(children, key, existing, val)
+	case int:
+		setNumber(children, key, existing, float64(val))
+	case int64:
+		setNumber(children, key, existing, float64(val))
+	case bool:
+		setBool(children, key, existing, val)
+	case string:
+		setString(children, key, existing, val)
+	}
+}
+
+func setNumber(children map[string]*Item, key string, existing *Item, val float64) {
+	if existing != nil && existing.Type == 0 {
+		existing.Value = &val
+		return
+	}
+	children[key] = num(val)
+}
+
+func setBool(children map[string]*Item, key string, existing *Item, val bool) {
+	if existing != nil && (existing.Type == 1 || existing.Type == 3) {
+		existing.State = &val
+		return
+	}
+	children[key] = boolean(val)
+}
+
+func setString(children map[string]*Item, key string, existing *Item, val string) {
+	if existing != nil && (existing.Type == 4 || existing.Type == 8) {
+		existing.Str = &val
+		return
+	}
+	children[key] = str(val)
 }
 
 // normalizeBlockName returns the canonical device display name for a block,
@@ -264,42 +270,54 @@ func resolveFootswitches(spec []Footswitch, modules []string) ([]Footswitch, err
 	}
 	out := make([]Footswitch, 0, len(spec))
 	for i, sw := range spec {
-		module := strings.TrimSpace(sw.Module)
-		if module == "" {
-			return nil, fmt.Errorf("footswitch %d: module is required", i+1)
-		}
-		name, ok := matchInstance(module, modules)
-		if !ok {
-			return nil, fmt.Errorf("footswitch %d: %q is not in the chain (modules: %s)", i+1, module, strings.Join(modules, ", "))
-		}
-		operation := strings.TrimSpace(sw.Operation)
-		if operation == "" {
-			operation = "On"
-		}
-		mode := strings.TrimSpace(sw.Mode)
-		switch {
-		case mode == "" || strings.EqualFold(mode, "Toggle"):
-			mode = "Toggle"
-		case strings.EqualFold(mode, "Scene"):
-			mode = "Scene"
-		default:
-			return nil, fmt.Errorf("footswitch %d: mode must be \"Toggle\" or \"Scene\", got %q", i+1, mode)
-		}
-
-		scene, err := resolveScene(sw.Scene, modules)
+		resolved, err := resolveFootswitch(sw, i, modules)
 		if err != nil {
-			return nil, fmt.Errorf("footswitch %d: %w", i+1, err)
+			return nil, err
 		}
-
-		out = append(out, Footswitch{
-			Module:    name,
-			Operation: operation,
-			Mode:      mode,
-			Label:     strings.TrimSpace(sw.Label),
-			Scene:     scene,
-		})
+		out = append(out, resolved)
 	}
 	return out, nil
+}
+
+func resolveFootswitch(sw Footswitch, i int, modules []string) (Footswitch, error) {
+	module := strings.TrimSpace(sw.Module)
+	if module == "" {
+		return Footswitch{}, fmt.Errorf("footswitch %d: module is required", i+1)
+	}
+	name, ok := matchInstance(module, modules)
+	if !ok {
+		return Footswitch{}, fmt.Errorf("footswitch %d: %q is not in the chain (modules: %s)", i+1, module, strings.Join(modules, ", "))
+	}
+	operation := strings.TrimSpace(sw.Operation)
+	if operation == "" {
+		operation = "On"
+	}
+	mode, err := footswitchMode(sw.Mode)
+	if err != nil {
+		return Footswitch{}, fmt.Errorf("footswitch %d: %w", i+1, err)
+	}
+	scene, err := resolveScene(sw.Scene, modules)
+	if err != nil {
+		return Footswitch{}, fmt.Errorf("footswitch %d: %w", i+1, err)
+	}
+	return Footswitch{
+		Module:    name,
+		Operation: operation,
+		Mode:      mode,
+		Label:     strings.TrimSpace(sw.Label),
+		Scene:     scene,
+	}, nil
+}
+
+func footswitchMode(mode string) (string, error) {
+	mode = strings.TrimSpace(mode)
+	switch {
+	case mode == "" || strings.EqualFold(mode, "Toggle"):
+		return "Toggle", nil
+	case strings.EqualFold(mode, "Scene"):
+		return "Scene", nil
+	}
+	return "", fmt.Errorf("mode must be \"Toggle\" or \"Scene\", got %q", mode)
 }
 
 // resolveScene validates a scene snapshot's module references and resolves them
@@ -495,7 +513,6 @@ func buildChain(cat *catalog.Catalog, spec Spec) (chain, error) {
 	if err := validateLevels(spec); err != nil {
 		return c, err
 	}
-
 	if !spec.Routing.Valid() {
 		return c, fmt.Errorf("unknown routing %q (want S, SPS-1 or PS-1)", spec.Routing)
 	}
@@ -505,72 +522,114 @@ func buildChain(cat *catalog.Catalog, spec Spec) (chain, error) {
 		c.routing = RoutingSerial
 	}
 
-	canonicalize := func(blocks []Block) ([]Block, error) {
-		out := make([]Block, 0, len(blocks))
-		for _, b := range blocks {
-			canon, ok := normalizeBlockName(cat, b.Type)
-			if !ok {
-				return nil, fmt.Errorf("unknown module type %q", b.Type)
-			}
-			b.Type = canon
-			out = append(out, b)
-		}
-		return out, nil
-	}
-
-	var err error
-	switch c.routing {
-	case RoutingSerial:
-		c.serial, err = canonicalize(spec.Blocks)
-	case RoutingSPS:
-		if len(spec.Prefix) > spsPrefixSlots {
-			return c, fmt.Errorf("SPS-1 prefix has %d blocks, max %d (slots 1-%d)", len(spec.Prefix), spsPrefixSlots, spsPrefixSlots)
-		}
-		if len(spec.PathA) > spsPathSlots {
-			return c, fmt.Errorf("SPS-1 path A has %d blocks, max %d", len(spec.PathA), spsPathSlots)
-		}
-		if len(spec.PathB) > spsPathSlots {
-			return c, fmt.Errorf("SPS-1 path B has %d blocks, max %d", len(spec.PathB), spsPathSlots)
-		}
-		if len(spec.Suffix) > spsSuffixSlots {
-			return c, fmt.Errorf("SPS-1 suffix has %d blocks, max %d (slots 10-11)", len(spec.Suffix), spsSuffixSlots)
-		}
-		c.prefix, err = canonicalize(spec.Prefix)
-		if err == nil {
-			c.pathA, err = canonicalize(spec.PathA)
-		}
-		if err == nil {
-			c.pathB, err = canonicalize(spec.PathB)
-		}
-		if err == nil {
-			c.suffix, err = canonicalize(spec.Suffix)
-		}
-	case RoutingPS:
-		if len(spec.Prefix) > 0 {
-			return c, fmt.Errorf("PS-1 has no serial prefix; use PathA/PathB/Suffix (the signal splits at the input)")
-		}
-		if len(spec.PathA) > psPathASlots {
-			return c, fmt.Errorf("PS-1 path A has %d blocks, max %d (slots 1-%d)", len(spec.PathA), psPathASlots, psPathASlots)
-		}
-		if len(spec.PathB) > psPathBSlots {
-			return c, fmt.Errorf("PS-1 path B has %d blocks, max %d", len(spec.PathB), psPathBSlots)
-		}
-		c.pathA, err = canonicalize(spec.PathA)
-		if err == nil {
-			c.pathB, err = canonicalize(spec.PathB)
-		}
-		if err == nil {
-			c.suffix, err = canonicalize(spec.Suffix)
-		}
-	}
-	if err != nil {
+	if err := c.fill(cat, spec); err != nil {
 		return c, err
 	}
-
-	if len(c.blocks()) > 11 {
-		return c, fmt.Errorf("too many blocks: the Gigboard has 11 chain slots, got %d", len(c.blocks()))
+	if err := c.validate(); err != nil {
+		return c, err
 	}
+	return c, nil
+}
 
+// fill canonicalizes the spec's blocks into the chain sections the routing
+// topology defines, enforcing each topology's slot budgets.
+func (c *chain) fill(cat *catalog.Catalog, spec Spec) error {
+	switch c.routing {
+	case RoutingSerial:
+		return c.fillSerial(cat, spec)
+	case RoutingSPS:
+		return c.fillSPS(cat, spec)
+	case RoutingPS:
+		return c.fillPS(cat, spec)
+	}
+	return nil
+}
+
+func (c *chain) fillSerial(cat *catalog.Catalog, spec Spec) error {
+	var err error
+	c.serial, err = canonicalizeBlocks(cat, spec.Blocks)
+	return err
+}
+
+func (c *chain) fillSPS(cat *catalog.Catalog, spec Spec) error {
+	if len(spec.Prefix) > spsPrefixSlots {
+		return fmt.Errorf("SPS-1 prefix has %d blocks, max %d (slots 1-%d)", len(spec.Prefix), spsPrefixSlots, spsPrefixSlots)
+	}
+	if len(spec.PathA) > spsPathSlots {
+		return fmt.Errorf("SPS-1 path A has %d blocks, max %d", len(spec.PathA), spsPathSlots)
+	}
+	if len(spec.PathB) > spsPathSlots {
+		return fmt.Errorf("SPS-1 path B has %d blocks, max %d", len(spec.PathB), spsPathSlots)
+	}
+	if len(spec.Suffix) > spsSuffixSlots {
+		return fmt.Errorf("SPS-1 suffix has %d blocks, max %d (slots 10-11)", len(spec.Suffix), spsSuffixSlots)
+	}
+	if err := c.canonicalizeSPS(cat, spec); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *chain) canonicalizeSPS(cat *catalog.Catalog, spec Spec) error {
+	var err error
+	c.prefix, err = canonicalizeBlocks(cat, spec.Prefix)
+	if err != nil {
+		return err
+	}
+	c.pathA, err = canonicalizeBlocks(cat, spec.PathA)
+	if err != nil {
+		return err
+	}
+	c.pathB, err = canonicalizeBlocks(cat, spec.PathB)
+	if err != nil {
+		return err
+	}
+	c.suffix, err = canonicalizeBlocks(cat, spec.Suffix)
+	return err
+}
+
+func (c *chain) fillPS(cat *catalog.Catalog, spec Spec) error {
+	if len(spec.Prefix) > 0 {
+		return fmt.Errorf("PS-1 has no serial prefix; use PathA/PathB/Suffix (the signal splits at the input)")
+	}
+	if len(spec.PathA) > psPathASlots {
+		return fmt.Errorf("PS-1 path A has %d blocks, max %d (slots 1-%d)", len(spec.PathA), psPathASlots, psPathASlots)
+	}
+	if len(spec.PathB) > psPathBSlots {
+		return fmt.Errorf("PS-1 path B has %d blocks, max %d", len(spec.PathB), psPathBSlots)
+	}
+	var err error
+	c.pathA, err = canonicalizeBlocks(cat, spec.PathA)
+	if err != nil {
+		return err
+	}
+	c.pathB, err = canonicalizeBlocks(cat, spec.PathB)
+	if err != nil {
+		return err
+	}
+	c.suffix, err = canonicalizeBlocks(cat, spec.Suffix)
+	return err
+}
+
+func canonicalizeBlocks(cat *catalog.Catalog, blocks []Block) ([]Block, error) {
+	out := make([]Block, 0, len(blocks))
+	for _, b := range blocks {
+		canon, ok := normalizeBlockName(cat, b.Type)
+		if !ok {
+			return nil, fmt.Errorf("unknown module type %q", b.Type)
+		}
+		b.Type = canon
+		out = append(out, b)
+	}
+	return out, nil
+}
+
+// validate enforces the global chain invariants: at most 11 slots and at least
+// one amp plus one cabinet or IR block.
+func (c chain) validate() error {
+	if len(c.blocks()) > 11 {
+		return fmt.Errorf("too many blocks: the Gigboard has 11 chain slots, got %d", len(c.blocks()))
+	}
 	ampSeen, cabOrIRSeen := false, false
 	for _, b := range c.blocks() {
 		switch b.Type {
@@ -581,10 +640,10 @@ func buildChain(cat *catalog.Catalog, spec Spec) (chain, error) {
 		}
 	}
 	if !ampSeen {
-		return c, fmt.Errorf("rig must contain an \"Amp\" block")
+		return fmt.Errorf("rig must contain an \"Amp\" block")
 	}
 	if !cabOrIRSeen {
-		return c, fmt.Errorf("rig must contain a \"Cab\", \"IR\" or \"IR (1024)\" block")
+		return fmt.Errorf("rig must contain a \"Cab\", \"IR\" or \"IR (1024)\" block")
 	}
-	return c, nil
+	return nil
 }
