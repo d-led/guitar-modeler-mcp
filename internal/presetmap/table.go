@@ -292,7 +292,14 @@ type Table struct {
 // a Mooer model (the device the Mooer side of the lookup is built from).
 func NewTable(cat *catalog.Catalog, m mooer.Model) *Table {
 	t := &Table{amps: newLinkIndex(), cabs: newLinkIndex(), fx: newFXTable(), mics: newLinkIndex(), mooer: m}
+	t.loadAmps(cat, m)
+	t.loadCabs(cat, m)
+	t.loadFX(cat, m)
+	t.loadMics(cat)
+	return t
+}
 
+func (t *Table) loadAmps(cat *catalog.Catalog, m mooer.Model) {
 	for _, a := range cat.Amps() {
 		t.amps.add(DeviceGigboard, a.Model, canonicalKey(a.Brand+" "+a.RealModel))
 	}
@@ -301,7 +308,9 @@ func NewTable(cat *catalog.Catalog, m mooer.Model) *Table {
 			t.amps.add(DeviceMooer, a.Name, canonicalKey(raw))
 		}
 	}
+}
 
+func (t *Table) loadCabs(cat *catalog.Catalog, m mooer.Model) {
 	for _, c := range cat.Cabs() {
 		if raw, ok := gigboardCabInspiredBy[c.Model]; ok {
 			t.cabs.add(DeviceGigboard, c.Model, canonicalKey(raw))
@@ -312,7 +321,9 @@ func NewTable(cat *catalog.Catalog, m mooer.Model) *Table {
 			t.cabs.add(DeviceMooer, c.Name, canonicalKey(raw))
 		}
 	}
+}
 
+func (t *Table) loadFX(cat *catalog.Catalog, m mooer.Model) {
 	for _, f := range cat.FX() {
 		if raw, ok := gigboardFXInspiredBy[f.Name]; ok {
 			t.fx.addGigboard(f.Name, f.Category, canonicalKey(raw))
@@ -325,11 +336,12 @@ func NewTable(cat *catalog.Catalog, m mooer.Model) *Table {
 			}
 		}
 	}
+}
 
-	for _, m := range cat.Mics() {
-		t.mics.add(DeviceGigboard, m.Model, canonicalKey(m.RealModel))
+func (t *Table) loadMics(cat *catalog.Catalog) {
+	for _, mic := range cat.Mics() {
+		t.mics.add(DeviceGigboard, mic.Model, canonicalKey(mic.RealModel))
 	}
-	return t
 }
 
 // MapAmp resolves an amp model from one device to the amp emulating the same

@@ -31,34 +31,67 @@ func (t *Table) GigboardToMooer(file *rig.RigFile) (mooer.Preset, error) {
 		if !ok {
 			continue
 		}
-		switch {
-		case strings.HasPrefix(slot, "Amp"):
-			if model, ok := m.Params["Type"].(string); ok {
-				if mooerModel, found := t.MapAmp(DeviceGigboard, model, DeviceMooer); found {
-					if index, found := t.mooer.AmpIndex(mooerModel); found {
-						mooer.SetModule(&p, "amp", index, m.On)
-					}
-				}
-			}
-		case strings.HasPrefix(slot, "Cab"):
-			if model, ok := m.Params["CabType"].(string); ok {
-				if mooerModel, found := t.MapCab(DeviceGigboard, model, DeviceMooer); found {
-					if index, found := t.mooer.CabIndex(mooerModel); found {
-						mooer.SetModule(&p, "cab", index, m.On)
-					}
-				}
-			}
-		case slot == "Gate" || slot == "Noise Filter":
-			mooer.SetModule(&p, "ns", 0, m.On)
-		default:
-			if module, name, ok := t.MapFXGigboardToMooer(slot); ok {
-				if index, found := t.mooer.EffectIndex(module, name); found {
-					mooer.SetModule(&p, module, index, m.On)
-				}
-			}
-		}
+		t.applySlot(&p, slot, m)
 	}
 	return p, nil
+}
+
+// applySlot maps one chain slot onto the corresponding Mooer module.
+func (t *Table) applySlot(p *mooer.Preset, slot string, m rig.SummaryModule) {
+	switch {
+	case strings.HasPrefix(slot, "Amp"):
+		t.applyAmp(p, m)
+	case strings.HasPrefix(slot, "Cab"):
+		t.applyCab(p, m)
+	case slot == "Gate" || slot == "Noise Filter":
+		mooer.SetModule(p, "ns", 0, m.On)
+	default:
+		t.applyFX(p, slot, m)
+	}
+}
+
+func (t *Table) applyAmp(p *mooer.Preset, m rig.SummaryModule) {
+	model, ok := m.Params["Type"].(string)
+	if !ok {
+		return
+	}
+	mooerModel, found := t.MapAmp(DeviceGigboard, model, DeviceMooer)
+	if !found {
+		return
+	}
+	index, found := t.mooer.AmpIndex(mooerModel)
+	if !found {
+		return
+	}
+	mooer.SetModule(p, "amp", index, m.On)
+}
+
+func (t *Table) applyCab(p *mooer.Preset, m rig.SummaryModule) {
+	model, ok := m.Params["CabType"].(string)
+	if !ok {
+		return
+	}
+	mooerModel, found := t.MapCab(DeviceGigboard, model, DeviceMooer)
+	if !found {
+		return
+	}
+	index, found := t.mooer.CabIndex(mooerModel)
+	if !found {
+		return
+	}
+	mooer.SetModule(p, "cab", index, m.On)
+}
+
+func (t *Table) applyFX(p *mooer.Preset, slot string, m rig.SummaryModule) {
+	module, name, ok := t.MapFXGigboardToMooer(slot)
+	if !ok {
+		return
+	}
+	index, found := t.mooer.EffectIndex(module, name)
+	if !found {
+		return
+	}
+	mooer.SetModule(p, module, index, m.On)
 }
 
 // MooerToGigboard maps a Mooer preset to a buildable Gigboard rig spec. As with
