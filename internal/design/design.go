@@ -153,6 +153,17 @@ func (d *Designer) Design(req Request) (*Result, error) {
 		Pedals:       pedals,
 	}
 
+	if err := d.applyRouting(&spec, req, ampModel, cabModel, micModel, skipCab, pre, post, last, &notes); err != nil {
+		return nil, err
+	}
+
+	notes = append(notes, d.footswitchHints(req)...)
+
+	return &Result{Spec: spec, Notes: notes}, nil
+}
+
+// applyRouting fills the chain sections according to the requested topology.
+func (d *Designer) applyRouting(spec *rig.Spec, req Request, ampModel, cabModel, micModel string, skipCab bool, pre, post, last []rig.Block, notes *[]string) error {
 	switch {
 	case req.Routing == rig.RoutingSPS && req.Amp2 == "":
 		// Shared amp: the amp+cab feed two parallel effect paths.
@@ -160,32 +171,28 @@ func (d *Designer) Design(req Request) (*Result, error) {
 		spec.PathA = d.fxBlocks(req.PathAFX)
 		spec.PathB = d.fxBlocks(req.PathBFX)
 		spec.Suffix = append(post, last...)
-		notes = append(notes, "shared amp with two parallel effect paths (SPS-1)")
+		*notes = append(*notes, "shared amp with two parallel effect paths (SPS-1)")
 	case req.Routing == rig.RoutingSPS:
 		// Dual amp: two full amp paths in parallel.
-		amp2Model, note2, err := d.resolveAmp(req.Amp2)
+		pathA, pathB, note2, cab2Model, err := d.dualAmpPaths(req, ampModel, cabModel, micModel)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		cab2Model := d.resolveCab(req.Cab2, amp2Model)
-		mic2Model := d.resolveMic(req.Mic2)
 		spec.Prefix = pre
-		spec.PathA = []rig.Block{d.ampBlock(ampModel, req.AmpParams), d.cabBlock(cabModel, micModel, req.CabParams)}
-		spec.PathB = []rig.Block{d.ampBlock(amp2Model, nil), d.cabBlock(cab2Model, mic2Model, nil)}
+		spec.PathA = pathA
+		spec.PathB = pathB
 		spec.Suffix = append(post, last...)
-		notes = append(notes, note2, fmt.Sprintf("cab2 %q", cab2Model))
+		*notes = append(*notes, note2, fmt.Sprintf("cab2 %q", cab2Model))
 	case req.Routing == rig.RoutingPS:
 		// Split at the input into two amp paths.
-		amp2Model, note2, err := d.resolveAmp(req.Amp2)
+		pathA, pathB, note2, cab2Model, err := d.dualAmpPaths(req, ampModel, cabModel, micModel)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		cab2Model := d.resolveCab(req.Cab2, amp2Model)
-		mic2Model := d.resolveMic(req.Mic2)
-		spec.PathA = append(pre, d.ampBlock(ampModel, req.AmpParams), d.cabBlock(cabModel, micModel, req.CabParams))
-		spec.PathB = []rig.Block{d.ampBlock(amp2Model, nil), d.cabBlock(cab2Model, mic2Model, nil)}
+		spec.PathA = append(pre, pathA...)
+		spec.PathB = pathB
 		spec.Suffix = append(post, last...)
-		notes = append(notes, note2, fmt.Sprintf("cab2 %q", cab2Model))
+		*notes = append(*notes, note2, fmt.Sprintf("cab2 %q", cab2Model))
 	default:
 		// Serial: pre → amp → [cab] → post → volume.
 		blocks := make([]rig.Block, 0, len(pre)+len(post)+len(last)+3)
@@ -198,10 +205,20 @@ func (d *Designer) Design(req Request) (*Result, error) {
 		blocks = append(blocks, last...)
 		spec.Blocks = blocks
 	}
+	return nil
+}
 
-	notes = append(notes, d.footswitchHints(req)...)
-
-	return &Result{Spec: spec, Notes: notes}, nil
+// dualAmpPaths resolves the second amp path and returns both paths' blocks.
+func (d *Designer) dualAmpPaths(req Request, ampModel, cabModel, micModel string) (pathA, pathB []rig.Block, note, cab2Model string, err error) {
+	amp2Model, note, err := d.resolveAmp(req.Amp2)
+	if err != nil {
+		return nil, nil, "", "", err
+	}
+	cab2Model = d.resolveCab(req.Cab2, amp2Model)
+	mic2Model := d.resolveMic(req.Mic2)
+	pathA = []rig.Block{d.ampBlock(ampModel, req.AmpParams), d.cabBlock(cabModel, micModel, req.CabParams)}
+	pathB = []rig.Block{d.ampBlock(amp2Model, nil), d.cabBlock(cab2Model, mic2Model, nil)}
+	return pathA, pathB, note, cab2Model, nil
 }
 
 // footswitchHints nudges the caller towards assigning a stomp switch to the
