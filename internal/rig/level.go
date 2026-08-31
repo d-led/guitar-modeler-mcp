@@ -84,6 +84,14 @@ func estimateLevel(patch Patch) LevelEstimate {
 	}
 
 	for _, name := range patch.ChildOrder {
+		if !isInstanceOf(name, "IR") {
+			continue
+		}
+		level, note := irStage(patch.Children[name])
+		add("IR ("+name+")", level, note)
+	}
+
+	for _, name := range patch.ChildOrder {
 		if !isInstanceOf(name, "Volume") {
 			continue
 		}
@@ -160,6 +168,67 @@ func nodeNumber(node *Node, key string) float64 {
 		return *item.Value
 	}
 	return 0
+}
+
+// nodeNumberOr reads a numeric parameter, falling back to def when the item is
+// absent (so an unset knob defaults to the device value rather than 0).
+func nodeNumberOr(node *Node, key string, def float64) float64 {
+	if node == nil {
+		return def
+	}
+	if item, ok := node.Children[key]; ok && item.Value != nil {
+		return *item.Value
+	}
+	return def
+}
+
+// nodeString reads a string (enumerated type or label) parameter, or "".
+func nodeString(node *Node, key string) string {
+	if node == nil {
+		return ""
+	}
+	if item, ok := node.Children[key]; ok && item.Str != nil {
+		return *item.Str
+	}
+	return ""
+}
+
+// nodeBool reads a boolean (state) parameter, defaulting to false.
+func nodeBool(node *Node, key string) bool {
+	if node == nil {
+		return false
+	}
+	if item, ok := node.Children[key]; ok && item.State != nil {
+		return *item.State
+	}
+	return false
+}
+
+// irStage estimates an IR loader's level contribution. Mix is a wet/dry blend
+// (0 = dry passthrough, 100 = full wet); the blended level is
+// 20·log10((1−m) + m·10^(g/20)). When Doubling is on and a second IR is
+// loaded, the louder of the two is used.
+func irStage(node *Node) (float64, string) {
+	gain := nodeNumberOr(node, "Gain", 0)
+	mix := nodeNumberOr(node, "Mix", 100)
+	level := blendDB(gain, mix)
+	note := fmt.Sprintf("gain %s, mix %.0f%%", dB(gain), mix)
+	if nodeBool(node, "Doubling") && nodeString(node, "IR2") != "" {
+		g2 := nodeNumberOr(node, "Gain2", 0)
+		m2 := nodeNumberOr(node, "Mix2", 100)
+		if l2 := blendDB(g2, m2); l2 > level {
+			level = l2
+		}
+		note += fmt.Sprintf(" (doubling: gain %s, mix %.0f%%)", dB(g2), m2)
+	}
+	return level, note
+}
+
+// blendDB estimates the level of a wet/dry blend: mix m in 0..100 and wet gain
+// g in dB. At m=100 the result is g; at m=0 it is 0 (dry passthrough).
+func blendDB(g, mix float64) float64 {
+	m := clamp(mix, 0, 100) / 100
+	return 20 * math.Log10((1-m)+m*math.Pow(10, g/20))
 }
 
 // percentToDB converts a 0..100 percentage knob to a dB estimate (0 = mute).

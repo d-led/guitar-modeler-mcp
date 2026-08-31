@@ -56,6 +56,52 @@ func TestEstimateLevelWithOutputVolume(t *testing.T) {
 	}
 }
 
+func TestEstimateLevelWithIR(t *testing.T) {
+	b := newTestBuilder(t)
+	file, err := b.Build(Spec{
+		Name: "Level",
+		Blocks: []Block{
+			{Type: "Amp", Params: map[string]any{"Type": "65 Black SR"}},
+			{Type: "IR", Params: map[string]any{"IR": "[directory](York)[name](Mix 01)", "Gain": 6.0}},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	est, err := EstimateLevel(file, 0)
+	if err != nil {
+		t.Fatalf("EstimateLevel: %v", err)
+	}
+	// amp master -6 dB + IR gain +6 dB (mix 100 = full wet) = 0 dB.
+	if est.EstimatedLevelDB != 0 {
+		t.Fatalf("estimated = %v, want 0 (amp master -6 + IR gain +6)", est.EstimatedLevelDB)
+	}
+}
+
+func TestEstimateLevelWithIRMixBlend(t *testing.T) {
+	b := newTestBuilder(t)
+	file, err := b.Build(Spec{
+		Name: "Level",
+		Blocks: []Block{
+			{Type: "Amp", Params: map[string]any{"Type": "65 Black SR"}},
+			// Mix 0 = dry passthrough, so the IR contributes nothing; mix 100 of
+			// a 0 dB IR is also unity. Either way the estimate stays at the amp
+			// master's -6 dB.
+			{Type: "IR", Params: map[string]any{"IR": "[directory](York)[name](Mix 01)", "Mix": 0.0}},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	est, err := EstimateLevel(file, 0)
+	if err != nil {
+		t.Fatalf("EstimateLevel: %v", err)
+	}
+	if est.EstimatedLevelDB != -6 {
+		t.Fatalf("estimated = %v, want -6 (mix 0 passes dry, no IR gain)", est.EstimatedLevelDB)
+	}
+}
+
 func TestEstimateLevelParallelRig(t *testing.T) {
 	b := newTestBuilder(t)
 	file, err := b.Build(Spec{
