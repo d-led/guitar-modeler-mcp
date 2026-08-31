@@ -177,35 +177,32 @@ func TestGigboardToMooer(t *testing.T) {
 		t.Fatalf("GigboardToMooer: %v", err)
 	}
 
-	if got.Name != "TO MOOER" {
-		t.Fatalf("name = %q, want TO MOOER (gigboard names are all caps)", got.Name)
-	}
+	wantEq(t, "name", got.Name, "TO MOOER")
 	m := mooer.Default()
-	if !got.Amp.Enabled || m.EffectName("amp", got.Amp.Type) != "Brit 800" {
-		t.Fatalf("amp = %+v, want enabled Brit 800", got.Amp)
-	}
-	if !got.Cab.Enabled || m.EffectName("cab", got.Cab.Type) != "4x12 Green" {
-		t.Fatalf("cab = %+v, want enabled 4x12 Green", got.Cab)
-	}
-	if !got.Drive.Enabled || m.EffectName("od", got.Drive.Type) != "TS808" {
-		t.Fatalf("drive = %+v, want enabled TS808", got.Drive)
-	}
-	if !got.Delay.Enabled || m.EffectName("delay", got.Delay.Type) != "Tape" {
-		t.Fatalf("delay = %+v, want enabled Tape", got.Delay)
-	}
-	if !got.Reverb.Enabled || m.EffectName("reverb", got.Reverb.Type) != "Spring" {
-		t.Fatalf("reverb = %+v, want enabled Spring", got.Reverb)
-	}
+	wantEq(t, "amp enabled", got.Amp.Enabled, true)
+	wantEq(t, "amp name", m.EffectName("amp", got.Amp.Type), "Brit 800")
+	wantEq(t, "cab enabled", got.Cab.Enabled, true)
+	wantEq(t, "cab name", m.EffectName("cab", got.Cab.Type), "4x12 Green")
+	wantEq(t, "drive enabled", got.Drive.Enabled, true)
+	wantEq(t, "drive name", m.EffectName("od", got.Drive.Type), "TS808")
+	wantEq(t, "delay enabled", got.Delay.Enabled, true)
+	wantEq(t, "delay name", m.EffectName("delay", got.Delay.Type), "Tape")
+	wantEq(t, "reverb enabled", got.Reverb.Enabled, true)
+	wantEq(t, "reverb name", m.EffectName("reverb", got.Reverb.Type), "Spring")
 
 	// Structural mapping must leave neutral parameter values, not zeroes.
-	if got.Amp.Gain != 50 || got.Amp.Master != 50 {
-		t.Fatalf("amp values = %+v, want noon (50)", got.Amp)
-	}
-	if got.Cab.Mic != 0 || got.Cab.Center != 50 {
-		t.Fatalf("cab values = %+v, want mic 0 / noon", got.Cab)
-	}
-	if got.Delay.TimeMS != 400 || got.Delay.Level != 50 {
-		t.Fatalf("delay values = %+v, want 400ms / noon", got.Delay)
+	wantEq(t, "amp gain", got.Amp.Gain, 50)
+	wantEq(t, "amp master", got.Amp.Master, 50)
+	wantEq(t, "cab mic", got.Cab.Mic, 0)
+	wantEq(t, "cab center", got.Cab.Center, 50)
+	wantEq(t, "delay time", got.Delay.TimeMS, 400)
+	wantEq(t, "delay level", got.Delay.Level, 50)
+}
+
+func wantEq[T comparable](t *testing.T, name string, got, want T) {
+	t.Helper()
+	if got != want {
+		t.Fatalf("%s = %v, want %v", name, got, want)
 	}
 }
 
