@@ -189,30 +189,30 @@ func fromTHR(t thr.Device) []Ingredient {
 // primaryFX maps a device's own category/module name to the canonical primary
 // feature tag. Empty means "derive from the name via the keyword dictionary".
 func primaryFX(category string) string {
-	switch strings.ToLower(strings.TrimSpace(category)) {
-	case "distortion", "od", "drive", "overdrive":
-		return "drive"
-	case "boost", "booster":
-		return "boost"
-	case "compressor", "comp":
-		return "comp"
-	case "gate", "ns", "noise suppressor":
-		return "gate"
-	case "equalizer", "eq":
-		return "eq"
-	case "filter":
-		return "filter"
-	case "wah":
-		return "wah"
-	case "pitch":
-		return "pitch"
-	case "delay", "echo":
-		return "delay"
-	case "reverb", "reverbs":
-		return "reverb"
-	case "modulation", "mod":
-		return "mod"
-	default:
-		return ""
-	}
+	return primaryFXMap[strings.ToLower(strings.TrimSpace(category))]
+}
+
+var primaryFXMap = map[string]string{
+	"distortion":       "drive",
+	"od":               "drive",
+	"drive":            "drive",
+	"overdrive":        "drive",
+	"boost":            "boost",
+	"booster":          "boost",
+	"compressor":       "comp",
+	"comp":             "comp",
+	"gate":             "gate",
+	"ns":               "gate",
+	"noise suppressor": "gate",
+	"equalizer":        "eq",
+	"eq":               "eq",
+	"filter":           "filter",
+	"wah":              "wah",
+	"pitch":            "pitch",
+	"delay":            "delay",
+	"echo":             "delay",
+	"reverb":           "reverb",
+	"reverbs":          "reverb",
+	"modulation":       "mod",
+	"mod":              "mod",
 }
