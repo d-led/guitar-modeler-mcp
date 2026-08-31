@@ -99,12 +99,13 @@ func footSwitchFor(template []byte, moduleNames []string, switches []Footswitch)
 	}
 
 	// The device loads with no scene active unless LastScene names one. Mark the
-	// first Scene-mode switch as the default scene (0-based across FS5..FS8) so
-	// the rig's starting point is defined; -1 means "no scene" (all toggles).
+	// first Scene-mode switch as the default scene; the value is the footswitch
+	// number (5..8 = FS5..FS8, matching the section's Module5..Module8 naming),
+	// and -1 means "no scene" (all toggles).
 	lastScene := -1
 	for i, sw := range switches {
 		if sw.Mode == "Scene" {
-			lastScene = i
+			lastScene = 5 + i
 			break
 		}
 	}

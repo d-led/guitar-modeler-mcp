@@ -178,8 +178,8 @@ func TestBuildMarksFirstSceneActiveByDefault(t *testing.T) {
 	}
 	fs := decodeSection(content.FootSwitch)
 	children := fs["data"].(map[string]any)["FootSwitch"].(map[string]any)["children"].(map[string]any)
-	if got := children["LastScene"].(map[string]any)["value"]; got != float64(0) {
-		t.Fatalf("LastScene = %v, want 0 (first scene on FS5 active)", got)
+	if got := children["LastScene"].(map[string]any)["value"]; got != float64(5) {
+		t.Fatalf("LastScene = %v, want 5 (first scene on FS5 active)", got)
 	}
 	if got := children["LastSceneState"].(map[string]any)["value"]; got != float64(0) {
 		t.Fatalf("LastSceneState = %v, want 0", got)
