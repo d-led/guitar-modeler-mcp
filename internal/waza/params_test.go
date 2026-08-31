@@ -14,29 +14,24 @@ func TestReadParamsTemplate(t *testing.T) {
 	}
 	p := tmpl.ReadParams()
 
-	if p.AmpType != "CLEAN" {
-		t.Fatalf("amp type = %q, want CLEAN", p.AmpType)
-	}
-	for k, v := range map[string]int{
-		"gain": p.AmpGain, "volume": p.AmpVolume, "bass": p.AmpBass,
-		"middle": p.AmpMiddle, "treble": p.AmpTreble, "presence": p.AmpPresence,
-	} {
-		if v != 50 {
-			t.Fatalf("%s = %d, want 50 (noon)", k, v)
-		}
-	}
-	if p.BoosterType != "" || p.BoosterDrive != 0 || p.BoosterLevel != 0 {
-		t.Fatalf("booster = %q/drive %d/level %d, want off", p.BoosterType, p.BoosterDrive, p.BoosterLevel)
-	}
-	for name, v := range map[string]string{"mod": p.ModType, "fx": p.FXType, "delay": p.DelayType, "reverb": p.ReverbType} {
-		if v != "" {
-			t.Fatalf("%s type = %q, want empty (off)", name, v)
-		}
-	}
+	wantEq(t, "amp type", p.AmpType, "CLEAN")
+	wantEq(t, "amp gain", p.AmpGain, 50)
+	wantEq(t, "amp volume", p.AmpVolume, 50)
+	wantEq(t, "amp bass", p.AmpBass, 50)
+	wantEq(t, "amp middle", p.AmpMiddle, 50)
+	wantEq(t, "amp treble", p.AmpTreble, 50)
+	wantEq(t, "amp presence", p.AmpPresence, 50)
+	wantEq(t, "booster type", p.BoosterType, "")
+	wantEq(t, "booster drive", p.BoosterDrive, 0)
+	wantEq(t, "booster level", p.BoosterLevel, 0)
+	wantEq(t, "mod type", p.ModType, "")
+	wantEq(t, "fx type", p.FXType, "")
+	wantEq(t, "delay type", p.DelayType, "")
+	wantEq(t, "reverb type", p.ReverbType, "")
 	// The neutral template keeps the device's spatial defaults.
-	if p.Position != "SURROUND" || p.Ambience != "STAGE" || p.Mode != "REVERB" {
-		t.Fatalf("spatial defaults = %q/%q/%q, want SURROUND/STAGE/REVERB", p.Position, p.Ambience, p.Mode)
-	}
+	wantEq(t, "position", p.Position, "SURROUND")
+	wantEq(t, "ambience", p.Ambience, "STAGE")
+	wantEq(t, "mode", p.Mode, "REVERB")
 }
 
 // TestWriteParamsRoundTrip writes a full set of parameters onto the template
@@ -70,25 +65,26 @@ func TestWriteParamsRoundTrip(t *testing.T) {
 	}).WithName("Round Trip")
 
 	got := out.ReadParams()
-	if got.AmpType != "BROWN" || got.AmpGain != 55 || got.AmpVolume != 68 || got.AmpBass != 42 ||
-		got.AmpMiddle != 50 || got.AmpTreble != 60 || got.AmpPresence != 75 {
-		t.Fatalf("amp params round-trip mismatch: %+v", got)
-	}
-	if got.BoosterType != "T-SCREAM" || got.BoosterDrive != 30 || got.BoosterTone != 50 || got.BoosterLevel != 80 {
-		t.Fatalf("booster params round-trip mismatch: %+v", got)
-	}
-	if got.ModType != "CHORUS" || got.FXType != "FLANGER" {
-		t.Fatalf("mod/fx round-trip mismatch: %q/%q", got.ModType, got.FXType)
-	}
-	if got.DelayType != "TAPE ECHO" || got.DelayTime != 380 || got.DelayFeedback != 32 || got.DelayLevel != 40 {
-		t.Fatalf("delay params round-trip mismatch: %+v", got)
-	}
-	if got.ReverbType != "HALL REVERB" || got.ReverbLevel != 45 {
-		t.Fatalf("reverb params round-trip mismatch: %+v", got)
-	}
-	if out.Name != "Round Trip" {
-		t.Fatalf("name = %q, want Round Trip", out.Name)
-	}
+	wantEq(t, "amp type", got.AmpType, "BROWN")
+	wantEq(t, "amp gain", got.AmpGain, 55)
+	wantEq(t, "amp volume", got.AmpVolume, 68)
+	wantEq(t, "amp bass", got.AmpBass, 42)
+	wantEq(t, "amp middle", got.AmpMiddle, 50)
+	wantEq(t, "amp treble", got.AmpTreble, 60)
+	wantEq(t, "amp presence", got.AmpPresence, 75)
+	wantEq(t, "booster type", got.BoosterType, "T-SCREAM")
+	wantEq(t, "booster drive", got.BoosterDrive, 30)
+	wantEq(t, "booster tone", got.BoosterTone, 50)
+	wantEq(t, "booster level", got.BoosterLevel, 80)
+	wantEq(t, "mod type", got.ModType, "CHORUS")
+	wantEq(t, "fx type", got.FXType, "FLANGER")
+	wantEq(t, "delay type", got.DelayType, "TAPE ECHO")
+	wantEq(t, "delay time", got.DelayTime, 380)
+	wantEq(t, "delay feedback", got.DelayFeedback, 32)
+	wantEq(t, "delay level", got.DelayLevel, 40)
+	wantEq(t, "reverb type", got.ReverbType, "HALL REVERB")
+	wantEq(t, "reverb level", got.ReverbLevel, 45)
+	wantEq(t, "name", out.Name, "Round Trip")
 }
 
 // TestWriteParamsLeavesUnsetUntouched verifies that unspecified numeric knobs
@@ -251,27 +247,17 @@ func TestWriteParamsBlockExtras(t *testing.T) {
 		BoosterSoloLevel: 80,
 	})
 
-	if got := out.Raw[offReverbTime]; got != 31 {
-		t.Fatalf("reverb time byte = %d, want 31 (round(-1+10*3.2))", got)
-	}
-	if got := out.Raw[offDelayHighCut]; got != 7 {
-		t.Fatalf("delay high cut byte = %d, want 7", got)
-	}
-	if out.Raw[offNSOn] != 0 {
-		t.Fatalf("NS on/off = %d, want 0 (off)", out.Raw[offNSOn])
-	}
-	if got := out.Raw[offBoosterBottom]; got != 20 {
-		t.Fatalf("booster bottom byte = %d, want 20 (50-30)", got)
-	}
-	if out.Raw[offBoosterSoloSW] != 1 || out.Raw[offBoosterSoloLv] != 80 {
-		t.Fatalf("booster solo = %d/%d, want 1/80", out.Raw[offBoosterSoloSW], out.Raw[offBoosterSoloLv])
-	}
+	wantEq(t, "reverb time byte", out.Raw[offReverbTime], byte(31))
+	wantEq(t, "delay high cut byte", out.Raw[offDelayHighCut], byte(7))
+	wantEq(t, "NS on/off", out.Raw[offNSOn], byte(0))
+	wantEq(t, "booster bottom byte", out.Raw[offBoosterBottom], byte(20))
+	wantEq(t, "booster solo switch", out.Raw[offBoosterSoloSW], byte(1))
+	wantEq(t, "booster solo level", out.Raw[offBoosterSoloLv], byte(80))
 
 	got := out.ReadParams()
-	if got.ReverbTime != 3.2 || got.BoosterBottom != -30 || got.DelayHighCut != 7 {
-		t.Fatalf("block extras round-trip = reverb_time %v, bottom %d, high_cut %d",
-			got.ReverbTime, got.BoosterBottom, got.DelayHighCut)
-	}
+	wantEq(t, "reverb time", got.ReverbTime, 3.2)
+	wantEq(t, "booster bottom", got.BoosterBottom, -30)
+	wantEq(t, "delay high cut", got.DelayHighCut, 7)
 	if got.NSOn == nil || *got.NSOn {
 		t.Fatalf("NS should read as off, got %v", got.NSOn)
 	}
@@ -280,34 +266,46 @@ func TestWriteParamsBlockExtras(t *testing.T) {
 // TestTypeIndexMaps guards the amp type mapping against accidental edits; the
 // first three values are read back from real backups.
 func TestTypeIndexMaps(t *testing.T) {
-	if ampTypeIndex["FLAT"] != 1 || ampTypeIndex["CLEAN"] != 8 || ampTypeIndex["CRUNCH"] != 11 ||
-		ampTypeIndex["LEAD"] != 24 || ampTypeIndex["BROWN"] != 23 {
-		t.Fatalf("amp type indices wrong: %v", ampTypeIndex)
+	checks := []struct {
+		name string
+		m    map[string]byte
+		key  string
+		want byte
+	}{
+		{"ampTypeIndex", ampTypeIndex, "FLAT", 1},
+		{"ampTypeIndex", ampTypeIndex, "CLEAN", 8},
+		{"ampTypeIndex", ampTypeIndex, "CRUNCH", 11},
+		{"ampTypeIndex", ampTypeIndex, "LEAD", 24},
+		{"ampTypeIndex", ampTypeIndex, "BROWN", 23},
+		{"boosterTypeIndex", boosterTypeIndex, "T-SCREAM", 12},
+		{"boosterTypeIndex", boosterTypeIndex, "BLUES DRIVE", 10},
+		{"boosterTypeIndex", boosterTypeIndex, "MUFF FUZZ", 20},
+		{"modFXTypeIndex", modFXTypeIndex, "CHORUS", 29},
+		{"modFXTypeIndex", modFXTypeIndex, "FLANGER", 20},
+		{"modFXTypeIndex", modFXTypeIndex, "COMP", 3},
+		{"delayTypeIndex", delayTypeIndex, "DIGITAL DELAY", 0},
+		{"delayTypeIndex", delayTypeIndex, "REVERSE DELAY", 6},
+		{"delayTypeIndex", delayTypeIndex, "ANALOG DELAY", 7},
+		{"delayTypeIndex", delayTypeIndex, "TAPE ECHO", 8},
+		{"delayTypeIndex", delayTypeIndex, "MODULATE", 9},
+		{"delayTypeIndex", delayTypeIndex, "SDE-3000", 10},
+		{"reverbTypeIndex", reverbTypeIndex, "ROOM REVERB", 1},
+		{"reverbTypeIndex", reverbTypeIndex, "HALL REVERB", 3},
+		{"reverbTypeIndex", reverbTypeIndex, "PLATE REVERB", 4},
+		{"reverbTypeIndex", reverbTypeIndex, "SPRING REVERB", 5},
+		{"reverbTypeIndex", reverbTypeIndex, "MODULATE REVERB", 6},
+		{"gyroTypeIndex", gyroTypeIndex, "OFF", 0},
+		{"gyroTypeIndex", gyroTypeIndex, "SURROUND", 1},
+		{"gyroTypeIndex", gyroTypeIndex, "STATIC", 2},
+		{"gyroTypeIndex", gyroTypeIndex, "STAGE", 3},
+		{"ambienceTypeIndex", ambienceTypeIndex, "STUDIO", 0},
+		{"ambienceTypeIndex", ambienceTypeIndex, "STAGE", 1},
+		{"modeIndex", modeIndex, "DELAY", 0},
+		{"modeIndex", modeIndex, "DLY+REV", 1},
+		{"modeIndex", modeIndex, "REVERB", 2},
 	}
-	if boosterTypeIndex["T-SCREAM"] != 12 || boosterTypeIndex["BLUES DRIVE"] != 10 || boosterTypeIndex["MUFF FUZZ"] != 20 {
-		t.Fatalf("booster type indices wrong: %v", boosterTypeIndex)
-	}
-	if modFXTypeIndex["CHORUS"] != 29 || modFXTypeIndex["FLANGER"] != 20 || modFXTypeIndex["COMP"] != 3 {
-		t.Fatalf("mod/fx type indices wrong: %v", modFXTypeIndex)
-	}
-	if delayTypeIndex["DIGITAL DELAY"] != 0 || delayTypeIndex["REVERSE DELAY"] != 6 ||
-		delayTypeIndex["ANALOG DELAY"] != 7 || delayTypeIndex["TAPE ECHO"] != 8 ||
-		delayTypeIndex["MODULATE"] != 9 || delayTypeIndex["SDE-3000"] != 10 {
-		t.Fatalf("delay type indices wrong: %v", delayTypeIndex)
-	}
-	if reverbTypeIndex["ROOM REVERB"] != 1 || reverbTypeIndex["HALL REVERB"] != 3 ||
-		reverbTypeIndex["PLATE REVERB"] != 4 || reverbTypeIndex["SPRING REVERB"] != 5 ||
-		reverbTypeIndex["MODULATE REVERB"] != 6 {
-		t.Fatalf("reverb type indices wrong: %v", reverbTypeIndex)
-	}
-	if gyroTypeIndex["OFF"] != 0 || gyroTypeIndex["SURROUND"] != 1 || gyroTypeIndex["STATIC"] != 2 || gyroTypeIndex["STAGE"] != 3 {
-		t.Fatalf("gyro type indices wrong: %v", gyroTypeIndex)
-	}
-	if ambienceTypeIndex["STUDIO"] != 0 || ambienceTypeIndex["STAGE"] != 1 {
-		t.Fatalf("ambience type indices wrong: %v", ambienceTypeIndex)
-	}
-	if modeIndex["DELAY"] != 0 || modeIndex["DLY+REV"] != 1 || modeIndex["REVERB"] != 2 {
-		t.Fatalf("mode indices wrong: %v", modeIndex)
+	for _, c := range checks {
+		wantIndex(t, c.name, c.m, c.key, c.want)
 	}
 }
 

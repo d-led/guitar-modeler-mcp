@@ -34,35 +34,29 @@ func TestAirStepModeBindings(t *testing.T) {
 		t.Fatal("mode 1 missing")
 	}
 	press := presses(m1)
-	if press["A"] != "Toggle BOOSTER" || press["B"] != "Toggle FX" || press["E"] != "CH 3/6" {
-		t.Fatalf("mode 1 presses = %v", press)
-	}
-	if long(m1, "C") != "Select CH 1-3" || long(m1, "D") != "Select CH 4-6" {
-		t.Fatalf("mode 1 long presses = %v", m1)
-	}
+	wantEq(t, "mode 1 A", press["A"], "Toggle BOOSTER")
+	wantEq(t, "mode 1 B", press["B"], "Toggle FX")
+	wantEq(t, "mode 1 E", press["E"], "CH 3/6")
+	wantEq(t, "mode 1 C long", long(m1, "C"), "Select CH 1-3")
+	wantEq(t, "mode 1 D long", long(m1, "D"), "Select CH 4-6")
 
 	m3, ok := a.Mode(3)
 	if !ok {
 		t.Fatal("mode 3 missing")
 	}
 	p3 := presses(m3)
-	if p3["D"] != "Toggle DELAY" || p3["E"] != "Toggle REVERB & DELAY2" {
-		t.Fatalf("mode 3 presses = %v", p3)
-	}
-	if long(m3, "A") != "CH 1" || long(m3, "E") != "CH 5" {
-		t.Fatalf("mode 3 long presses = %v", m3)
-	}
+	wantEq(t, "mode 3 D", p3["D"], "Toggle DELAY")
+	wantEq(t, "mode 3 E", p3["E"], "Toggle REVERB & DELAY2")
+	wantEq(t, "mode 3 A long", long(m3, "A"), "CH 1")
+	wantEq(t, "mode 3 E long", long(m3, "E"), "CH 5")
 
 	m4, ok := a.Mode(4)
 	if !ok {
 		t.Fatal("mode 4 missing")
 	}
-	if presses(m4)["D"] != "CH 4" || long(m4, "E") != "CH 6" {
-		t.Fatalf("mode 4 bindings = %v", m4)
-	}
-	if long(m4, "A") != "" {
-		t.Fatalf("mode 4 FS A should have no long press, got %q", long(m4, "A"))
-	}
+	wantEq(t, "mode 4 D", presses(m4)["D"], "CH 4")
+	wantEq(t, "mode 4 E long", long(m4, "E"), "CH 6")
+	wantEq(t, "mode 4 A long", long(m4, "A"), "")
 }
 
 func TestAirStepModeOutOfRange(t *testing.T) {
