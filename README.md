@@ -1,14 +1,16 @@
 # guitar-modeler-mcp
 
-> **!!! USE AT YOUR OWN RISK !!!** — This project writes preset files for
+## Disclaimer
+
+> **!!! USE AT YOUR OWN RISK !!!** — This project writes preset files and set up instructions for
 > third-party hardware. We do our best to get the formats right, but we can't
 > guarantee compatibility with every device or firmware version. Well-meant
 > contributions (fixes, corrections, new devices) are always welcome.
 
+## In Short
+
 > Tired of tweaking parameters by hand hoping to land a sound? This MCP gives
-> AI assistants the device catalogs and preset formats, so they can write
-> presets for you. It's open source and comes with no guarantee — always check
-> the result on your device.
+> AI assistants can do their best with the device catalogs and preset formats and set up the sound you seek.
 
 **What it does:** designs guitar presets for real modelers — HeadRush Gigboard,
 Mooer GE150 Pro / GE200 / GE100 Pro, BOSS Waza Air, Yamaha THR and Neural DSP
