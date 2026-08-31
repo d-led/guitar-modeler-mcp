@@ -283,24 +283,45 @@ func (d Device) resolveAmp(query string) (AmpCell, error) {
 	qn := norm(q)
 
 	// Full cell name ("clean classic").
-	for _, c := range d.Amps {
-		if norm(c.Name) == qn {
-			return c, nil
-		}
+	if c, ok := d.ampByName(qn); ok {
+		return c, nil
 	}
 	// Selector group alone ("clean" → the CLASSIC variant).
-	for _, c := range d.Amps {
-		if c.Type != "" && strings.EqualFold(c.Type, q) && c.Mode == d.defaultMode() {
-			return c, nil
-		}
+	if c, ok := d.ampBySelector(q); ok {
+		return c, nil
 	}
 	// "Inspired by" substring ("twin reverb").
-	for _, c := range d.Amps {
-		if c.InspiredBy != "" && strings.Contains(norm(c.InspiredBy), qn) {
-			return c, nil
-		}
+	if c, ok := d.ampByInspiredBy(qn); ok {
+		return c, nil
 	}
 	return AmpCell{}, fmt.Errorf("no amp matches %q (see thr_catalog_list_amps)", query)
+}
+
+func (d Device) ampByName(qn string) (AmpCell, bool) {
+	for _, c := range d.Amps {
+		if norm(c.Name) == qn {
+			return c, true
+		}
+	}
+	return AmpCell{}, false
+}
+
+func (d Device) ampBySelector(q string) (AmpCell, bool) {
+	for _, c := range d.Amps {
+		if c.Type != "" && strings.EqualFold(c.Type, q) && c.Mode == d.defaultMode() {
+			return c, true
+		}
+	}
+	return AmpCell{}, false
+}
+
+func (d Device) ampByInspiredBy(qn string) (AmpCell, bool) {
+	for _, c := range d.Amps {
+		if c.InspiredBy != "" && strings.Contains(norm(c.InspiredBy), qn) {
+			return c, true
+		}
+	}
+	return AmpCell{}, false
 }
 
 func (d Device) defaultMode() string {

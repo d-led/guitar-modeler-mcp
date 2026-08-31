@@ -65,29 +65,7 @@ td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;verti
 	b.WriteString(chainHint(d.Chain, s))
 
 	for i, module := range d.Chain {
-		switch module {
-		case "COMPRESSOR":
-			writeModuleCard(&b, module, onOff(s.Compressor), "", s.Compressor, compressorKnobs(s.CompParams), i+1)
-		case "NOISE GATE":
-			writeModuleCard(&b, module, onOff(s.NoiseGate), "", s.NoiseGate, gateKnobs(s.GateParams), i+1)
-		case "AMP":
-			if cell, ok := d.ampCell(s.Amp); ok {
-				writeModuleCard(&b, module, cell.Name, cell.InspiredBy, true, ampKnobs(s.AmpParams), i+1)
-				if cell.Description != "" {
-					writeNote(&b, cell.Description)
-				}
-			} else {
-				writeModuleCard(&b, module, "OFF", "", false, nil, i+1)
-			}
-		case "CAB":
-			writeModuleCard(&b, module, s.Cab, "", true, nil, i+1)
-		case "MOD":
-			writeModuleCard(&b, module, s.Mod, "", true, modKnobs(s.ModParams), i+1)
-		case "ECHO":
-			writeModuleCard(&b, module, s.Echo, "", true, echoKnobs(s.EchoParams), i+1)
-		case "REVERB":
-			writeModuleCard(&b, module, s.Reverb, "", true, reverbKnobs(s.ReverbParams), i+1)
-		}
+		d.writeChainModule(&b, module, s, i+1)
 	}
 
 	if knobs := levelKnobs(s.Levels); len(knobs) > 0 {
@@ -100,6 +78,38 @@ td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;verti
 	b.WriteString("<p class=\"inspired\">Knob values are 0&ndash;100 unless noted (ms). Knobs marked (noon) are at 12 o'clock; set them to noon to reproduce the tone.</p>")
 	b.WriteString("</body></html>")
 	return b.String()
+}
+
+// writeChainModule renders one module of the fixed signal chain as a card.
+func (d Device) writeChainModule(b *strings.Builder, module string, s Spec, slot int) {
+	switch module {
+	case "COMPRESSOR":
+		writeModuleCard(b, module, onOff(s.Compressor), "", s.Compressor, compressorKnobs(s.CompParams), slot)
+	case "NOISE GATE":
+		writeModuleCard(b, module, onOff(s.NoiseGate), "", s.NoiseGate, gateKnobs(s.GateParams), slot)
+	case "AMP":
+		d.writeAmpCard(b, module, s, slot)
+	case "CAB":
+		writeModuleCard(b, module, s.Cab, "", true, nil, slot)
+	case "MOD":
+		writeModuleCard(b, module, s.Mod, "", true, modKnobs(s.ModParams), slot)
+	case "ECHO":
+		writeModuleCard(b, module, s.Echo, "", true, echoKnobs(s.EchoParams), slot)
+	case "REVERB":
+		writeModuleCard(b, module, s.Reverb, "", true, reverbKnobs(s.ReverbParams), slot)
+	}
+}
+
+func (d Device) writeAmpCard(b *strings.Builder, module string, s Spec, slot int) {
+	cell, ok := d.ampCell(s.Amp)
+	if !ok {
+		writeModuleCard(b, module, "OFF", "", false, nil, slot)
+		return
+	}
+	writeModuleCard(b, module, cell.Name, cell.InspiredBy, true, ampKnobs(s.AmpParams), slot)
+	if cell.Description != "" {
+		writeNote(b, cell.Description)
+	}
 }
 
 func onOff(on bool) string {
