@@ -214,24 +214,16 @@ func TestBuildPreset(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BuildPreset: %v", err)
 	}
-	if p.Name != "Mooer Tone" {
-		t.Fatalf("name = %q", p.Name)
-	}
-	if !p.Amp.Enabled || m.AmpName(p.Amp.Type) != "800" {
-		t.Fatalf("amp = %+v, want enabled 800", p.Amp)
-	}
-	if !p.Cab.Enabled || m.CabName(p.Cab.Type) != "1960 412" {
-		t.Fatalf("cab = %+v, want enabled 1960 412", p.Cab)
-	}
-	if !p.Drive.Enabled || m.EffectName("od", p.Drive.Type) != "808" {
-		t.Fatalf("drive = %+v, want enabled 808", p.Drive)
-	}
-	if !p.Delay.Enabled || m.EffectName("delay", p.Delay.Type) != "TAPE" {
-		t.Fatalf("delay = %+v, want enabled TAPE", p.Delay)
-	}
-	if p.Reverb.Enabled {
-		t.Fatal("reverb should be disabled")
-	}
+	wantEq(t, "name", p.Name, "Mooer Tone")
+	wantEq(t, "amp enabled", p.Amp.Enabled, true)
+	wantEq(t, "amp name", m.AmpName(p.Amp.Type), "800")
+	wantEq(t, "cab enabled", p.Cab.Enabled, true)
+	wantEq(t, "cab name", m.CabName(p.Cab.Type), "1960 412")
+	wantEq(t, "drive enabled", p.Drive.Enabled, true)
+	wantEq(t, "drive name", m.EffectName("od", p.Drive.Type), "808")
+	wantEq(t, "delay enabled", p.Delay.Enabled, true)
+	wantEq(t, "delay name", m.EffectName("delay", p.Delay.Type), "TAPE")
+	wantEq(t, "reverb enabled", p.Reverb.Enabled, false)
 }
 
 func TestBuildPresetUnknownEffect(t *testing.T) {
@@ -278,27 +270,35 @@ func TestBuildPresetAppliesParams(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BuildPreset: %v", err)
 	}
-	if p.Amp.Gain != 75 || p.Amp.Bass != 70 || p.Amp.Mid != 25 || p.Amp.Treble != 75 || p.Amp.Presence != 65 || p.Amp.Master != 78 {
-		t.Fatalf("amp params not applied: %+v", p.Amp)
-	}
-	if p.Cab.Mic != 1 || p.Cab.Distance != 90 {
-		t.Fatalf("cab params not applied: %+v", p.Cab)
-	}
-	if p.Drive.Gain != 20 || p.Drive.Tone != 70 || p.Drive.Volume != 85 {
-		t.Fatalf("drive params not applied: %+v", p.Drive)
-	}
-	if !p.NoiseGate.Enabled || p.NoiseGate.Threshold != 40 {
-		t.Fatalf("noise gate = %+v", p.NoiseGate)
-	}
-	if !p.EQ.Enabled || p.EQ.Bands[0] != 60 || p.EQ.Bands[2] != 46 {
-		t.Fatalf("eq params not applied: %+v", p.EQ)
-	}
-	if p.Delay.TimeMS != 400 || p.Delay.Feedback != 76 {
-		t.Fatalf("delay params not applied: %+v", p.Delay)
-	}
+	wantEq(t, "amp gain", p.Amp.Gain, 75)
+	wantEq(t, "amp bass", p.Amp.Bass, 70)
+	wantEq(t, "amp mid", p.Amp.Mid, 25)
+	wantEq(t, "amp treble", p.Amp.Treble, 75)
+	wantEq(t, "amp presence", p.Amp.Presence, 65)
+	wantEq(t, "amp master", p.Amp.Master, 78)
+	wantEq(t, "cab mic", p.Cab.Mic, 1)
+	wantEq(t, "cab distance", p.Cab.Distance, 90)
+	wantEq(t, "drive gain", p.Drive.Gain, 20)
+	wantEq(t, "drive tone", p.Drive.Tone, 70)
+	wantEq(t, "drive volume", p.Drive.Volume, 85)
+	wantEq(t, "noise gate enabled", p.NoiseGate.Enabled, true)
+	wantEq(t, "noise gate threshold", p.NoiseGate.Threshold, 40)
+	wantEq(t, "eq enabled", p.EQ.Enabled, true)
+	wantEq(t, "eq band1", p.EQ.Bands[0], 60)
+	wantEq(t, "eq band3", p.EQ.Bands[2], 46)
+	wantEq(t, "delay time", p.Delay.TimeMS, 400)
+	wantEq(t, "delay feedback", p.Delay.Feedback, 76)
 	// Unspecified knobs stay at their neutral value, not zero.
-	if p.Cab.Center != 50 || p.Cab.Tube != 50 {
-		t.Fatalf("unspecified cab knobs should stay at noon: %+v", p.Cab)
+	wantEq(t, "cab center", p.Cab.Center, 50)
+	wantEq(t, "cab tube", p.Cab.Tube, 50)
+}
+
+// wantEq fails the test when got differs from want, with the checked field
+// named in the message so each assertion reads as a sentence.
+func wantEq[T comparable](t *testing.T, name string, got, want T) {
+	t.Helper()
+	if got != want {
+		t.Fatalf("%s = %v, want %v", name, got, want)
 	}
 }
 
