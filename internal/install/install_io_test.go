@@ -142,16 +142,30 @@ func TestInstallAndUninstallWorkspace(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Install: %v", err)
 	}
-	if !changed {
-		t.Fatal("Install reported unchanged on a fresh config")
-	}
-	if path != filepath.Join(".vscode", "mcp.json") {
-		t.Fatalf("Install path = %q", path)
-	}
+	wantEq(t, "install changed", changed, true)
+	wantEq(t, "install path", path, filepath.Join(".vscode", "mcp.json"))
 
-	// The file lands under the changed working directory.
-	abs := filepath.Join(dir, path)
-	data, err := os.ReadFile(abs)
+	// The file lands under the changed working directory and carries the server.
+	assertConfigHasServers(t, filepath.Join(dir, path))
+
+	// Installing the identical server again is a no-op.
+	assertInstallNoop(t)
+
+	// Uninstall removes it and reports a change.
+	_, changed, err = Uninstall(TargetVSCodeWorkspace, server().Name)
+	if err != nil {
+		t.Fatalf("Uninstall: %v", err)
+	}
+	wantEq(t, "uninstall changed", changed, true)
+	assertServerAbsent(t, filepath.Join(dir, path))
+
+	// Uninstalling again is a no-op.
+	assertUninstallNoop(t)
+}
+
+func assertConfigHasServers(t *testing.T, path string) {
+	t.Helper()
+	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read installed config: %v", err)
 	}
@@ -162,32 +176,41 @@ func TestInstallAndUninstallWorkspace(t *testing.T) {
 	if root["servers"] == nil {
 		t.Fatal("installed config missing servers key")
 	}
+}
 
-	// Installing the identical server again is a no-op.
-	if _, changed, err := Install(TargetVSCodeWorkspace, server()); err != nil || changed {
-		t.Fatalf("second Install = changed=%v err=%v, want unchanged", changed, err)
-	}
-
-	// Uninstall removes it and reports a change.
-	_, changed, err = Uninstall(TargetVSCodeWorkspace, server().Name)
-	if err != nil {
-		t.Fatalf("Uninstall: %v", err)
-	}
-	if !changed {
-		t.Fatal("Uninstall reported unchanged")
-	}
-	data, err = os.ReadFile(abs)
+func assertServerAbsent(t *testing.T, path string) {
+	t.Helper()
+	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read config after uninstall: %v", err)
 	}
 	if strings.Contains(string(data), server().Name) {
 		t.Fatalf("server still present after uninstall: %s", data)
 	}
+}
 
-	// Uninstalling again is a no-op.
-	_, changed, err = Uninstall(TargetVSCodeWorkspace, server().Name)
-	if err != nil || changed {
-		t.Fatalf("second Uninstall = changed=%v err=%v, want unchanged", changed, err)
+func assertInstallNoop(t *testing.T) {
+	t.Helper()
+	_, changed, err := Install(TargetVSCodeWorkspace, server())
+	if err != nil {
+		t.Fatalf("second Install: %v", err)
+	}
+	wantEq(t, "second install changed", changed, false)
+}
+
+func assertUninstallNoop(t *testing.T) {
+	t.Helper()
+	_, changed, err := Uninstall(TargetVSCodeWorkspace, server().Name)
+	if err != nil {
+		t.Fatalf("second Uninstall: %v", err)
+	}
+	wantEq(t, "second uninstall changed", changed, false)
+}
+
+func wantEq[T comparable](t *testing.T, name string, got, want T) {
+	t.Helper()
+	if got != want {
+		t.Fatalf("%s = %v, want %v", name, got, want)
 	}
 }
 

@@ -33,11 +33,15 @@ func TestRunHandlesInitializeListAndCall(t *testing.T) {
 	}
 
 	lines := nonEmptyLines(out.String())
-	if len(lines) != 3 {
-		t.Fatalf("got %d responses, want 3 (notification must not be answered):\n%s", len(lines), out.String())
-	}
+	wantEq(t, "responses", len(lines), 3)
+	assertInitialize(t, lines[0])
+	assertListTools(t, lines[1])
+	assertCallResult(t, lines[2])
+}
 
-	var initResp struct {
+func assertInitialize(t *testing.T, line string) {
+	t.Helper()
+	var resp struct {
 		Result struct {
 			ProtocolVersion string `json:"protocolVersion"`
 			ServerInfo      struct {
@@ -46,31 +50,35 @@ func TestRunHandlesInitializeListAndCall(t *testing.T) {
 			} `json:"serverInfo"`
 		} `json:"result"`
 	}
-	if err := json.Unmarshal([]byte(lines[0]), &initResp); err != nil {
+	if err := json.Unmarshal([]byte(line), &resp); err != nil {
 		t.Fatalf("initialize response: %v", err)
 	}
-	if initResp.Result.ServerInfo.Name != "test-server" || initResp.Result.ServerInfo.Version != "1.2.3" {
-		t.Fatalf("serverInfo = %+v", initResp.Result.ServerInfo)
-	}
-	if initResp.Result.ProtocolVersion == "" {
+	wantEq(t, "serverInfo name", resp.Result.ServerInfo.Name, "test-server")
+	wantEq(t, "serverInfo version", resp.Result.ServerInfo.Version, "1.2.3")
+	if resp.Result.ProtocolVersion == "" {
 		t.Fatal("missing protocolVersion")
 	}
+}
 
-	var listResp struct {
+func assertListTools(t *testing.T, line string) {
+	t.Helper()
+	var resp struct {
 		Result struct {
 			Tools []struct {
 				Name string `json:"name"`
 			} `json:"tools"`
 		} `json:"result"`
 	}
-	if err := json.Unmarshal([]byte(lines[1]), &listResp); err != nil {
+	if err := json.Unmarshal([]byte(line), &resp); err != nil {
 		t.Fatalf("tools/list response: %v", err)
 	}
-	if len(listResp.Result.Tools) != 1 || listResp.Result.Tools[0].Name != "echo" {
-		t.Fatalf("tools = %+v", listResp.Result.Tools)
-	}
+	wantEq(t, "tools", len(resp.Result.Tools), 1)
+	wantEq(t, "tool name", resp.Result.Tools[0].Name, "echo")
+}
 
-	var callResp struct {
+func assertCallResult(t *testing.T, line string) {
+	t.Helper()
+	var resp struct {
 		Result struct {
 			Content []struct {
 				Text string `json:"text"`
@@ -78,14 +86,17 @@ func TestRunHandlesInitializeListAndCall(t *testing.T) {
 			IsError bool `json:"isError"`
 		} `json:"result"`
 	}
-	if err := json.Unmarshal([]byte(lines[2]), &callResp); err != nil {
+	if err := json.Unmarshal([]byte(line), &resp); err != nil {
 		t.Fatalf("tools/call response: %v", err)
 	}
-	if callResp.Result.Content[0].Text != "hi bob" {
-		t.Fatalf("content = %+v", callResp.Result.Content)
-	}
-	if callResp.Result.IsError {
-		t.Fatal("unexpected isError")
+	wantEq(t, "content", resp.Result.Content[0].Text, "hi bob")
+	wantEq(t, "isError", resp.Result.IsError, false)
+}
+
+func wantEq[T comparable](t *testing.T, name string, got, want T) {
+	t.Helper()
+	if got != want {
+		t.Fatalf("%s = %v, want %v", name, got, want)
 	}
 }
 
