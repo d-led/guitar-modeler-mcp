@@ -48,11 +48,8 @@ func EstimateLevel(file *RigFile, targetDB float64) (LevelEstimate, error) {
 // output level. It is shared by EstimateLevel and the build-time plausibility
 // check so both agree on the numbers.
 func estimateLevel(patch Patch) LevelEstimate {
-	est := LevelEstimate{}
-	if chain, ok := patch.Children["Chain"]; ok {
-		if item, ok := chain.Children["Routing"]; ok && item.Str != nil {
-			est.Routing = *item.Str
-		}
+	est := LevelEstimate{
+		Routing: nodeString(patch.Children["Chain"], "Routing"),
 	}
 
 	total := 0.0
@@ -65,39 +62,21 @@ func estimateLevel(patch Patch) LevelEstimate {
 		add("input gain", nodeNumber(in, "InputGain"), "")
 	}
 
-	sawAmp := false
-	for _, name := range patch.ChildOrder {
-		if !isInstanceOf(name, "Amp") {
-			continue
-		}
-		sawAmp = true
-		node := patch.Children[name]
+	sawAmp := addTypeStages(patch, "Amp", add, func(name string, node *Node) (string, float64, string) {
 		master := nodeNumber(node, "Master")
-		add("amp master ("+name+")", percentToDB(master), fmt.Sprintf("master %s", percent(master)))
-	}
-
-	for _, name := range patch.ChildOrder {
-		if !isInstanceOf(name, "Cab") {
-			continue
-		}
-		add("cab out gain ("+name+")", nodeNumber(patch.Children[name], "OutGain"), "")
-	}
-
-	for _, name := range patch.ChildOrder {
-		if !isInstanceOf(name, "IR") {
-			continue
-		}
-		level, note := irStage(patch.Children[name])
-		add("IR ("+name+")", level, note)
-	}
-
-	for _, name := range patch.ChildOrder {
-		if !isInstanceOf(name, "Volume") {
-			continue
-		}
-		v := nodeNumber(patch.Children[name], "Volume")
-		add("volume pedal ("+name+")", percentToDB(v), fmt.Sprintf("position %s", percent(v)))
-	}
+		return "amp master (" + name + ")", percentToDB(master), fmt.Sprintf("master %s", percent(master))
+	})
+	addTypeStages(patch, "Cab", add, func(name string, node *Node) (string, float64, string) {
+		return "cab out gain (" + name + ")", nodeNumber(node, "OutGain"), ""
+	})
+	addTypeStages(patch, "IR", add, func(name string, node *Node) (string, float64, string) {
+		level, note := irStage(node)
+		return "IR (" + name + ")", level, note
+	})
+	addTypeStages(patch, "Volume", add, func(name string, node *Node) (string, float64, string) {
+		v := nodeNumber(node, "Volume")
+		return "volume pedal (" + name + ")", percentToDB(v), fmt.Sprintf("position %s", percent(v))
+	})
 
 	if est.Routing != "" && est.Routing != "S" {
 		chain := patch.Children["Chain"]
@@ -118,6 +97,21 @@ func estimateLevel(patch Patch) LevelEstimate {
 
 	est.EstimatedLevelDB = round1(total)
 	return est
+}
+
+// addTypeStages appends one stage per instance of base in the patch child order
+// and reports whether any instance was found.
+func addTypeStages(patch Patch, base string, add func(string, float64, string), measure func(string, *Node) (string, float64, string)) bool {
+	found := false
+	for _, name := range patch.ChildOrder {
+		if !isInstanceOf(name, base) {
+			continue
+		}
+		found = true
+		label, db, note := measure(name, patch.Children[name])
+		add(label, db, note)
+	}
+	return found
 }
 
 // Plausibility thresholds: a rig whose estimated net level exceeds these is

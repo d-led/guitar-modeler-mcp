@@ -92,39 +92,28 @@ func Describe(file *RigFile) (Summary, error) {
 	patch := content.Data.Patch
 
 	s := Summary{
-		Name:      file.Name(),
-		ID:        file.ID,
-		Color:     file.Color,
-		CreatedAt: file.CreatedAt,
-		Version:   content.Info.Version,
-		Slots:     chainSlots(patch),
+		Name:         file.Name(),
+		ID:           file.ID,
+		Color:        file.Color,
+		CreatedAt:    file.CreatedAt,
+		Version:      content.Info.Version,
+		Slots:        chainSlots(patch),
+		Routing:      nodeString(patch.Children["Chain"], "Routing"),
+		Mixer:        mixerSummary(patch.Children["Chain"]),
+		Tempo:        nodeNumber(patch.Children["Rig"], "Tempo"),
+		InputGain:    nodeNumber(patch.Children["Input"], "InputGain"),
+		OutputVolume: nodeNumber(patch.Children["Output"], "RigVolume"),
 	}
 
 	s.Footswitches = footswitchAssignments(content)
+	s.Modules = summarizeModules(patch)
+	return s, nil
+}
 
-	if chain, ok := patch.Children["Chain"]; ok {
-		if item, ok := chain.Children["Routing"]; ok && item.Str != nil {
-			s.Routing = *item.Str
-		}
-		s.Mixer = mixerSummary(chain)
-	}
-
-	if rigNode, ok := patch.Children["Rig"]; ok {
-		if item, ok := rigNode.Children["Tempo"]; ok && item.Value != nil {
-			s.Tempo = *item.Value
-		}
-	}
-	if in, ok := patch.Children["Input"]; ok {
-		if item, ok := in.Children["InputGain"]; ok && item.Value != nil {
-			s.InputGain = *item.Value
-		}
-	}
-	if out, ok := patch.Children["Output"]; ok {
-		if item, ok := out.Children["RigVolume"]; ok && item.Value != nil {
-			s.OutputVolume = *item.Value
-		}
-	}
-
+// summarizeModules lists every movable module in chain order with its effective
+// parameter values.
+func summarizeModules(patch Patch) []SummaryModule {
+	var modules []SummaryModule
 	for _, name := range patch.ChildOrder {
 		if isStructuralNode(name) {
 			continue
@@ -133,13 +122,13 @@ func Describe(file *RigFile) (Summary, error) {
 		if !ok {
 			continue
 		}
-		s.Modules = append(s.Modules, SummaryModule{
+		modules = append(modules, SummaryModule{
 			Name:   name,
 			On:     moduleOn(node),
 			Params: moduleParams(node),
 		})
 	}
-	return s, nil
+	return modules
 }
 
 func isStructuralNode(name string) bool {
@@ -155,6 +144,9 @@ func isStructuralNode(name string) bool {
 // defaults and have no effect).
 func mixerSummary(chain *Node) MixerSummary {
 	var m MixerSummary
+	if chain == nil {
+		return m
+	}
 	if item, ok := chain.Children["Tails"]; ok && item.State != nil {
 		m.Tails = *item.State
 	}
