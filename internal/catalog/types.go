@@ -62,6 +62,11 @@ type FX struct {
 	Description  string `json:"description"`
 	ModeledAfter string `json:"modeled_after,omitempty"`
 	Confirmed    bool   `json:"confirmed"`
+	// Gain classifies a distortion effect's drive strength — "boost",
+	// "overdrive", "distortion", "fuzz", "bass" or "bitcrusher" — so an agent
+	// can match the pedal to the part (mirrors Amp.Gain). Empty for non-drive
+	// effects.
+	Gain string `json:"gain,omitempty"`
 }
 
 // Category is one effect category, e.g. "delay" or "reverb". Categories mirror

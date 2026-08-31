@@ -946,114 +946,132 @@
       "category": "distortion",
       "description": "Clean, transparent boost (Xotic RC Booster style).",
       "modeled_after": "Xotic RC Booster",
-      "confirmed": false
+      "confirmed": false,
+      "gain": "boost"
     },
     {
       "name": "Green JRC-OD",
       "category": "distortion",
       "description": "Green overdrive (Ibanez TS808 Tube Screamer style).",
       "modeled_after": "Ibanez TS-808 Tube Screamer",
-      "confirmed": true
+      "confirmed": true,
+      "gain": "overdrive"
     },
     {
       "name": "D250 Drive",
       "category": "distortion",
       "description": "Amp-in-a-box drive (DOD 250 style).",
-      "confirmed": false
+      "confirmed": false,
+      "gain": "overdrive"
     },
     {
       "name": "Glorious Drive",
       "category": "distortion",
       "description": "Transparent low-to-medium gain drive.",
-      "confirmed": false
+      "confirmed": false,
+      "gain": "overdrive"
     },
     {
       "name": "S1 Drive",
       "category": "distortion",
       "description": "Medium gain, amp-like overdrive.",
-      "confirmed": false
+      "confirmed": false,
+      "gain": "overdrive"
     },
     {
       "name": "B2 Drive",
       "category": "distortion",
       "description": "Bright, cutting overdrive.",
-      "confirmed": false
+      "confirmed": false,
+      "gain": "overdrive"
     },
     {
       "name": "K Drive",
       "category": "distortion",
       "description": "High gain distortion with a tight low end.",
-      "confirmed": false
+      "confirmed": false,
+      "gain": "distortion"
     },
     {
       "name": "DC Distort",
       "category": "distortion",
       "description": "Classic distortion (BOSS DS-1 style).",
       "modeled_after": "Avid custom",
-      "confirmed": false
+      "confirmed": false,
+      "gain": "distortion"
     },
     {
       "name": "D1 Dist",
       "category": "distortion",
       "description": "Hard-clipping distortion.",
-      "confirmed": false
+      "confirmed": false,
+      "gain": "distortion"
     },
     {
       "name": "MX Dist",
       "category": "distortion",
       "description": "Aggressive modern distortion.",
-      "confirmed": false
+      "confirmed": false,
+      "gain": "distortion"
     },
     {
       "name": "Anxiety OD",
       "category": "distortion",
       "description": "Overdrive voiced for modern metal rhythm.",
-      "confirmed": false
+      "confirmed": false,
+      "gain": "distortion"
     },
     {
       "name": "Anxiety OD V2",
       "category": "distortion",
       "description": "Refined version of Anxiety OD.",
-      "confirmed": false
+      "confirmed": false,
+      "gain": "distortion"
     },
     {
       "name": "B Dist 7000",
       "category": "distortion",
       "description": "Bass distortion.",
-      "confirmed": false
+      "confirmed": false,
+      "gain": "bass"
     },
     {
       "name": "Black OP",
       "category": "distortion",
       "description": "Dark, gated fuzz-style distortion.",
       "modeled_after": "Pro Co. Rat",
-      "confirmed": false
+      "confirmed": false,
+      "gain": "distortion"
     },
     {
       "name": "Tri Fuzz",
       "category": "distortion",
       "description": "Three-transistor fuzz.",
       "modeled_after": "Electro-Harmonix Big Muff Pi",
-      "confirmed": false
+      "confirmed": false,
+      "gain": "fuzz"
     },
     {
       "name": "Round Fuzz",
       "category": "distortion",
       "description": "Smooth, round fuzz (EHX Big Muff style).",
-      "confirmed": false
+      "confirmed": false,
+      "gain": "fuzz"
     },
     {
       "name": "Oct Fuzz",
       "category": "distortion",
       "description": "Octave-up fuzz.",
-      "confirmed": false
+      "confirmed": false,
+      "gain": "fuzz"
     },
     {
       "name": "8-Bit Crush",
       "category": "distortion",
       "description": "Lo-fi bitcrusher with drive.",
       "modeled_after": "Headrush custom",
-      "confirmed": false
+      "confirmed": false,
+      "gain": "bitcrusher"
     },
     {
       "name": "DynIII Comp",

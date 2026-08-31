@@ -22,6 +22,9 @@ type LevelEstimate struct {
 	TargetDB             float64      `json:"target_db"`
 	OutputRigVolume      float64      `json:"output_rig_volume"`
 	RecommendedRigVolume float64      `json:"recommended_rig_volume"`
+	// Notes flags what the dB sum deliberately leaves out, so the estimate is
+	// read as a relative hint rather than an absolute measurement.
+	Notes []string `json:"notes,omitempty"`
 }
 
 // EstimateLevel sums the level-relevant stages of a rig (input gain, amp
@@ -62,10 +65,12 @@ func estimateLevel(patch Patch) LevelEstimate {
 		add("input gain", nodeNumber(in, "InputGain"), "")
 	}
 
+	sawAmp := false
 	for _, name := range patch.ChildOrder {
 		if !isInstanceOf(name, "Amp") {
 			continue
 		}
+		sawAmp = true
 		node := patch.Children[name]
 		master := nodeNumber(node, "Master")
 		add("amp master ("+name+")", percentToDB(master), fmt.Sprintf("master %s", percent(master)))
@@ -96,6 +101,11 @@ func estimateLevel(patch Patch) LevelEstimate {
 	if out, ok := patch.Children["Output"]; ok {
 		est.OutputRigVolume = nodeNumber(out, "RigVolume")
 		add("output rig volume", est.OutputRigVolume, "")
+	}
+
+	if sawAmp {
+		est.Notes = append(est.Notes,
+			"amp preamp gain (GainA/GainB) and any drive-pedal Level are not in this sum: a high-gain amp plays louder than the estimate suggests. Set loudness with the amp Master (power-amp volume), drive with Gain, and use RigVolume only as a final trim.")
 	}
 
 	est.EstimatedLevelDB = round1(total)

@@ -97,12 +97,27 @@ func footSwitchFor(template []byte, moduleNames []string, switches []Footswitch)
 			children["Scene"+n] = map[string]any{"state": sceneBlob(moduleNames, sceneHeaders(moduleNames, sw.Scene)), "type": 24}
 		}
 	}
+
+	// The device loads with no scene active unless LastScene names one. Mark the
+	// first Scene-mode switch as the default scene (0-based across FS5..FS8) so
+	// the rig's starting point is defined; -1 means "no scene" (all toggles).
+	lastScene := -1
+	for i, sw := range switches {
+		if sw.Mode == "Scene" {
+			lastScene = i
+			break
+		}
+	}
+	children["LastScene"] = map[string]any{"type": 10, "value": lastScene}
+	children["LastSceneState"] = map[string]any{"type": 10, "value": 0}
 	return fs, nil
 }
 
-// pedalFor resets the template pedal section so it no longer references
-// modules from the template's chain.
-func pedalFor(template []byte) (map[string]any, error) {
+// pedalFor rewires a template expression pedal (Pedal1/Pedal2) to the given
+// assignments, resetting every slot first so nothing references the template's
+// chain. Each assignment fills one slot (Classic mode uses the first; the rest
+// stay unassigned).
+func pedalFor(template []byte, assignments []Pedal) (map[string]any, error) {
 	pedal, err := decodeObject(template)
 	if err != nil {
 		return nil, fmt.Errorf("parse pedal template: %w", err)
@@ -119,9 +134,34 @@ func pedalFor(template []byte) (map[string]any, error) {
 		for i := 1; i <= 4; i++ {
 			children[fmt.Sprintf("Module%d", i)] = map[string]any{"string": "Unassigned", "type": 8}
 			children[fmt.Sprintf("Param%d", i)] = map[string]any{"string": "", "type": 8}
+			children[fmt.Sprintf("Min%d", i)] = map[string]any{"type": 0, "value": 0}
+			children[fmt.Sprintf("Max%d", i)] = map[string]any{"type": 0, "value": 100}
+		}
+		for i, a := range assignments {
+			if i >= 4 {
+				break
+			}
+			n := fmt.Sprintf("%d", i+1)
+			max := a.Max
+			if max == 0 {
+				max = 100
+			}
+			children["Module"+n] = map[string]any{"string": a.Module, "type": 8}
+			children["Param"+n] = map[string]any{"string": a.Param, "type": 8}
+			children["Min"+n] = map[string]any{"type": 0, "value": a.Min}
+			children["Max"+n] = map[string]any{"type": 0, "value": max}
 		}
 	}
 	return pedal, nil
+}
+
+// pedalAt returns the assignment for one physical expression pedal (Pedal1 at
+// index 0, Pedal2 at index 1) as a single-slot slice, or nil when unassigned.
+func pedalAt(pedals []Pedal, i int) []Pedal {
+	if i < len(pedals) {
+		return pedals[i : i+1]
+	}
+	return nil
 }
 
 func decodeObject(raw []byte) (map[string]any, error) {

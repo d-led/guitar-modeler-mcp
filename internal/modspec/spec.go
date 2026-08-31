@@ -148,6 +148,10 @@ func (p Param) Validate(value any) error {
 		if _, ok := value.(bool); !ok {
 			return fmt.Errorf("%s expects a boolean, got %T", p.Label, value)
 		}
+	case "string":
+		if _, ok := value.(string); !ok {
+			return fmt.Errorf("%s expects a string, got %T", p.Label, value)
+		}
 	}
 	return nil
 }

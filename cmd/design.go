@@ -17,10 +17,12 @@ func newDesignCmd() *cobra.Command {
 	var (
 		device       string
 		name         string
-		song         string
+		note         string
 		amp          string
 		cab          string
 		mic          string
+		ampParams    string
+		cabParams    string
 		routing      string
 		amp2         string
 		cab2         string
@@ -42,7 +44,7 @@ func newDesignCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "design",
 		Short: "Dial in a tone and write a .rig patch plus an HTML report",
-		Example: `  guitar-modeler-mcp design --name "Brown Sound" --song "Van Halen - Panama" \
+		Example: `  guitar-modeler-mcp design --name "Brown Sound" --note "Van Halen - Panama" \
       --amp "Marshall JCM800" --fx '[{"type":"Tape Echo","enabled":true}]'`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			a, err := newApp()
@@ -65,13 +67,23 @@ func newDesignCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			ampParamsMap, err := parseParamsFlag(ampParams)
+			if err != nil {
+				return err
+			}
+			cabParamsMap, err := parseParamsFlag(cabParams)
+			if err != nil {
+				return err
+			}
 			res, err := a.design.Design(design.Request{
 				Device:       device,
 				Name:         name,
-				Song:         song,
+				Note:         note,
 				Amp:          amp,
 				Cab:          cab,
 				Mic:          mic,
+				AmpParams:    ampParamsMap,
+				CabParams:    cabParamsMap,
 				Routing:      rig.Routing(routing),
 				Amp2:         amp2,
 				Cab2:         cab2,
@@ -100,7 +112,7 @@ func newDesignCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			html, err := htmlreport.Render(file, song, a.cat)
+			html, err := htmlreport.Render(file, note, a.cat)
 			if err != nil {
 				return err
 			}
@@ -124,10 +136,12 @@ func newDesignCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&name, "name", "New Rig", "rig name")
 	cmd.Flags().StringVar(&device, "device", "gigboard", "target device (currently only gigboard is supported)")
-	cmd.Flags().StringVar(&song, "song", "", "song the tone is for")
+	cmd.Flags().StringVar(&note, "note", "", "note annotation shown on the report")
 	cmd.Flags().StringVar(&amp, "amp", "", "amp: device model or real-hardware description (required)")
 	cmd.Flags().StringVar(&cab, "cab", "", "cab: device model or description")
 	cmd.Flags().StringVar(&mic, "mic", "", "mic: device model or description")
+	cmd.Flags().StringVar(&ampParams, "amp-params", "", "amp knob overrides as a JSON object, e.g. '{\"GainA\":58,\"Master\":60}'")
+	cmd.Flags().StringVar(&cabParams, "cab-params", "", "cab knob overrides as a JSON object")
 	cmd.Flags().StringVar(&routing, "routing", "", "signal-chain topology: S (serial, default), SPS-1 (serial→parallel→serial) or PS-1 (parallel from input)")
 	cmd.Flags().StringVar(&amp2, "amp2", "", "second amp for a dual-amp parallel rig (same model = same amp on both channels)")
 	cmd.Flags().StringVar(&cab2, "cab2", "", "cab for the second amp path")
@@ -178,4 +192,17 @@ func parseFootswitchFlags(jsonValue string) ([]rig.Footswitch, error) {
 		return nil, fmt.Errorf("parse --footswitches: %w", err)
 	}
 	return switches, nil
+}
+
+// parseParamsFlag parses a JSON object of knob overrides (--amp-params/
+// --cab-params) into a map.
+func parseParamsFlag(jsonValue string) (map[string]any, error) {
+	if jsonValue == "" {
+		return nil, nil
+	}
+	var m map[string]any
+	if err := json.Unmarshal([]byte(jsonValue), &m); err != nil {
+		return nil, fmt.Errorf("parse --amp-params/--cab-params: %w", err)
+	}
+	return m, nil
 }

@@ -25,6 +25,12 @@ are supported:
   knobs differently). Setup cards and reports are named
   `<preset>.<device>.html` (e.g. `Brown Sound.ge200.html`), while preset files
   keep the terse `<preset>.mo` / `.rig` / `.tsl` scheme.
+
+  **Expression pedal is a device setting, not in the `.mo`.** A Wah or Volume
+  in the FX module still needs the device's EXP pedal assigned to it by hand
+  (the wah's `POSITION` follows the pedal); `mooer_design` dials the block's
+  knobs but cannot write the pedal assignment into the preset. Say so when a
+  wah/volume is part of the tone.
 - **BOSS Waza Air** — a wireless headphone amp. Preset is a BOSS TONE STUDIO
   backup (`.tsl`): a named set of one or more patches, each a 2335-byte binary
   record stored as hex under `data[0][].paramSet["User%Patch"]`. The record is
@@ -111,6 +117,11 @@ are supported:
   uses the device's public `KEY_MATERIAL` + serial, and `qc_usb` uses the
   unit's own protocol over USB-HID.
 
+  **Expression pedals are not authored by `qc_design`.** A wah, pitch or filter
+  block that is rocked by a foot pedal must be wired to EXP1/EXP2 on the unit
+  itself — the card lists the block and its knobs, but the controller routing
+  is a manual step. Say so when a tone depends on a swept block.
+
 Every parameter you pass is validated before a file is written, so an invalid
 preset is never produced. `design_rig` is Gigboard-only; Mooer presets go
 through `mooer_design`, Waza Air presets through `waza_write_tsl`, THR cards
@@ -159,6 +170,12 @@ Keep it tight and don't spiral:
   message — testing it costs one turn, reasoning about it costs ten.
 - **Don't re-read `get_guide` or re-list catalogs mid-task.** They are stable
   for the session; re-calling them is dead time.
+- **Hand off with a visual check.** Once the HTML report/setup card is written,
+  pass the clickable report link to the user — the tool returns it as a
+  `[filename](file://…)` markdown link, so present it as a link (don't flatten
+  it to a raw path) — and tell them to eyeball it before deploying to the
+  device: AI model, parameter and routing choices can be off, and the card is
+  the human verification step against the actual hardware.
 
 ## Tools and workflow
 
@@ -186,7 +203,17 @@ Keep it tight and don't spiral:
    a wah, whammy or solo-boost that the player toggles must be put on a stomp
    switch, otherwise the rig is unplayable as a stompbox. The tool's reply
    lists the assigned switches (or warns that none are assigned) so you can
-   tell at a glance whether the controls are wired up.
+   tell at a glance whether the controls are wired up. **Keep `name` short** —
+   the Gigboard stores and displays preset names in **all caps** and ellipsizes
+   them beyond 21 characters, so `design_rig` uppercases and truncates over-long
+   names (and says so in its reply); put the full song/artist/character title in
+   `note`, which lands on the HTML report instead (the `name` itself comes out
+   as `UPPERCASE` — that's the device, not a bug).
+   Dial the amp and cab knobs with `amp_params`/`cab_params` (flat objects
+   keyed by the exact parameter names from `catalog_list_module_params` — e.g.
+   `{"GainA": 62, "Master": 55}`; the amp uses `GainA`/`GainB`, not `Gain`,
+   and toggles like `OnAxis` take booleans). FX knobs go in each `fx` item's
+   `params` the same way.
 8. `rig_decode` / `render_report` — inspect or re-report an existing preset.
 9. `estimate_rig_level` — check a rig's net output level and the RigVolume that
    reaches a target. Default gain staging: input 0 dB → amp master 50% (−6 dB)
@@ -194,12 +221,83 @@ Keep it tight and don't spiral:
    **drive** raise the amp `Gain` (or the drive pedal's `Drive`) — raising
    `Master`/`output_level` only makes it louder, not more overdriven.
 
+   **The estimate is a relative hint, not a measurement.** It sums only the
+   *known* stages — input gain, amp **Master** (power-amp volume), cab out
+   gain, the parallel mixer and **RigVolume** — and deliberately leaves out
+   the amp's preamp gain (`GainA`/`GainB`) and drive-pedal `Level`, so a clean
+   amp and a high-gain amp at the same Master read identically even though the
+   high-gain amp plays much louder. To make a rig louder **without overdrive**,
+   raise the amp **Master** (loudness), not `Gain` (drive), and leave RigVolume
+   near unity as a final trim — see the "Level first" step under *Optimizing a
+   rig* below.
+
 ## Effect categories
 
 Effects are grouped into eight categories, mirroring the standard HeadRush
 effect grouping: `distortion`, `dynamics`, `eq`, `expression`, `modulation`,
 `delay`, `reverb`, `utility`. List them with `catalog_list_fx_categories` and
 the modules of one with `catalog_list_fx_by_category`.
+
+## Impulse responses (custom IR)
+
+A custom impulse response loads a third-party cab capture (OwnHammer, York
+Audio, ML Sound Lab, …) instead of a stock cabinet. There are two blocks:
+`IR` (2048-sample) and `IR (1024)` (truncated, half the DSP). List them with
+`catalog_list_fx` (`query: "IR"`) and read their knobs with
+`catalog_list_module_params`.
+
+- **An `IR` effect replaces the cabinet** — pass it in the `fx` list and
+  `design_rig` drops the Cab block (the chain becomes amp → IR). Don't also
+  pass a `cab`: the signal would be filtered twice.
+- The IR selection is the `IR` parameter, a string of the form
+  `[directory](<folder>)[name](<file>)` — `<folder>` is the folder under
+  `Impulse Responses/` on the device and `<file>` is the `.wav` name without
+  the extension; `[directory]([IR ROOT])` is the root folder. Example:
+  `{"type": "IR", "params": {"IR": "[directory](YorkMixes)[name](YA MES 212 V30 Mix 01)"}}`.
+- The other knobs are `Gain` (dB trim), `HiCut` (Hz), `LoCut` (Hz) and `Mix`
+  (%); the block also carries a `Doubling`/stereo second set (`IR2`, `Gain2`,
+  …) like Amp and Cab, which the builder writes with safe defaults.
+- **Scenes cannot change the IR file** — a scene only flips blocks on/off. To
+  switch between two IRs per scene, place **two IR blocks** (each loaded with
+  one file) and let the scenes toggle which one is on.
+
+## Choosing effects (browse the class, fit the chain)
+
+Don't grab the first `search_catalog`/`translate_*` hit and call it done. For a
+category that carries the tone — especially **distortion** — list the whole
+class and pick for the *chain*, not just for the real pedal it emulates:
+
+1. `catalog_list_fx_by_category` (e.g. `category: "distortion"`) and read each
+   module's `modeled_after`, `confirmed` flag and `capabilities`. Two pedals can
+   both be "inspired by" a Tube Screamer yet sit very differently in a rig.
+2. **One overdrive is usually not enough for a singing lead.** A lead tone is
+   gain-staged, not a single pedal: stack a low-gain boost/OD (e.g. `Green JRC-OD`
+   at low `Drive`, high `Level`) into a higher-gain drive, or into the amp's own
+   `Gain` — the amp's `gain` character decides how much help it needs. A `clean`
+   amp needs more staging than a `crunch`/`high gain` amp.
+3. **Match the effect to the chain, not to the song's gear list.** Decide what
+   the block must *do* (clean boost, edge-of-breakup push, mid-hump, fuzz wall,
+   solo level bump) and choose the model that does that job where it sits
+   (before the amp it pushes the amp; after the amp it shapes the tone).
+4. **Occasional effects start off.** A modulation effect (phaser, chorus,
+   flanger, tremolo) or filter that only colours certain sections of the song
+   should be *configured but bypassed*: add it with its dialled params and
+   `"enabled": false`, then wire it to a footswitch (or a scene) so the player
+   can bring it in. Turn it on by default only when the user wants it always-on
+   or explicitly proposes switching it — if it's unclear, ask.
+
+The amp's `gain` character (`clean` → `high gain`, from `catalog_list_amps`)
+tells you how much drive the chain already has: a `high gain` amp needs at most
+a clean boost, while a `clean` amp may need two stacked gain stages to reach a
+lead sound.
+
+Distortion effects also carry a `gain` character — `boost` → `overdrive` →
+`distortion` → `fuzz` (plus `bass` and `bitcrusher`) — shown by
+`catalog_list_fx`, `catalog_list_fx_by_category` and `search_catalog`. Don't
+default to `Green JRC-OD`: it is a low-gain TS-808 **overdrive**, and a
+singing/high-gain lead usually wants a **distortion** (`Black OP` Pro Co Rat,
+`DC Distort`, `D1 Dist`, `MX Dist`) or a drive→distortion stack. Match the
+pedal's `gain` to the part exactly as you match the amp's.
 
 ## Signal chain & parallel routing
 
@@ -277,29 +375,55 @@ pass a different `operation` to control a module-specific parameter instead.
 A module that is not in the chain is rejected, and you can never assign more
 than four switches.
 
-A **Scene** switch recalls a saved snapshot of which blocks are on and off in
-one press. Set `"mode": "scene"`, give it a `label` for the screen, and list
-the blocks the scene turns `on` and `off` (any block not listed keeps its
-current state):
+A **Scene** switch is how you **turn several blocks on and off at once** with a
+single stomp: one press recalls a saved snapshot of which of the 11 chain slots
+are on and off. Set `"mode": "scene"`, give it a `label` for the screen, and
+list the blocks the scene turns `on` and `off` (any block not listed keeps its
+current state). The `module` field still names a module in the chain — it
+anchors the switch and its on-screen colour, but the *behaviour* comes from the
+`scene.on`/`scene.off` lists, which can reference any blocks in the chain, not
+just that one module:
 
 ```json
 "footswitches": [
-  {"module": "Green JRC-OD", "mode": "scene", "label": "DRIVE",
-   "scene": {"on": ["S1 Drive", "Green JRC-OD"], "off": ["BBD Delay"]}},
-  {"module": "BBD Delay", "mode": "scene", "label": "CLEAN",
-   "scene": {"on": ["BBD Delay"], "off": ["S1 Drive", "Green JRC-OD"]}}
+  {"module": "Green JRC-OD", "mode": "scene", "label": "LEAD",
+   "scene": {"on": ["Green JRC-OD", "Tape Echo"], "off": ["Chorus"]}},
+  {"module": "Green JRC-OD", "mode": "scene", "label": "CLEAN",
+   "scene": {"on": ["Chorus"], "off": ["Green JRC-OD", "Tape Echo"]}}
 ]
 ```
 
-Every scene turns on, turns off, or leaves alone each of the 11 chain slots
-(0 = no change, 1 = on, 2 = off) — exactly what the device's scene editor
-writes.
+Here `LEAD` switches the drive *and* the delay on and the chorus off in one
+press; `CLEAN` does the inverse. Every scene turns on (1), turns off (2), or
+leaves alone (0) each of the 11 chain slots — exactly what the device's scene
+editor writes — so a scene can flip any combination of blocks in the chain.
 
 **Order matters: put the most important switches first.** The first two entries
 land on buttons 1 and 2 (FS5/FS6), which stay dedicated to the patch in every
 button mode. Buttons 3 and 4 (FS7/FS8) are repurposed for bank switching in the
 hybrid button mode, so a switch the player hits mid-song (a whammy toe switch,
 a solo boost) must be in the first two slots.
+
+## Expression pedals
+
+A wah, whammy or volume pedal is **unplayable without an expression pedal** — a
+footswitch only toggles it on/off, it does not sweep it. Wire the sweep with
+`design_rig`'s `pedals` argument (Pedal1, then Pedal2) and **always set the
+sweep range** (`min`/`max`):
+
+```json
+"pedals": [{"module": "Black Wah", "param": "Pedal", "min": 0, "max": 100}]
+```
+
+- `param` is the controller target: `"Pedal"` (wah sweep), `"Pitch"` (whammy),
+  `"Volume"` (volume pedal).
+- `min`/`max` is the controller range — 0–100 is the full sweep; a narrower
+  range keeps a whammy in a usable window. Omit `max` to default to 100.
+- `design_rig` auto-assigns the first wah/whammy/volume in the chain to Pedal1
+  (0–100) when `pedals` is omitted — but don't rely on it: state the pedal and
+  its range explicitly, and pair it with a `footswitches` entry that toggles
+  the module on/off (a wah is usually **off by default**, brought in by its
+  stomp switch).
 
 ## Songs with multiple sounds (scenes vs setlists)
 
@@ -308,10 +432,15 @@ tools. **Ask the user which they want when it is not obvious** — the wrong
 guess wastes a round trip:
 
 - **Scenes** — one rig, one chain. A Scene footswitch turns several blocks on
-  and off at once. Use this when the sounds are variations of the *same chain*
-  (same amp/cab, different pedals or a boost). Design the rig with scene
-  footswitches (see above); the on/off snapshot is written into the `.rig`, so
-  nothing needs editing on the device afterwards.
+  and off at once in a single press. Use this when the sounds are variations
+  of the *same chain* (same amp/cab, different pedals or a boost) — the
+  classic clean↔lead: the clean scene switches the drive off and the chorus
+  on, the lead scene switches the drive (and maybe a delay) on and the chorus
+  off. Design the rig with scene footswitches (see Footswitches above); the
+  on/off snapshot is written into the `.rig`, so nothing needs editing on the
+  device afterwards. Scenes flip *on/off state only* — they do not change
+  parameter values, so a scene cannot switch the amp's gain or the delay's
+  time; for that you need two rigs (see setlists).
 - **A setlist of rigs** — several full `.rig` files stepped through as a bank.
   Use this when the sounds need *incompatible chains* (different amps/cabs that
   won't all fit in 11 slots, or a chain that must be rebuilt). Design each rig
@@ -353,6 +482,19 @@ Workflow to reproduce or tweak a preset:
 4. `estimate_rig_level` on the existing file reports its net output level —
    useful before changing gain staging.
 
+The HTML report visualises on/off state: a block that starts bypassed is
+greyed in the chain picture, carries an `off` badge on its card, and its
+stomp-switch button is grey instead of green (only for on/off toggles — scene
+buttons stay green). Reading a rig this way shows at a glance which pedals
+start off.
+
+For a programmatic edit in the repo (not via MCP): decode a `.rig` with
+`RigFile.Decode()` into the typed `Content` model, change any node or
+parameter, then `RigFile.SetContent(content)` re-encodes and `Write` saves —
+untouched sections (the FootSwitch/Pedal blobs) survive byte-for-byte, and
+round-trip tests in `internal/rig/roundtrip_test.go` cover the no-op,
+all-parameters-changed and block-toggle cases.
+
 A `.rig` is plain JSON whose `content` field is an escaped second JSON document
 (`{FootSwitch, Pedal1, Pedal2, data:{Patch}, info:{version}}`). Prefer
 `rig_decode` over hand-parsing the raw JSON — it already resolves the
@@ -363,9 +505,25 @@ instance names, mixer and footswitches.
 Once you have decoded a rig, improve it in this order:
 
 1. **Level first.** `estimate_rig_level` with a target (default 0 dB) tells you
-   how far off the rig is. Fix it with `output_level` (RigVolume), amp
-   `Master`, or cab `OutGain` — but keep the summed level within −60…+20 dB or
-   the build is refused.
+   how far off the rig is — but treat it as a *relative* hint, because it
+   ignores amp preamp gain (see above). Balance in this order:
+   - **Amp `Master` is the loudness control, `Gain` is the drive control.**
+     Raise `Master` to get louder *without* overdriving; raise `Gain` only to
+     add drive. This is the most common fix — an under-driven clean amp
+     (Master left at 50%) is why a rig comes out quiet and tempts a big
+     RigVolume boost.
+   - **A clean amp needs a higher Master than a high-gain amp.** To reach the
+     same loudness without overdrive, put a clean/bass amp's Master around
+     70–80% and a high-gain amp's around 50–60% — the high-gain amp's preamp
+     gain makes it naturally much hotter.
+   - **Leave RigVolume near unity as the final trim.** Crank `output_level`
+     only for the last dB or two; a rig that needs +15 dB of RigVolume has a
+     gain-staging problem (usually a quiet clean amp), not a trim problem.
+   - **Aim for a healthy meter, not a specific number.** The goal is green
+     meters that swing close to — but never into — the red on the loudest
+     strum.
+   Keep the summed estimate within −60…+20 dB or the build is refused; fix it
+   with amp `Master` or cab `OutGain` before reaching for `output_level`.
 2. **Match the amp to the part.** Compare the amp's `gain` character
    (`clean` → `high gain`) with the song. A lead-channel amp on a clean song is
    the most common mismatch — swap it and keep the cab/mic if they fit.
@@ -380,6 +538,31 @@ Once you have decoded a rig, improve it in this order:
    a boost for a solo).
 6. **Rebuild through `design_rig`** with the corrected values. It re-validates
    every parameter, so a bad edit is rejected rather than written.
+
+## Delay & reverb mix (avoiding mud)
+
+The factory block defaults are wet-heavy — `Tape Echo` defaults to `Mix` 40,
+`AIR Reverb` to `Mix` 40 — so two or three time-based effects stacked at their
+defaults collapse into a cloudy tail. **Always set `Mix` explicitly; don't
+leave the factory default.** Start low and push up only if the part calls for
+it:
+
+| Effect | `Mix` range | Notes |
+| --- | --- | --- |
+| Delay (`Tape Echo`, `BBD Delay`, `Air Delay`, …) | **15–25** | The repeats should be *felt*, not heard as a separate echo; above ~30 the dry attack smears. Keep `Feedback` ≤ ~30 unless you want obvious repeats. |
+| Reverb (`AIR Reverb`, `Eleven Reverb`, …) | clean **35–45**, dense/high-gain **15–30** | A clean or ambient part can sit wetter; a dense high-gain tone wants less room, or the reverb buries the gain. |
+| Modulation (`Chorus`, `Flanger`, `Phaser`) | **15–25** | Low depth+mix reads as width; a high mix wobbles the pitch of the dry note. |
+
+Rules of thumb:
+
+- **Lower the mix for high-gain amps.** Distortion already fills the spectrum,
+  so a driven tone wants *less* delay and reverb than a clean one. A lead patch
+  at delay 24 + reverb 21 stays articulate; the same values on a clean patch
+  can go delay 25 + reverb 42.
+- **`Tails` stays on.** It only controls whether the trail rings out when the
+  block is bypassed — it does not change the wet level.
+- **If the dry attack is masked, lower `Mix`.** That is the fix, not an EQ
+  or a tone knob.
 
 ## Validation
 
@@ -449,6 +632,30 @@ per-device design tools (`design_rig`, `mooer_design`, `waza_write_tsl`,
 signal-chain *shape* (shorter chains, missing parallel paths) is a separate
 concern and is not yet modelled — say so when the target device has fewer
 slots than the source chain.
+
+### Rethink the chain, routing and switching
+
+`map_ingredients` (and `map_preset`) match *blocks and knobs* — they cannot
+carry over the source device's chain shape, parallel routing or footswitches,
+because those are device-specific and often simply don't exist on the target.
+Re-decide them for the target device instead of copying the source:
+
+- **Chain shape differs.** Gigboard has 11 free slots with parallel routing
+  (`S`/`SPS-1`/`PS-1`) and dual-amp configs; Mooer has a fixed nine-module
+  chain (FX→OD→AMP→CAB→NS→EQ→MOD→DELAY→REVERB) with no parallel paths and no
+  dual amp; Waza Air shares slots (booster vs mod, delay vs fx); the Quad
+  Cortex is a free 4-lane wire. A parallel wet/dry/wet Gigboard rig must be
+  flattened to a serial Mooer chain — decide which blocks survive the squeeze.
+- **Switching differs.** Gigboard: 4 stomp switches (FS5–FS8) + scenes + 2
+  expression pedals. Mooer: no per-effect footswitches — it switches whole
+  patches. Waza Air: no footswitches at all (an AIRSTEP BW adds them). Quad
+  Cortex: 8+ switches + scenes. Re-map the *control intent* — a wah on a
+  pedal, a drive on a stomp, a clean/lead scene — to what the target actually
+  has, don't copy the source's assignments.
+- **Convert in two passes.** First `map_ingredients` to line up the blocks and
+  knobs, then rebuild with the target's own design tool re-deriving order,
+  routing and footswitches for that device. Present both: the mapping is a
+  starting point, not the finished preset.
 
 The setup card is the deliverable for models without file exchange (the
 non-pro GE150): it lists every module's effect, on/off state, the real hardware

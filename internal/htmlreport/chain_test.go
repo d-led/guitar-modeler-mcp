@@ -1,10 +1,15 @@
 package htmlreport
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/d-led/guitar-modeler-mcp/internal/catalog"
+	"github.com/d-led/guitar-modeler-mcp/internal/rig"
+)
 
 func TestChainStepsSerial(t *testing.T) {
 	slots := []string{"Amp", "Cab", "Spring Reverb"}
-	steps := chainSteps("", slots)
+	steps := chainSteps("", slots, nil)
 	if len(steps) != 3 {
 		t.Fatalf("steps = %d, want 3", len(steps))
 	}
@@ -20,7 +25,7 @@ func TestChainStepsSPSParallelJunction(t *testing.T) {
 		"Eleven Reverb", "Empty Slot", "Empty Slot",
 		"Tremolo", "Empty Slot",
 	}
-	steps := chainSteps("SPS-1", slots)
+	steps := chainSteps("SPS-1", slots, nil)
 	// 3 prefix + 1 junction + 2 suffix.
 	if len(steps) != 6 {
 		t.Fatalf("steps = %d, want 6 (3 prefix + junction + 2 suffix)", len(steps))
@@ -48,7 +53,7 @@ func TestChainStepsPSParallelFromInput(t *testing.T) {
 	slots[0] = "Amp"
 	slots[3] = "Amp 2"
 	slots[8] = "Eleven Reverb"
-	steps := chainSteps("PS-1", slots)
+	steps := chainSteps("PS-1", slots, nil)
 	if len(steps) != 4 {
 		t.Fatalf("steps = %d, want 4 (junction + 3 suffix)", len(steps))
 	}
@@ -63,5 +68,49 @@ func TestChainStepsPSParallelFromInput(t *testing.T) {
 	}
 	if steps[3].Slot != 11 {
 		t.Errorf("last suffix slot = %d, want 11", steps[3].Slot)
+	}
+}
+
+func TestChainStepsDimOffModules(t *testing.T) {
+	slots := []string{"Chorus", "Amp", "Cab"}
+	off := map[string]bool{"Chorus": true}
+	steps := chainSteps("", slots, off)
+	if len(steps) != 3 {
+		t.Fatalf("steps = %d, want 3", len(steps))
+	}
+	if !steps[0].Off {
+		t.Errorf("bypassed module should be dimmed: %+v", steps[0])
+	}
+	if steps[1].Off || steps[2].Off {
+		t.Errorf("on modules should not be dimmed: %+v %+v", steps[1], steps[2])
+	}
+}
+
+func TestBypassedFlagsOffModules(t *testing.T) {
+	b, err := rig.NewBuilder(catalog.New())
+	if err != nil {
+		t.Fatalf("NewBuilder: %v", err)
+	}
+	file, err := b.Build(rig.Spec{
+		Name: "Off Chain",
+		Blocks: []rig.Block{
+			{Type: "Chorus", Enabled: false},
+			{Type: "Amp", Params: map[string]any{"Type": "65 Black SR"}},
+			{Type: "Cab", Params: map[string]any{"CabType": "1x12 Black Panel Lux"}},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	content, err := file.Decode()
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	off := bypassed(content.Data.Patch)
+	if !off["Chorus"] {
+		t.Fatalf("bypassed should flag Chorus: %v", off)
+	}
+	if off["Amp"] || off["Cab"] {
+		t.Fatalf("bypassed should not flag on modules: %v", off)
 	}
 }

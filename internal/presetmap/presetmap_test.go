@@ -177,8 +177,8 @@ func TestGigboardToMooer(t *testing.T) {
 		t.Fatalf("GigboardToMooer: %v", err)
 	}
 
-	if got.Name != "To Mooer" {
-		t.Fatalf("name = %q, want To Mooer", got.Name)
+	if got.Name != "TO MOOER" {
+		t.Fatalf("name = %q, want TO MOOER (gigboard names are all caps)", got.Name)
 	}
 	m := mooer.Default()
 	if !got.Amp.Enabled || m.EffectName("amp", got.Amp.Type) != "Brit 800" {

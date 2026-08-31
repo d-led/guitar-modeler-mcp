@@ -15,6 +15,7 @@ type SearchResult struct {
 	Name         string  `json:"name"`                    // exact device name
 	ModeledAfter string  `json:"modeled_after,omitempty"` // real hardware it emulates
 	Category     string  `json:"category,omitempty"`      // effects only
+	Gain         string  `json:"gain,omitempty"`          // distortion effects: drive strength
 	Description  string  `json:"description,omitempty"`
 	Score        float64 `json:"score"`      // 0..1 relevance
 	MatchedOn    string  `json:"matched_on"` // which field matched best
@@ -67,6 +68,7 @@ func (c *Catalog) Search(query, kind string) []SearchResult {
 	if k == "" || k == "fx" {
 		for _, f := range fx {
 			if r, ok := matchEntry("fx", f.Name, f.ModeledAfter, f.Category, f.Description, q); ok {
+				r.Gain = f.Gain
 				results = append(results, r)
 			}
 		}

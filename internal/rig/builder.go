@@ -24,9 +24,9 @@ type RigFile struct {
 
 // Content is the decoded value of RigFile.Content.
 type Content struct {
-	FootSwitch any `json:"FootSwitch"`
-	Pedal1     any `json:"Pedal1"`
-	Pedal2     any `json:"Pedal2"`
+	FootSwitch json.RawMessage `json:"FootSwitch"`
+	Pedal1     json.RawMessage `json:"Pedal1"`
+	Pedal2     json.RawMessage `json:"Pedal2"`
 	Data       struct {
 		Patch Patch `json:"Patch"`
 	} `json:"data"`
@@ -129,6 +129,8 @@ func (b *Builder) Build(spec Spec) (*RigFile, error) {
 				mic = "Dyn 57"
 			}
 			node = cabNode(cab, mic, block.Params)
+		case "IR", "IR (1024)":
+			node = irNode(block.Enabled, block.Params)
 		default:
 			node, err = buildFXNode(canon, block.Enabled, block.Params)
 			if err != nil {
@@ -169,19 +171,28 @@ func (b *Builder) Build(spec Spec) (*RigFile, error) {
 	if err != nil {
 		return nil, err
 	}
-	pedal1, err := pedalFor(b.pedal1)
+	pedals, err := resolvePedals(spec.Pedals, moduleNames)
 	if err != nil {
 		return nil, err
 	}
-	pedal2, err := pedalFor(b.pedal2)
+	pedal1, err := pedalFor(b.pedal1, pedalAt(pedals, 0))
+	if err != nil {
+		return nil, err
+	}
+	pedal2, err := pedalFor(b.pedal2, pedalAt(pedals, 1))
 	if err != nil {
 		return nil, err
 	}
 
-	content := Content{
-		FootSwitch: footSwitch,
-		Pedal1:     pedal1,
-		Pedal2:     pedal2,
+	content := Content{}
+	if content.FootSwitch, err = json.Marshal(footSwitch); err != nil {
+		return nil, fmt.Errorf("encode footswitch section: %w", err)
+	}
+	if content.Pedal1, err = json.Marshal(pedal1); err != nil {
+		return nil, fmt.Errorf("encode pedal1 section: %w", err)
+	}
+	if content.Pedal2, err = json.Marshal(pedal2); err != nil {
+		return nil, fmt.Errorf("encode pedal2 section: %w", err)
 	}
 	content.Data.Patch = patch
 	content.Info.Version = b.version
@@ -225,6 +236,19 @@ func (b *Builder) Build(spec Spec) (*RigFile, error) {
 // device writes it (no indentation and no trailing newline).
 func (f *RigFile) Marshal() ([]byte, error) {
 	return json.Marshal(f)
+}
+
+// SetContent re-encodes a decoded (and possibly modified) content model back
+// into the rig's inner JSON, completing a Load → Change → Save round-trip. The
+// FootSwitch/Pedal sections are held as raw JSON, so untouched sections survive
+// byte-for-byte.
+func (f *RigFile) SetContent(c *Content) error {
+	data, err := json.Marshal(c)
+	if err != nil {
+		return fmt.Errorf("encode rig content: %w", err)
+	}
+	f.Content = string(data)
+	return nil
 }
 
 func strParam(params map[string]any, key string) string {

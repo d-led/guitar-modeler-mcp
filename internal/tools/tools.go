@@ -208,10 +208,12 @@ func (r *Registrar) Register(s *mcp.Server) {
 		InputSchema: objectSchema(map[string]any{
 			"device":     stringSchema("Target hardware modeler. Currently only \"gigboard\" (default) is supported."),
 			"name":       stringSchema("Rig/patch name."),
-			"song":       stringSchema("Optional song the tone is for."),
+			"note":       stringSchema("Optional free-form note shown on the report (e.g. the tone's character, artist or song)."),
 			"amp":        stringSchema("Amp: device model or real-hardware description."),
 			"cab":        stringSchema("Optional cab: device model or description."),
 			"mic":        stringSchema("Optional mic: device model or description."),
+			"amp_params": paramMapSchema("Amp knob overrides, keyed by parameter name (e.g. \"GainA\", \"Master\"); values are numbers, booleans or strings."),
+			"cab_params": paramMapSchema("Cab knob overrides, keyed by parameter name (e.g. \"Breakup\", \"OutGain\", \"OnAxis\"); values are numbers, booleans or strings."),
 			"routing":    stringSchema("Signal-chain topology: \"S\" (serial, default), \"SPS-1\" (serial → parallel → serial) or \"PS-1\" (parallel from the input)."),
 			"amp2":       stringSchema("Optional second amp for a dual-amp parallel rig (device model or description). Same model as amp = same amp on both channels."),
 			"cab2":       stringSchema("Optional cab for the second amp path."),
@@ -227,6 +229,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 			"para2_pan":    numberSchema("Optional pan of path B, -100..100 (default 0; 100 = hard right)."),
 			"para_delay":   numberSchema("Optional delay of path B in ms (default 0)."),
 			"footswitches": arraySchema("Optional assignments for the 4 stomp switches (FS5..FS8), in order. Each toggles a module on/off, e.g. [{\"module\":\"Wham\"}] puts the whammy on switch 5.", footswitchItemSchema()),
+			"pedals":       arraySchema("Optional expression-pedal assignments (Pedal1, Pedal2), in order. Each wires a module parameter to a pedal, e.g. [{\"module\":\"Black Wah\",\"param\":\"Pedal\"}] sweeps a wah. A wah/whammy/volume is auto-assigned to Pedal1 when this is omitted.", pedalItemSchema()),
 		}),
 		Handler: func(_ context.Context, args map[string]any) (string, error) {
 			return r.designRig(args)
@@ -238,7 +241,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 		Description: "Render the human-readable HTML report for an existing .rig file.",
 		InputSchema: objectSchema(map[string]any{
 			"rig_file":   stringSchema("Path to the .rig file."),
-			"song":       stringSchema("Optional song annotation."),
+			"note":       stringSchema("Optional note annotation."),
 			"output_dir": stringSchema("Directory to write the HTML file into (default: same as rig file)."),
 		}),
 		Handler: func(_ context.Context, args map[string]any) (string, error) {
@@ -739,10 +742,12 @@ func (r *Registrar) designRig(args map[string]any) (string, error) {
 	req := design.Request{
 		Device:       argString(args, "device"),
 		Name:         argString(args, "name"),
-		Song:         argString(args, "song"),
+		Note:         argString(args, "note"),
 		Amp:          argString(args, "amp"),
 		Cab:          argString(args, "cab"),
 		Mic:          argString(args, "mic"),
+		AmpParams:    argMap(args, "amp_params"),
+		CabParams:    argMap(args, "cab_params"),
 		Routing:      rig.Routing(argString(args, "routing")),
 		Amp2:         argString(args, "amp2"),
 		Cab2:         argString(args, "cab2"),
@@ -759,6 +764,7 @@ func (r *Registrar) designRig(args map[string]any) (string, error) {
 		Para2Pan:     argFloatPtr(args, "para2_pan"),
 		ParaDelay:    argFloatPtr(args, "para_delay"),
 		Footswitches: parseFootswitches(args["footswitches"]),
+		Pedals:       parsePedals(args["pedals"]),
 	}
 	res, err := r.design.Design(req)
 	if err != nil {
@@ -768,6 +774,11 @@ func (r *Registrar) designRig(args map[string]any) (string, error) {
 	file, err := r.builder.Build(res.Spec)
 	if err != nil {
 		return "", err
+	}
+	if stored, truncated := rig.StoredName(res.Spec.Name); truncated {
+		res.Notes = append(res.Notes, fmt.Sprintf(
+			"preset name %q was truncated to %q — Gigboard names fit %d characters; put the full title in the note field instead",
+			res.Spec.Name, stored, rig.NameLimit))
 	}
 
 	outDir := argString(args, "output_dir")
@@ -779,7 +790,7 @@ func (r *Registrar) designRig(args map[string]any) (string, error) {
 		return "", err
 	}
 
-	html, err := htmlreport.Render(file, req.Song, r.cat)
+	html, err := htmlreport.Render(file, req.Note, r.cat)
 	if err != nil {
 		return "", err
 	}
@@ -788,7 +799,7 @@ func (r *Registrar) designRig(args map[string]any) (string, error) {
 		return "", err
 	}
 
-	return summarize(file, res.Notes, req.Song, rigPath, htmlPath), nil
+	return summarize(file, res.Notes, req.Note, rigPath, htmlPath), nil
 }
 
 func (r *Registrar) renderReport(args map[string]any) (string, error) {
@@ -800,7 +811,7 @@ func (r *Registrar) renderReport(args map[string]any) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	html, err := htmlreport.Render(file, argString(args, "song"), r.cat)
+	html, err := htmlreport.Render(file, argString(args, "note"), r.cat)
 	if err != nil {
 		return "", err
 	}
@@ -812,7 +823,7 @@ func (r *Registrar) renderReport(args map[string]any) (string, error) {
 	if err := os.WriteFile(htmlPath, []byte(html), 0o644); err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("Wrote report to %s", htmlPath), nil
+	return fmt.Sprintf("Wrote report: %s", fileLink(htmlPath)), nil
 }
 
 func (r *Registrar) decodeRig(args map[string]any) (string, error) {
@@ -893,11 +904,11 @@ func readRigFile(path string) (*rig.RigFile, error) {
 	return &file, nil
 }
 
-func summarize(file *rig.RigFile, notes []string, song, rigPath, htmlPath string) string {
+func summarize(file *rig.RigFile, notes []string, note, rigPath, htmlPath string) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "Rig %q written.\n", file.Name())
-	if song != "" {
-		fmt.Fprintf(&b, "Song: %s\n", song)
+	if note != "" {
+		fmt.Fprintf(&b, "Note: %s\n", note)
 	}
 	for _, n := range notes {
 		fmt.Fprintf(&b, "- %s\n", n)
@@ -910,9 +921,25 @@ func summarize(file *rig.RigFile, notes []string, song, rigPath, htmlPath string
 		fmt.Fprintf(&b, "Levels: input %+g dB, output %+g dB.\n", summary.InputGain, summary.OutputVolume)
 	}
 
-	fmt.Fprintf(&b, "Rig file: %s\n", rigPath)
-	fmt.Fprintf(&b, "Report:  %s\n", htmlPath)
+	fmt.Fprintf(&b, "Rig file: %s\n", fileLink(rigPath))
+	fmt.Fprintf(&b, "Report:  %s\n", fileLink(htmlPath))
 	return b.String()
+}
+
+// fileURL returns an absolute file:// URI for a path, so chat clients render it
+// as a clickable link that opens in the browser.
+func fileURL(path string) string {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return path
+	}
+	return "file://" + filepath.ToSlash(abs)
+}
+
+// fileLink wraps a path as a markdown link whose label is the file name, so the
+// user sees a friendly clickable label instead of the raw file:// URI.
+func fileLink(path string) string {
+	return fmt.Sprintf("[%s](%s)", filepath.Base(path), fileURL(path))
 }
 
 func parseFX(raw any) []design.FXBlock {
@@ -981,6 +1008,32 @@ func parseFootswitches(raw any) []rig.Footswitch {
 	return out
 }
 
+// parsePedals reads the pedals array argument: one expression-pedal assignment
+// per entry, e.g. {"module":"Black Wah","param":"Pedal"}.
+func parsePedals(raw any) []rig.Pedal {
+	arr, ok := raw.([]any)
+	if !ok {
+		return nil
+	}
+	out := make([]rig.Pedal, 0, len(arr))
+	for _, item := range arr {
+		m, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		p := rig.Pedal{
+			Module: argString(m, "module"),
+			Param:  argString(m, "param"),
+			Min:    argFloat(m, "min"),
+			Max:    argFloat(m, "max"),
+		}
+		if p.Module != "" && p.Param != "" {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
 // ---- argument helpers ----
 
 func argString(args map[string]any, key string) string {
@@ -1022,6 +1075,16 @@ func argObjects(args map[string]any, key string) []map[string]any {
 		}
 	}
 	return out
+}
+
+// argMap returns an object argument as-is (a map of parameter overrides whose
+// values may be numbers, booleans or strings), or nil when absent or not an
+// object.
+func argMap(args map[string]any, key string) map[string]any {
+	if m, ok := args[key].(map[string]any); ok {
+		return m
+	}
+	return nil
 }
 
 func argFloat(args map[string]any, key string) float64 {
@@ -1162,6 +1225,12 @@ func floatMapSchema(desc string) map[string]any {
 	}
 }
 
+// paramMapSchema describes an object of parameter overrides whose values may
+// be numbers, booleans or strings (not just numbers).
+func paramMapSchema(desc string) map[string]any {
+	return map[string]any{"type": "object", "description": desc}
+}
+
 // qcFXItemSchema describes one Quad Cortex effect block in qc_design.
 func qcFXItemSchema() map[string]any {
 	return objectSchema(map[string]any{
@@ -1201,6 +1270,15 @@ func footswitchItemSchema() map[string]any {
 			"on":  arraySchema("Modules the scene turns ON (instance names).", stringSchema("Module instance name.")),
 			"off": arraySchema("Modules the scene turns OFF (instance names).", stringSchema("Module instance name.")),
 		}),
+	})
+}
+
+func pedalItemSchema() map[string]any {
+	return objectSchema(map[string]any{
+		"module": stringSchema("Module instance name to control, e.g. \"Black Wah\", \"Wham\" or \"Volume\"."),
+		"param":  stringSchema("Controller target, e.g. \"Pedal\" (wah sweep), \"Pitch\" (whammy) or \"Volume\"."),
+		"min":    numberSchema("Optional controller minimum (default 0)."),
+		"max":    numberSchema("Optional controller maximum (default 100)."),
 	})
 }
 

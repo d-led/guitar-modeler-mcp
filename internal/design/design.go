@@ -22,14 +22,19 @@ type FXBlock struct {
 type Request struct {
 	// Device selects the target hardware. "gigboard" (default) is currently
 	// the only supported backend.
-	Device    string  `json:"device,omitempty"`
-	Name      string  `json:"name"`
-	Song      string  `json:"song,omitempty"`
-	Amp       string  `json:"amp"`           // device model or real-hardware description
-	Cab       string  `json:"cab,omitempty"` // device model or description
-	Mic       string  `json:"mic,omitempty"` // device model or description
-	Tempo     float64 `json:"tempo,omitempty"`
-	InputGain float64 `json:"input_gain,omitempty"`
+	Device string `json:"device,omitempty"`
+	Name   string `json:"name"`
+	Note   string `json:"note,omitempty"`
+	Amp    string `json:"amp"`           // device model or real-hardware description
+	Cab    string `json:"cab,omitempty"` // device model or description
+	Mic    string `json:"mic,omitempty"` // device model or description
+	// AmpParams and CabParams override the amp/cab block's knobs (e.g.
+	// "GainA", "Master", "Breakup", "OutGain"). Values are numbers, booleans
+	// or strings, keyed by the module's exact parameter names.
+	AmpParams map[string]any `json:"amp_params,omitempty"`
+	CabParams map[string]any `json:"cab_params,omitempty"`
+	Tempo     float64        `json:"tempo,omitempty"`
+	InputGain float64        `json:"input_gain,omitempty"`
 	// OutputLevel is the rig's overall output level in dB (RigVolume). When nil
 	// the designer defaults to +6 dB, compensating the amp master's −6 dB so a
 	// fresh rig lands at unity.
@@ -64,6 +69,11 @@ type Request struct {
 	// modules, e.g. [{"module":"Wham"}] toggles the whammy on/off. Module must
 	// be a module in the chain.
 	Footswitches []rig.Footswitch `json:"footswitches,omitempty"`
+
+	// Pedals assigns the two expression pedals (Pedal1, Pedal2) to control
+	// module parameters, e.g. [{"module":"Black Wah","param":"Pedal"}]. When
+	// empty, a wah/whammy/volume in the chain is auto-assigned to Pedal1.
+	Pedals []rig.Pedal `json:"pedals,omitempty"`
 }
 
 // Result carries the resolved spec plus human-readable decisions.
@@ -101,7 +111,16 @@ func (d *Designer) Design(req Request) (*Result, error) {
 	cabModel := d.resolveCab(req.Cab, ampModel)
 	micModel := d.resolveMic(req.Mic)
 
-	notes := []string{note, fmt.Sprintf("cab %q", cabModel), fmt.Sprintf("mic %q", micModel)}
+	// An impulse-response loader replaces the cabinet: the signal runs
+	// amp → IR instead of amp → cab, so the cab block is dropped.
+	skipCab := hasIR(req.FX)
+
+	notes := []string{note}
+	if skipCab {
+		notes = append(notes, "IR loader replaces the cabinet")
+	} else {
+		notes = append(notes, fmt.Sprintf("cab %q", cabModel), fmt.Sprintf("mic %q", micModel))
+	}
 
 	pre, post, last, err := d.classifyFX(req.FX)
 	if err != nil {
@@ -117,6 +136,8 @@ func (d *Designer) Design(req Request) (*Result, error) {
 		outputVolume = *req.OutputLevel
 	}
 
+	pedals := d.assignExpressionPedals(req, &notes)
+
 	spec := rig.Spec{
 		Name:         req.Name,
 		Tempo:        tempo,
@@ -129,12 +150,13 @@ func (d *Designer) Design(req Request) (*Result, error) {
 		Para2Pan:     req.Para2Pan,
 		ParaDelay:    req.ParaDelay,
 		Footswitches: req.Footswitches,
+		Pedals:       pedals,
 	}
 
 	switch {
 	case req.Routing == rig.RoutingSPS && req.Amp2 == "":
 		// Shared amp: the amp+cab feed two parallel effect paths.
-		spec.Prefix = append(pre, d.ampBlock(ampModel), d.cabBlock(cabModel, micModel))
+		spec.Prefix = append(pre, d.ampBlock(ampModel, req.AmpParams), d.cabBlock(cabModel, micModel, req.CabParams))
 		spec.PathA = d.fxBlocks(req.PathAFX)
 		spec.PathB = d.fxBlocks(req.PathBFX)
 		spec.Suffix = append(post, last...)
@@ -148,8 +170,8 @@ func (d *Designer) Design(req Request) (*Result, error) {
 		cab2Model := d.resolveCab(req.Cab2, amp2Model)
 		mic2Model := d.resolveMic(req.Mic2)
 		spec.Prefix = pre
-		spec.PathA = []rig.Block{d.ampBlock(ampModel), d.cabBlock(cabModel, micModel)}
-		spec.PathB = []rig.Block{d.ampBlock(amp2Model), d.cabBlock(cab2Model, mic2Model)}
+		spec.PathA = []rig.Block{d.ampBlock(ampModel, req.AmpParams), d.cabBlock(cabModel, micModel, req.CabParams)}
+		spec.PathB = []rig.Block{d.ampBlock(amp2Model, nil), d.cabBlock(cab2Model, mic2Model, nil)}
 		spec.Suffix = append(post, last...)
 		notes = append(notes, note2, fmt.Sprintf("cab2 %q", cab2Model))
 	case req.Routing == rig.RoutingPS:
@@ -160,16 +182,18 @@ func (d *Designer) Design(req Request) (*Result, error) {
 		}
 		cab2Model := d.resolveCab(req.Cab2, amp2Model)
 		mic2Model := d.resolveMic(req.Mic2)
-		spec.PathA = append(pre, d.ampBlock(ampModel), d.cabBlock(cabModel, micModel))
-		spec.PathB = []rig.Block{d.ampBlock(amp2Model), d.cabBlock(cab2Model, mic2Model)}
+		spec.PathA = append(pre, d.ampBlock(ampModel, req.AmpParams), d.cabBlock(cabModel, micModel, req.CabParams))
+		spec.PathB = []rig.Block{d.ampBlock(amp2Model, nil), d.cabBlock(cab2Model, mic2Model, nil)}
 		spec.Suffix = append(post, last...)
 		notes = append(notes, note2, fmt.Sprintf("cab2 %q", cab2Model))
 	default:
-		// Serial: pre → amp → cab → post → volume.
-		blocks := make([]rig.Block, 0, len(pre)+len(post)+len(last)+2)
+		// Serial: pre → amp → [cab] → post → volume.
+		blocks := make([]rig.Block, 0, len(pre)+len(post)+len(last)+3)
 		blocks = append(blocks, pre...)
-		blocks = append(blocks, d.ampBlock(ampModel))
-		blocks = append(blocks, d.cabBlock(cabModel, micModel))
+		blocks = append(blocks, d.ampBlock(ampModel, req.AmpParams))
+		if !skipCab {
+			blocks = append(blocks, d.cabBlock(cabModel, micModel, req.CabParams))
+		}
 		blocks = append(blocks, post...)
 		blocks = append(blocks, last...)
 		spec.Blocks = blocks
@@ -215,7 +239,60 @@ func (d *Designer) footswitchHints(req Request) []string {
 	return hints
 }
 
+// assignExpressionPedals wires an expression-pedal-driven module (wah, whammy,
+// volume) to expression pedal 1 when the caller did not specify pedals. A wah
+// or whammy with no expression pedal is unplayable, so this must not be left to
+// chance. The caller's explicit Pedals, when present, win.
+func (d *Designer) assignExpressionPedals(req Request, notes *[]string) []rig.Pedal {
+	if len(req.Pedals) > 0 {
+		return req.Pedals
+	}
+	all := append(append(append([]FXBlock{}, req.FX...), req.PathAFX...), req.PathBFX...)
+	for _, f := range all {
+		def, ok := d.cat.FXByName(f.Type)
+		if !ok || def.Category != "expression" {
+			continue
+		}
+		param := expressionParam(def.Name)
+		if param == "" {
+			continue
+		}
+		*notes = append(*notes, fmt.Sprintf("assigned expression pedal 1 to %q (%s 0–100)", def.Name, param))
+		return []rig.Pedal{{Module: def.Name, Param: param}}
+	}
+	return nil
+}
+
+// expressionParam returns the controller parameter an expression pedal drives
+// for a module that needs one: a wah's sweep ("Pedal"), a whammy's pitch
+// ("Pitch"), a volume pedal's "Volume". Anything else returns "" (no default).
+func expressionParam(name string) string {
+	n := strings.ToLower(name)
+	switch {
+	case strings.Contains(n, "wah"):
+		return "Pedal"
+	case n == "wham":
+		return "Pitch"
+	case n == "volume":
+		return "Volume"
+	default:
+		return ""
+	}
+}
+
 // classifyFX orders effects into pre-amp, post-amp and final (Volume) groups.
+// hasIR reports whether any requested effect is an impulse-response loader.
+// An IR replaces the cabinet, so the designer drops the cab block for it.
+func hasIR(fx []FXBlock) bool {
+	for _, f := range fx {
+		switch strings.ToLower(strings.TrimSpace(f.Type)) {
+		case "ir", "ir (1024)":
+			return true
+		}
+	}
+	return false
+}
+
 func (d *Designer) classifyFX(fx []FXBlock) (pre, post, last []rig.Block, err error) {
 	for _, f := range fx {
 		def, ok := d.cat.FXByName(f.Type)
@@ -247,12 +324,25 @@ func (d *Designer) fxBlocks(fx []FXBlock) []rig.Block {
 	return blocks
 }
 
-func (d *Designer) ampBlock(model string) rig.Block {
-	return rig.Block{Type: "Amp", Enabled: true, Params: map[string]any{"Type": model, "On": true}}
+func (d *Designer) ampBlock(model string, params map[string]any) rig.Block {
+	p := make(map[string]any, len(params)+2)
+	for k, v := range params {
+		p[k] = v
+	}
+	p["Type"] = model
+	p["On"] = true
+	return rig.Block{Type: "Amp", Enabled: true, Params: p}
 }
 
-func (d *Designer) cabBlock(cab, mic string) rig.Block {
-	return rig.Block{Type: "Cab", Enabled: true, Params: map[string]any{"CabType": cab, "MicType": mic, "On": true}}
+func (d *Designer) cabBlock(cab, mic string, params map[string]any) rig.Block {
+	p := make(map[string]any, len(params)+3)
+	for k, v := range params {
+		p[k] = v
+	}
+	p["CabType"] = cab
+	p["MicType"] = mic
+	p["On"] = true
+	return rig.Block{Type: "Cab", Enabled: true, Params: p}
 }
 
 func (d *Designer) resolveAmp(query string) (string, string, error) {

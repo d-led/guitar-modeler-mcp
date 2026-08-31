@@ -440,7 +440,7 @@ func TestIntegrationDesignDecodeReportRoundTrip(t *testing.T) {
 		"name": "design_rig",
 		"arguments": map[string]any{
 			"name":       "Integration Rig",
-			"song":       "Test Song",
+			"note":       "Test Note",
 			"amp":        "Fender Twin Reverb",
 			"output_dir": dir,
 			"fx": []any{
@@ -467,7 +467,7 @@ func TestIntegrationDesignDecodeReportRoundTrip(t *testing.T) {
 	if !strings.Contains(decoded, "\"Amp\"") || !strings.Contains(decoded, "\"Cab\"") {
 		t.Fatalf("rig_decode missing Amp/Cab modules: %s", decoded)
 	}
-	if !strings.Contains(decoded, "\"name\": \"Integration Rig\"") {
+	if !strings.Contains(decoded, "\"name\": \"INTEGRATION RIG\"") {
 		t.Fatalf("rig_decode missing rig name: %s", decoded)
 	}
 

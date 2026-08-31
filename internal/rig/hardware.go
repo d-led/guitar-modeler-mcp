@@ -1,5 +1,7 @@
 package rig
 
+import "encoding/json"
+
 // ButtonAssign is one stomp button. Buttons 1..4 are the device's four
 // footswitches (FS5..FS8 in the file); an unassigned button has an empty
 // Module.
@@ -7,8 +9,9 @@ type ButtonAssign struct {
 	Number    int    `json:"number"` // 1..4
 	Module    string `json:"module"` // module instance name, "" = unassigned
 	Operation string `json:"operation"`
-	Mode      string `json:"mode"`  // "Toggle" or "Scene"
-	Label     string `json:"label"` // on-screen switch text (UserFootSwitchText), e.g. "DRIVE"
+	Mode      string `json:"mode"`          // "Toggle" or "Scene"
+	Label     string `json:"label"`         // on-screen switch text (UserFootSwitchText), e.g. "DRIVE"
+	Off       bool   `json:"off,omitempty"` // target inactive at load: a bypassed toggle, or a scene other than the active one
 }
 
 // PedalTarget is one expression-pedal assignment: the module, its parameter
@@ -44,29 +47,73 @@ func HardwareAssignments(rf *RigFile) (Hardware, error) {
 	}
 
 	h := Hardware{}
-	children := namedChildren(content.FootSwitch, "FootSwitch")
+	patch := content.Data.Patch
+	children := namedChildren(decodeSection(content.FootSwitch), "FootSwitch")
+	lastScene := sceneIndex(children)
 	for i, n := range []string{"5", "6", "7", "8"} {
 		module := assignedName(childString(children, "Module"+n))
 		// Mode and label only belong to an assigned switch; the template may
 		// still carry a stale value on an unassigned button.
-		mode, label := "", ""
+		mode, label, operation, off := "", "", "", false
 		if module != "" {
 			mode = childString(children, "ModeNew"+n)
 			label = childString(children, "UserFootSwitchText"+n)
+			operation = childString(children, "Operation"+n)
+			// A button starts dimmed when its target is inactive at load: a
+			// toggle whose module is bypassed, or a scene other than the one
+			// the rig loads with (LastScene).
+			if mode == "Scene" {
+				off = lastScene != i
+			} else if operation == "" || operation == "On" {
+				off = nodeStartsOff(patch, module)
+			}
 		}
 		h.Buttons = append(h.Buttons, ButtonAssign{
 			Number:    i + 1,
 			Module:    module,
-			Operation: childString(children, "Operation"+n),
+			Operation: operation,
 			Mode:      mode,
 			Label:     label,
+			Off:       off,
 		})
 	}
 	h.Pedals = append(h.Pedals,
-		pedalAssign(content.Pedal1, "Pedal1", "Pedal 1"),
-		pedalAssign(content.Pedal2, "Pedal2", "Pedal 2"),
+		pedalAssign(decodeSection(content.Pedal1), "Pedal1", "Pedal 1"),
+		pedalAssign(decodeSection(content.Pedal2), "Pedal2", "Pedal 2"),
 	)
 	return h, nil
+}
+
+// decodeSection unmarshals a raw content section (FootSwitch, Pedal1, Pedal2)
+// back into its object form for inspection.
+func decodeSection(raw json.RawMessage) map[string]any {
+	var m map[string]any
+	if err := json.Unmarshal(raw, &m); err != nil {
+		return nil
+	}
+	return m
+}
+
+// nodeStartsOff reports whether the patch module's On state is false. Modules
+// missing from the patch report false.
+func nodeStartsOff(patch Patch, name string) bool {
+	node, ok := patch.Children[name]
+	if !ok || node == nil {
+		return false
+	}
+	item, ok := node.Children["On"]
+	return ok && item.State != nil && !*item.State
+}
+
+// sceneIndex returns the active-scene index (the FootSwitch LastScene field,
+// type 10), or -1 when no scene is active.
+func sceneIndex(children map[string]any) int {
+	v, ok := children["LastScene"].(map[string]any)
+	if !ok {
+		return -1
+	}
+	num, _ := v["value"].(float64)
+	return int(num)
 }
 
 // namedChildren unwraps the {data:{<name>:{children:{…}}}} wrapper used by the

@@ -13,7 +13,7 @@ func footswitchChildren(t *testing.T, file *RigFile) map[string]any {
 	if err != nil {
 		t.Fatalf("Decode: %v", err)
 	}
-	fs := content.FootSwitch.(map[string]any)
+	fs := decodeSection(content.FootSwitch)
 	return fs["data"].(map[string]any)["FootSwitch"].(map[string]any)["children"].(map[string]any)
 }
 

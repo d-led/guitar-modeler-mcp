@@ -15,7 +15,7 @@ import (
 // ModuleNames lists every module that has a parameter description.
 func ModuleNames() []string {
 	names := modspec.Modules()
-	names = append(names, "Cab")
+	names = append(names, "Cab", "IR", "IR (1024)")
 	sort.Strings(names)
 	return names
 }
@@ -47,6 +47,8 @@ func Describe(cat *catalog.Catalog, moduleName string) (map[string]modspec.Param
 		return cabParams(cat), nil
 	case "Amp":
 		return ampParams(cat), nil
+	case "IR", "IR (1024)":
+		return irParams(), nil
 	}
 
 	spec, ok := modspec.Get(canon)
@@ -99,6 +101,24 @@ func ampParams(cat *catalog.Catalog) map[string]modspec.Param {
 
 // fp is a shorthand for a float64 pointer, used when building Param specs.
 func fp(v float64) *float64 { return &v }
+
+// irParams documents the impulse-response loader: a file selector plus the
+// gain/filter/mix trims. The IR file reference is the device's
+// "[directory](<folder>)[name](<file>)" string; "[IR ROOT]" is the root.
+func irParams() map[string]modspec.Param {
+	return map[string]modspec.Param{
+		"IR":     {Kind: "string", Label: "IR", Description: `Impulse-response selector in the form "[directory](<folder>)[name](<file>)"; use "[IR ROOT]" for the root folder.`},
+		"IR2":    {Kind: "string", Label: "IR (Doubling)", Description: `Second impulse response for the Doubling (stereo) state.`},
+		"Gain":   {Kind: "range", Label: "Gain", Description: "IR output gain.", Min: fp(-24), Max: fp(24), Unit: " dB"},
+		"Gain2":  {Kind: "range", Label: "Gain (Doubling)", Description: "Second IR output gain.", Min: fp(-24), Max: fp(24), Unit: " dB"},
+		"HiCut":  {Kind: "range", Label: "High Cut", Description: "High-cut filter.", Min: fp(500), Max: fp(20000), Unit: " Hz"},
+		"HiCut2": {Kind: "range", Label: "High Cut (Doubling)", Description: "Second IR high-cut filter.", Min: fp(500), Max: fp(20000), Unit: " Hz"},
+		"LoCut":  {Kind: "range", Label: "Low Cut", Description: "Low-cut filter.", Min: fp(20), Max: fp(1000), Unit: " Hz"},
+		"LoCut2": {Kind: "range", Label: "Low Cut (Doubling)", Description: "Second IR low-cut filter.", Min: fp(20), Max: fp(1000), Unit: " Hz"},
+		"Mix":    {Kind: "range", Label: "Mix", Description: "Wet/dry mix.", Min: fp(0), Max: fp(100), Unit: " %"},
+		"Mix2":   {Kind: "range", Label: "Mix (Doubling)", Description: "Second IR wet/dry mix.", Min: fp(0), Max: fp(100), Unit: " %"},
+	}
+}
 
 func cabParams(cat *catalog.Catalog) map[string]modspec.Param {
 	cabs := make([]string, 0, len(cat.Cabs()))

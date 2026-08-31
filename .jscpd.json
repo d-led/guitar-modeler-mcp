@@ -1,0 +1,15 @@
+{
+  "threshold": 3,
+  "reporters": ["consoleFull"],
+  "mode": "strict",
+  "minLines": 5,
+  "minTokens": 80,
+  "format": ["go"],
+  "ignore": [
+    "**/*_test.go",
+    "**/testdata/**",
+    "**/*.golden",
+    "**/vendor/**",
+    "**/node_modules/**"
+  ]
+}

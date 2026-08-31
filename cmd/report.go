@@ -15,7 +15,7 @@ import (
 func newReportCmd() *cobra.Command {
 	var (
 		rigFile string
-		song    string
+		note    string
 		out     string
 	)
 	cmd := &cobra.Command{
@@ -34,7 +34,7 @@ func newReportCmd() *cobra.Command {
 			if err := json.Unmarshal(data, &file); err != nil {
 				return fmt.Errorf("parse rig file: %w", err)
 			}
-			html, err := htmlreport.Render(&file, song, a.cat)
+			html, err := htmlreport.Render(&file, note, a.cat)
 			if err != nil {
 				return err
 			}
@@ -51,7 +51,7 @@ func newReportCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&rigFile, "rig", "", "path to the .rig file (required)")
-	cmd.Flags().StringVar(&song, "song", "", "song annotation")
+	cmd.Flags().StringVar(&note, "note", "", "note annotation")
 	cmd.Flags().StringVar(&out, "out", "", "output directory (default: same as the rig file)")
 	_ = cmd.MarkFlagRequired("rig")
 	return cmd

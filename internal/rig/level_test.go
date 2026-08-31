@@ -81,6 +81,33 @@ func TestEstimateLevelParallelRig(t *testing.T) {
 	}
 }
 
+func TestEstimateLevelNotesPreampGainBlindSpot(t *testing.T) {
+	b := newTestBuilder(t)
+	file, err := b.Build(Spec{
+		Name: "Level",
+		Blocks: []Block{
+			{Type: "Amp", Params: map[string]any{"Type": "65 Black SR", "GainA": 78.0}},
+			{Type: "Cab", Params: map[string]any{"CabType": "1x12 Black Panel Lux"}},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+
+	est, err := EstimateLevel(file, 0)
+	if err != nil {
+		t.Fatalf("EstimateLevel: %v", err)
+	}
+	// The amp preamp gain is deliberately excluded from the dB sum; the estimate
+	// must say so rather than pretending the number is an absolute loudness.
+	if len(est.Notes) == 0 {
+		t.Fatal("expected a note flagging the preamp-gain blind spot, got none")
+	}
+	if !strings.Contains(est.Notes[0], "preamp gain") {
+		t.Fatalf("note = %q, want it to mention the preamp gain", est.Notes[0])
+	}
+}
+
 func TestBuildRefusesVeryLoudRig(t *testing.T) {
 	b := newTestBuilder(t)
 	_, err := b.Build(Spec{

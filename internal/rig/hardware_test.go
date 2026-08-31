@@ -89,3 +89,74 @@ func TestHardwareAssignmentsSceneLabel(t *testing.T) {
 		t.Fatalf("button 1 = %+v, want label DRIVE, mode Scene, module Green JRC-OD", got)
 	}
 }
+
+func TestHardwareAssignmentsOff(t *testing.T) {
+	b, err := NewBuilder(catalog.New())
+	if err != nil {
+		t.Fatalf("NewBuilder: %v", err)
+	}
+	file, err := b.Build(Spec{
+		Name: "Off Switches",
+		Blocks: []Block{
+			{Type: "Chorus", Enabled: false}, // toggle target, starts off
+			{Type: "Amp", Params: map[string]any{"Type": "65 Black SR"}},
+			{Type: "Cab", Params: map[string]any{"CabType": "1x12 Black Panel Lux"}},
+			{Type: "Green JRC-OD", Enabled: true}, // scene target
+		},
+		Footswitches: []Footswitch{
+			{Module: "Chorus"}, // Toggle, off at load
+			{Module: "Green JRC-OD", Mode: "Scene", Scene: &SceneSnapshot{On: []string{"Green JRC-OD"}}}, // Scene, active at load
+		},
+	})
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+
+	hw, err := HardwareAssignments(file)
+	if err != nil {
+		t.Fatalf("HardwareAssignments: %v", err)
+	}
+
+	if got := hw.Buttons[0]; !got.Off {
+		t.Fatalf("toggle button for a bypassed module should be dimmed: %+v", got)
+	}
+	if got := hw.Buttons[1]; got.Off {
+		t.Fatalf("the active scene must not be dimmed: %+v", got)
+	}
+}
+
+func TestHardwareAssignmentsDimInactiveScenes(t *testing.T) {
+	b, err := NewBuilder(catalog.New())
+	if err != nil {
+		t.Fatalf("NewBuilder: %v", err)
+	}
+	file, err := b.Build(Spec{
+		Name: "Two Scenes",
+		Blocks: []Block{
+			{Type: "Green JRC-OD", Enabled: true},
+			{Type: "Amp", Params: map[string]any{"Type": "65 Black SR"}},
+			{Type: "Cab", Params: map[string]any{"CabType": "1x12 Black Panel Lux"}},
+			{Type: "BBD Delay", Enabled: true},
+		},
+		Footswitches: []Footswitch{
+			{Module: "Green JRC-OD", Mode: "Scene", Label: "LEAD", Scene: &SceneSnapshot{On: []string{"Green JRC-OD"}, Off: []string{"BBD Delay"}}},
+			{Module: "BBD Delay", Mode: "Scene", Label: "CLEAN", Scene: &SceneSnapshot{On: []string{"BBD Delay"}, Off: []string{"Green JRC-OD"}}},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+
+	hw, err := HardwareAssignments(file)
+	if err != nil {
+		t.Fatalf("HardwareAssignments: %v", err)
+	}
+
+	// Only the first scene is active at load (LastScene=0); the second dims.
+	if hw.Buttons[0].Off {
+		t.Fatalf("first scene should be lit at load: %+v", hw.Buttons[0])
+	}
+	if !hw.Buttons[1].Off {
+		t.Fatalf("second scene should be dimmed at load: %+v", hw.Buttons[1])
+	}
+}

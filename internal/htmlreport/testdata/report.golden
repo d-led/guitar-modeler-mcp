@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Report Rig · HeadRush Gigboard</title>
+<title>REPORT RIG · HeadRush Gigboard</title>
 <style>
   :root { color-scheme: light dark; }
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -31,6 +31,8 @@
   .btn .op { font-size: .76em; color: #888; }
   .btn.assigned { background: #34c75918; border-color: #34c75955; }
   .btn.assigned .num { background: #34c759; color: #fff; }
+  .btn.off { background: #8e8e9318; border-color: #8e8e9355; }
+  .btn.off .num { background: #8e8e93; color: #fff; }
   .btn.empty { opacity: .42; }
   .pedals { margin-top: 12px; font-size: .9em; display: flex; flex-direction: column; gap: 6px; }
   .pedal { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
@@ -38,6 +40,8 @@
   .muted { color: #999; }
   .module { border: 1px solid #e3e3e8; border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; }
   @media (prefers-color-scheme: dark) { .module { border-color: #2c2c2e; } }
+  .module.off { opacity: .55; }
+  .offbadge { margin-left: 8px; font-size: .6em; vertical-align: middle; text-transform: uppercase; letter-spacing: .06em; color: #fff; background: #8e8e93; border-radius: 4px; padding: 2px 6px; }
   .module h2 { margin: 0 0 2px; font-size: 1.1em; }
   .module .cat { font-size: .78em; color: #888; text-transform: uppercase; letter-spacing: .05em; }
   .module .desc { color: #666; margin: 4px 0 10px; }
@@ -62,8 +66,8 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>Report Rig</h1>
-  <div class="sub">Song: <strong>Test Song</strong> · Generated FIXED</div>
+  <h1>REPORT RIG</h1>
+  <div class="sub">Note: <strong>Test Note</strong> · Generated FIXED</div>
   <div class="meta">
     <div><div class="label">Tempo</div><div>0 BPM</div></div>
   </div>

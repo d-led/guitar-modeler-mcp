@@ -122,6 +122,21 @@ type SceneSnapshot struct {
 	Off []string `json:"off,omitempty"`
 }
 
+// Pedal assigns one expression pedal (Pedal1 or Pedal2) to control a module
+// parameter, e.g. {Module: "Black Wah", Param: "Pedal"} sweeps the wah with an
+// expression pedal. Min/Max set the controller range (default 0..100).
+type Pedal struct {
+	// Module is the module instance name to control ("Black Wah", "Wham",
+	// "Volume"). It must match a module in the chain.
+	Module string `json:"module"`
+	// Param is the controller target ("Pedal" for a wah's sweep, "Pitch" for a
+	// whammy, "Volume" for a volume pedal).
+	Param string `json:"param"`
+	// Min and Max are the controller range (default 0..100).
+	Min float64 `json:"min,omitempty"`
+	Max float64 `json:"max,omitempty"`
+}
+
 // Spec describes the rig to build.
 //
 // For a serial rig (Routing ""), Blocks holds the whole chain in signal order.
@@ -163,6 +178,11 @@ type Spec struct {
 	// modules, in order. Each entry's Module must name a module in the chain;
 	// at most four are allowed.
 	Footswitches []Footswitch
+
+	// Pedals assigns the two expression pedals (Pedal1, Pedal2) to control
+	// module parameters, in order. Each entry's Module must name a module in
+	// the chain; at most two are allowed.
+	Pedals []Pedal
 }
 
 // applyParams merges user overrides onto a node's children, preserving the
@@ -319,6 +339,32 @@ func matchInstance(ref string, modules []string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// resolvePedals validates the spec's expression-pedal assignments and resolves
+// each module reference to its device instance name. At most two pedals exist
+// (Pedal1 and Pedal2); a nil Max defaults to a full 0..100 sweep.
+func resolvePedals(spec []Pedal, modules []string) ([]Pedal, error) {
+	if len(spec) > 2 {
+		return nil, fmt.Errorf("the Gigboard has 2 expression pedals, got %d", len(spec))
+	}
+	out := make([]Pedal, 0, len(spec))
+	for i, p := range spec {
+		module := strings.TrimSpace(p.Module)
+		if module == "" {
+			return nil, fmt.Errorf("pedal %d: module is required", i+1)
+		}
+		name, ok := matchInstance(module, modules)
+		if !ok {
+			return nil, fmt.Errorf("pedal %d: %q is not in the chain (modules: %s)", i+1, module, strings.Join(modules, ", "))
+		}
+		param := strings.TrimSpace(p.Param)
+		if param == "" {
+			return nil, fmt.Errorf("pedal %d: param is required", i+1)
+		}
+		out = append(out, Pedal{Module: name, Param: param, Min: p.Min, Max: p.Max})
+	}
+	return out, nil
 }
 
 // paraBounds are the parameter ranges measured from the device backups.
@@ -525,20 +571,20 @@ func buildChain(cat *catalog.Catalog, spec Spec) (chain, error) {
 		return c, fmt.Errorf("too many blocks: the Gigboard has 11 chain slots, got %d", len(c.blocks()))
 	}
 
-	ampSeen, cabSeen := false, false
+	ampSeen, cabOrIRSeen := false, false
 	for _, b := range c.blocks() {
 		switch b.Type {
 		case "Amp":
 			ampSeen = true
-		case "Cab":
-			cabSeen = true
+		case "Cab", "IR", "IR (1024)":
+			cabOrIRSeen = true
 		}
 	}
 	if !ampSeen {
 		return c, fmt.Errorf("rig must contain an \"Amp\" block")
 	}
-	if !cabSeen {
-		return c, fmt.Errorf("rig must contain a \"Cab\" block")
+	if !cabOrIRSeen {
+		return c, fmt.Errorf("rig must contain a \"Cab\", \"IR\" or \"IR (1024)\" block")
 	}
 	return c, nil
 }

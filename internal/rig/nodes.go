@@ -7,6 +7,7 @@ import "strconv"
 // device expects.
 
 func rigNode(name string, tempo float64) *Node {
+	name, _ = StoredName(name)
 	n := newNode("PresetName", "Tempo", "TempoFromMaster", "ExtAmp", "RigCurPedalAB")
 	n.set("PresetName", label(name))
 	n.set("Tempo", num(tempo))
@@ -27,10 +28,11 @@ func inputNode(inputGain float64) *Node {
 }
 
 func outputNode(rigVolume float64) *Node {
-	n := newNode("PresetName", "RigVolume", "RigWidth")
+	n := newNode("PresetName", "RigVolume", "RigWidth", "ToAmpGain")
 	n.set("PresetName", label(""))
 	n.set("RigVolume", num(rigVolume))
 	n.set("RigWidth", num(100))
+	n.set("ToAmpGain", num(0))
 	return n
 }
 
@@ -172,6 +174,37 @@ func cabNode(cabModel, micModel string, params map[string]any) *Node {
 	n.set("OutGain", num(0))
 	n.set("OutGain2", num(0))
 	n.set("AmpCompGain", num(0))
+	applyParams(n.Children, params)
+	return n
+}
+
+// irNode builds the impulse-response loader module. Like Amp and Cab it carries
+// a Doubling (stereo) second set of parameters; the IR selection strings use
+// the device's "[directory](<folder>)[name](<file>)" encoding (root folder =
+// "[IR ROOT]").
+func irNode(enabled bool, params map[string]any) *Node {
+	n := newNode(
+		"PresetName", "PresetName2", "Doubling", "DoubleStates",
+		"IR", "Gain", "HiCut", "LoCut", "Mix",
+		"IR2", "Gain2", "HiCut2", "LoCut2", "Mix2",
+		"On", "Colour",
+	)
+	n.set("PresetName", label(""))
+	n.set("PresetName2", label(""))
+	n.set("Doubling", boolean(false))
+	n.set("DoubleStates", dblState(false))
+	n.set("IR", label(""))
+	n.set("Gain", num(0))
+	n.set("HiCut", num(20000))
+	n.set("LoCut", num(20))
+	n.set("Mix", num(100))
+	n.set("IR2", label(""))
+	n.set("Gain2", num(0))
+	n.set("HiCut2", num(20000))
+	n.set("LoCut2", num(20))
+	n.set("Mix2", num(100))
+	n.set("On", boolean(enabled))
+	n.set("Colour", str("Green"))
 	applyParams(n.Children, params)
 	return n
 }

@@ -44,6 +44,81 @@ func TestDesignOrdersChainAndResolvesHardware(t *testing.T) {
 	}
 }
 
+func TestDesignAppliesAmpAndCabParams(t *testing.T) {
+	d := NewDesigner(catalog.New())
+	res, err := d.Design(Request{
+		Name:      "Dialed",
+		Amp:       "65 Black SR",
+		AmpParams: map[string]any{"GainA": 62.0, "Master": 55.0, "Treble": 58.0},
+		CabParams: map[string]any{"Breakup": 30.0, "OnAxis": false},
+	})
+	if err != nil {
+		t.Fatalf("Design: %v", err)
+	}
+
+	var amp, cab rig.Block
+	for _, b := range res.Spec.Blocks {
+		switch b.Type {
+		case "Amp":
+			amp = b
+		case "Cab":
+			cab = b
+		}
+	}
+	if amp.Params["Type"] != "65 Black SR" {
+		t.Fatalf("amp type = %v, want 65 Black SR", amp.Params["Type"])
+	}
+	if amp.Params["GainA"] != 62.0 || amp.Params["Master"] != 55.0 || amp.Params["Treble"] != 58.0 {
+		t.Fatalf("amp params = %v, want GainA 62, Master 55, Treble 58", amp.Params)
+	}
+	if cab.Params["CabType"] != "1x12 Black Panel Lux" {
+		t.Fatalf("cab type = %v, want default 1x12 Black Panel Lux", cab.Params["CabType"])
+	}
+	if cab.Params["Breakup"] != 30.0 || cab.Params["OnAxis"] != false {
+		t.Fatalf("cab params = %v, want Breakup 30, OnAxis false", cab.Params)
+	}
+}
+
+func TestDesignAutoAssignsExpressionPedal(t *testing.T) {
+	d := NewDesigner(catalog.New())
+	res, err := d.Design(Request{
+		Name: "Wah",
+		Amp:  "65 Black SR",
+		FX:   []FXBlock{{Type: "Black Wah", Enabled: false}},
+	})
+	if err != nil {
+		t.Fatalf("Design: %v", err)
+	}
+	if len(res.Spec.Pedals) != 1 || res.Spec.Pedals[0].Module != "Black Wah" || res.Spec.Pedals[0].Param != "Pedal" {
+		t.Fatalf("pedals = %+v, want Black Wah -> Pedal", res.Spec.Pedals)
+	}
+	found := false
+	for _, n := range res.Notes {
+		if strings.Contains(n, "expression pedal 1") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected an expression-pedal note, got %v", res.Notes)
+	}
+}
+
+func TestDesignRespectsExplicitPedals(t *testing.T) {
+	d := NewDesigner(catalog.New())
+	res, err := d.Design(Request{
+		Name:   "Wah",
+		Amp:    "65 Black SR",
+		FX:     []FXBlock{{Type: "Black Wah", Enabled: false}},
+		Pedals: []rig.Pedal{{Module: "Black Wah", Param: "Pedal", Min: 10, Max: 90}},
+	})
+	if err != nil {
+		t.Fatalf("Design: %v", err)
+	}
+	if len(res.Spec.Pedals) != 1 || res.Spec.Pedals[0].Min != 10 || res.Spec.Pedals[0].Max != 90 {
+		t.Fatalf("pedals = %+v, want explicit Min 10 Max 90", res.Spec.Pedals)
+	}
+}
+
 func TestDesignDefaultsCabForFenderAmp(t *testing.T) {
 	d := NewDesigner(catalog.New())
 	res, err := d.Design(Request{Name: "Clean", Amp: "65 Black SR"})

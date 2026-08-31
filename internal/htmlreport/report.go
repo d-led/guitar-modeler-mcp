@@ -34,7 +34,7 @@ type moduleInfo struct {
 
 type pageData struct {
 	Name      string
-	Song      string
+	Note      string
 	Tempo     string
 	Generated string
 	Chain     []moduleInfo
@@ -47,7 +47,7 @@ type pageData struct {
 var page = template.Must(template.New("report").Parse(reportHTML))
 
 // Render builds the HTML report for a rig.
-func Render(rf *rig.RigFile, song string, cat *catalog.Catalog) (string, error) {
+func Render(rf *rig.RigFile, note string, cat *catalog.Catalog) (string, error) {
 	content, err := rf.Decode()
 	if err != nil {
 		return "", err
@@ -101,7 +101,7 @@ func Render(rf *rig.RigFile, song string, cat *catalog.Catalog) (string, error) 
 	var sb strings.Builder
 	if err := page.Execute(&sb, pageData{
 		Name:      rf.Name(),
-		Song:      song,
+		Note:      note,
 		Tempo:     tempo,
 		Generated: time.Now().Format("2006-01-02 15:04"),
 		Chain:     modules,
@@ -201,13 +201,25 @@ func formatNumber(v float64) string {
 	return strings.TrimRight(fmt.Sprintf("%.2f", v), "0")
 }
 
-// chainHTML renders the rig's signal chain as a numbered cardchain fragment.
+// chainHTML renders the rig's signal chain as a numbered cardchain fragment,
+// dimming any slot whose module starts bypassed.
 func chainHTML(patch rig.Patch) string {
 	routing, slots := chainLayout(patch)
 	if len(slots) == 0 {
 		return ""
 	}
-	return cardchain.Render(chainSteps(routing, slots))
+	return cardchain.Render(chainSteps(routing, slots, bypassed(patch)))
+}
+
+// bypassed returns the set of module instance names that start switched off.
+func bypassed(patch rig.Patch) map[string]bool {
+	off := make(map[string]bool)
+	for _, name := range patch.ChildOrder {
+		if node := patch.Children[name]; node != nil && !nodeEnabled(node) {
+			off[name] = true
+		}
+	}
+	return off
 }
 
 // chainLayout reads the routing topology and the 11 grid slots (with "Empty
@@ -237,11 +249,11 @@ func chainLayout(patch rig.Patch) (string, []string) {
 // parallel paths of 3 → 2 shared slots) and PS-1 (two parallel paths at the
 // input → 3 shared slots). Parallel paths become a junction with branches A
 // and B, each branch keeping its own absolute slot numbers.
-func chainSteps(routing string, slots []string) []cardchain.Step {
+func chainSteps(routing string, slots []string, off map[string]bool) []cardchain.Step {
 	mk := func(names []string, start int) []cardchain.Step {
 		steps := make([]cardchain.Step, 0, len(names))
 		for i, n := range names {
-			steps = append(steps, slotStep(start+i, n))
+			steps = append(steps, slotStep(start+i, n, off[n]))
 		}
 		return steps
 	}
@@ -268,13 +280,13 @@ func chainSteps(routing string, slots []string) []cardchain.Step {
 	return mk(slots, 1)
 }
 
-func slotStep(pos int, name string) cardchain.Step {
+func slotStep(pos int, name string, off bool) cardchain.Step {
 	empty := name == "" || name == "Empty Slot"
 	effect := name
 	if empty {
 		effect = ""
 	}
-	return cardchain.Step{Slot: pos, Effect: effect, Off: empty}
+	return cardchain.Step{Slot: pos, Effect: effect, Off: empty || off}
 }
 
 const reportHTML = `<!doctype html>
@@ -310,6 +322,8 @@ const reportHTML = `<!doctype html>
   .btn .op { font-size: .76em; color: #888; }
   .btn.assigned { background: #34c75918; border-color: #34c75955; }
   .btn.assigned .num { background: #34c759; color: #fff; }
+  .btn.off { background: #8e8e9318; border-color: #8e8e9355; }
+  .btn.off .num { background: #8e8e93; color: #fff; }
   .btn.empty { opacity: .42; }
   .pedals { margin-top: 12px; font-size: .9em; display: flex; flex-direction: column; gap: 6px; }
   .pedal { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
@@ -317,6 +331,8 @@ const reportHTML = `<!doctype html>
   .muted { color: #999; }
   .module { border: 1px solid #e3e3e8; border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; }
   @media (prefers-color-scheme: dark) { .module { border-color: #2c2c2e; } }
+  .module.off { opacity: .55; }
+  .offbadge { margin-left: 8px; font-size: .6em; vertical-align: middle; text-transform: uppercase; letter-spacing: .06em; color: #fff; background: #8e8e93; border-radius: 4px; padding: 2px 6px; }
   .module h2 { margin: 0 0 2px; font-size: 1.1em; }
   .module .cat { font-size: .78em; color: #888; text-transform: uppercase; letter-spacing: .05em; }
   .module .desc { color: #666; margin: 4px 0 10px; }
@@ -332,7 +348,7 @@ const reportHTML = `<!doctype html>
 <body>
 <div class="wrap">
   <h1>{{.Name}}</h1>
-  <div class="sub">{{if .Song}}Song: <strong>{{.Song}}</strong> · {{end}}Generated {{.Generated}}</div>
+  <div class="sub">{{if .Note}}Note: <strong>{{.Note}}</strong> · {{end}}Generated {{.Generated}}</div>
   <div class="meta">
     {{if .Tempo}}<div><div class="label">Tempo</div><div>{{.Tempo}} BPM</div></div>{{end}}
   </div>
@@ -340,7 +356,7 @@ const reportHTML = `<!doctype html>
   <div class="hw">
     <h2>Footswitches</h2>
     <div class="buttons">
-      {{range .Buttons}}<div class="btn {{if .Module}}assigned{{else}}empty{{end}}">
+      {{range .Buttons}}<div class="btn {{if .Module}}assigned{{else}}empty{{end}}{{if .Off}} off{{end}}">
         <div class="num">{{.Number}}</div>
         <div class="mod">{{if .Label}}{{.Label}}{{else if .Module}}{{.Module}}{{else}}—{{end}}</div>{{if .Operation}}<div class="op">{{.Operation}}</div>{{end}}{{if .Mode}}<div class="op">{{.Mode}}</div>{{end}}
       </div>{{end}}
@@ -354,8 +370,8 @@ const reportHTML = `<!doctype html>
     </div>
   </div>
   {{range .Chain}}
-  <div class="module">
-    <h2>{{if .Slot}}<span class="slotbadge">{{.Slot}}</span>{{end}}{{.Name}}</h2>
+  <div class="module{{if not .On}} off{{end}}">
+    <h2>{{if .Slot}}<span class="slotbadge">{{.Slot}}</span>{{end}}{{.Name}}{{if not .On}}<span class="offbadge">off</span>{{end}}</h2>
     <div class="cat">{{.Category}}</div>
     {{if .Amp}}<div class="desc">{{.Amp.Brand}} {{.Amp.RealModel}}{{if .Amp.Wattage}} · {{.Amp.Wattage}}{{end}}{{if .Amp.Style}} · {{range $i, $s := .Amp.Style}}{{if $i}}, {{end}}{{$s}}{{end}}{{end}}</div>
     {{else if .Cab}}<div class="desc">{{.Cab.Speakers}} · {{.Cab.SpeakersRef}}{{if .Mic}} · mic {{.Mic.RealModel}}{{end}}</div>

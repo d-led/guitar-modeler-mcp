@@ -118,8 +118,8 @@ func TestWriteProducesDecodableFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Write: %v", err)
 	}
-	if filepath.Base(path) != "Write Test.rig" {
-		t.Fatalf("filename = %q, want Write Test.rig", filepath.Base(path))
+	if filepath.Base(path) != "WRITE TEST.rig" {
+		t.Fatalf("filename = %q, want WRITE TEST.rig", filepath.Base(path))
 	}
 
 	raw, err := os.ReadFile(path)
@@ -130,7 +130,7 @@ func TestWriteProducesDecodableFile(t *testing.T) {
 	if err := json.Unmarshal(raw, &reread); err != nil {
 		t.Fatalf("reparse: %v", err)
 	}
-	if reread.Name() != "Write Test" {
+	if reread.Name() != "WRITE TEST" {
 		t.Fatalf("name = %q", reread.Name())
 	}
 }
@@ -153,7 +153,7 @@ func TestDescribeReturnsChainAndParams(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Describe: %v", err)
 	}
-	if summary.Name != "Describe Test" {
+	if summary.Name != "DESCRIBE TEST" {
 		t.Fatalf("name = %q", summary.Name)
 	}
 	if summary.InputGain != 6 || summary.OutputVolume != 3 {

@@ -175,7 +175,7 @@ func mixerSummary(chain *Node) MixerSummary {
 // footswitchAssignments lists the stomp switches that are assigned to a
 // module, in FS5..FS8 order. Unassigned switches are omitted.
 func footswitchAssignments(content *Content) []FootswitchSummary {
-	children := namedChildren(content.FootSwitch, "FootSwitch")
+	children := namedChildren(decodeSection(content.FootSwitch), "FootSwitch")
 	if children == nil {
 		return nil
 	}
