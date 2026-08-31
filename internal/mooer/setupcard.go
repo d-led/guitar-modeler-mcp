@@ -26,6 +26,38 @@ type ModuleDesc struct {
 	Params     []ParamDesc
 }
 
+// describeFuncs maps a chain module name to the function that reads its label,
+// enabled flag, effect index and parameters out of a preset.
+var describeFuncs = map[string]func(Preset) (string, bool, uint8, []ParamDesc){
+	"fx": func(p Preset) (string, bool, uint8, []ParamDesc) {
+		return "FX", p.FX.Enabled, p.FX.Type, fxParams(p.FX)
+	},
+	"od": func(p Preset) (string, bool, uint8, []ParamDesc) {
+		return "DS/OD", p.Drive.Enabled, p.Drive.Type, driveParams(p.Drive)
+	},
+	"amp": func(p Preset) (string, bool, uint8, []ParamDesc) {
+		return "AMP", p.Amp.Enabled, p.Amp.Type, ampParams(p.Amp)
+	},
+	"cab": func(p Preset) (string, bool, uint8, []ParamDesc) {
+		return "CAB", p.Cab.Enabled, p.Cab.Type, cabParams(p.Cab)
+	},
+	"ns": func(p Preset) (string, bool, uint8, []ParamDesc) {
+		return "NS", p.NoiseGate.Enabled, p.NoiseGate.Type, nsParams(p.NoiseGate)
+	},
+	"eq": func(p Preset) (string, bool, uint8, []ParamDesc) {
+		return "EQ", p.EQ.Enabled, p.EQ.Type, eqParams(p.EQ)
+	},
+	"mod": func(p Preset) (string, bool, uint8, []ParamDesc) {
+		return "MOD", p.Mod.Enabled, p.Mod.Type, modParams(p.Mod)
+	},
+	"delay": func(p Preset) (string, bool, uint8, []ParamDesc) {
+		return "DELAY", p.Delay.Enabled, p.Delay.Type, delayParams(p.Delay)
+	},
+	"reverb": func(p Preset) (string, bool, uint8, []ParamDesc) {
+		return "REVERB", p.Reverb.Enabled, p.Reverb.Type, reverbParams(p.Reverb)
+	},
+}
+
 // Describe flattens a preset into a display-ready list of module descriptions
 // in the model's chain order (ModuleOrder), resolving effect_type indices to
 // names via the model's catalog.
@@ -36,26 +68,12 @@ func Describe(p Preset, m Model) []ModuleDesc {
 	}
 	desc := make([]ModuleDesc, 0, len(order))
 	for _, module := range order {
-		switch module {
-		case "fx":
-			desc = append(desc, describeModule("FX", module, p.FX.Enabled, p.FX.Type, m, fxParams(p.FX)))
-		case "od":
-			desc = append(desc, describeModule("DS/OD", module, p.Drive.Enabled, p.Drive.Type, m, driveParams(p.Drive)))
-		case "amp":
-			desc = append(desc, describeModule("AMP", module, p.Amp.Enabled, p.Amp.Type, m, ampParams(p.Amp)))
-		case "cab":
-			desc = append(desc, describeModule("CAB", module, p.Cab.Enabled, p.Cab.Type, m, cabParams(p.Cab)))
-		case "ns":
-			desc = append(desc, describeModule("NS", module, p.NoiseGate.Enabled, p.NoiseGate.Type, m, nsParams(p.NoiseGate)))
-		case "eq":
-			desc = append(desc, describeModule("EQ", module, p.EQ.Enabled, p.EQ.Type, m, eqParams(p.EQ)))
-		case "mod":
-			desc = append(desc, describeModule("MOD", module, p.Mod.Enabled, p.Mod.Type, m, modParams(p.Mod)))
-		case "delay":
-			desc = append(desc, describeModule("DELAY", module, p.Delay.Enabled, p.Delay.Type, m, delayParams(p.Delay)))
-		case "reverb":
-			desc = append(desc, describeModule("REVERB", module, p.Reverb.Enabled, p.Reverb.Type, m, reverbParams(p.Reverb)))
+		fn, ok := describeFuncs[module]
+		if !ok {
+			continue
 		}
+		label, enabled, index, params := fn(p)
+		desc = append(desc, describeModule(label, module, enabled, index, m, params))
 	}
 	return desc
 }
