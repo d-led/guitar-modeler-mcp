@@ -105,15 +105,19 @@ func nodeStartsOff(patch Patch, name string) bool {
 	return ok && item.State != nil && !*item.State
 }
 
-// sceneIndex returns the active-scene index (the FootSwitch LastScene field,
-// type 10), or -1 when no scene is active.
+// sceneIndex returns the active scene's 0-based button index (0..3 for
+// FS5..FS8), or -1 when no scene is active. The FootSwitch LastScene field
+// stores the footswitch number (5..8), so it is normalised here.
 func sceneIndex(children map[string]any) int {
 	v, ok := children["LastScene"].(map[string]any)
 	if !ok {
 		return -1
 	}
 	num, _ := v["value"].(float64)
-	return int(num)
+	if num >= 5 && num <= 8 {
+		return int(num) - 5
+	}
+	return -1
 }
 
 // namedChildren unwraps the {data:{<name>:{children:{…}}}} wrapper used by the
