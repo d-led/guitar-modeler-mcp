@@ -67,13 +67,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 			"query": stringSchema("Search text, e.g. \"JCM800\", \"Tube Screamer\", \"Twin Reverb\", \"SM57\" or \"Tape Echo\"."),
 			"kind":  stringSchema("Optional: restrict to \"amp\", \"cab\", \"mic\" or \"fx\"."),
 		}),
-		Handler: func(_ context.Context, args map[string]any) (string, error) {
-			query := argString(args, "query")
-			if query == "" {
-				return "", fmt.Errorf("a \"query\" is required")
-			}
-			return marshal(r.cat.Search(query, argString(args, "kind")))
-		},
+		Handler: r.searchCatalog,
 	})
 	s.Register(mcp.Tool{
 		Name:        "catalog_list_amps",
@@ -122,36 +116,13 @@ func (r *Registrar) Register(s *mcp.Server) {
 		Name:        "catalog_list_fx_by_category",
 		Description: "List the effect modules in one category (e.g. category=\"delay\" or \"reverb\"). See catalog_list_fx_categories for the valid category names.",
 		InputSchema: objectSchema(map[string]any{"category": stringSchema("Effect category, e.g. \"delay\", \"reverb\", \"distortion\", \"modulation\", \"dynamics\", \"eq\", \"expression\", \"utility\".")}),
-		Handler: func(_ context.Context, args map[string]any) (string, error) {
-			category := argString(args, "category")
-			if category == "" {
-				return "", fmt.Errorf("a \"category\" is required; see catalog_list_fx_categories")
-			}
-			matches := params.FXListingsByCategory(r.cat, category)
-			if len(matches) == 0 {
-				return "", fmt.Errorf("unknown effect category %q; see catalog_list_fx_categories", category)
-			}
-			return marshal(matches)
-		},
+		Handler:     r.catalogListFXByCategory,
 	})
 	s.Register(mcp.Tool{
 		Name:        "catalog_list_block_presets",
 		Description: "List the named factory presets for an effect module (e.g. type=\"Tape Echo\").",
 		InputSchema: objectSchema(map[string]any{"type": stringSchema("The effect module display name.")}),
-		Handler: func(_ context.Context, args map[string]any) (string, error) {
-			typ := argString(args, "type")
-			if typ == "" {
-				return "", fmt.Errorf("a module \"type\" is required")
-			}
-			if f, ok := r.cat.FXByName(typ); ok {
-				typ = f.Name
-			}
-			presets, err := assets.Presets(strings.ToUpper(typ))
-			if err != nil {
-				return "", fmt.Errorf("no presets for module %q: %w", typ, err)
-			}
-			return marshal(presets)
-		},
+		Handler:     r.catalogListBlockPresets,
 	})
 
 	s.Register(mcp.Tool{
@@ -161,20 +132,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 			"type":  stringSchema("Module display name, e.g. \"Tape Echo\", \"Amp\" or \"Cab\"."),
 			"types": arraySchema("Optional list of module names to describe in one call (alternative to type).", stringSchema("A module display name.")),
 		}),
-		Handler: func(_ context.Context, args map[string]any) (string, error) {
-			names := argStrings(args["types"])
-			if len(names) > 0 {
-				if len(names) == 1 {
-					return r.describeModule(names[0])
-				}
-				return marshal(params.DescribeMany(r.cat, names))
-			}
-			typ := argString(args, "type")
-			if typ == "" {
-				return "", fmt.Errorf("a module \"type\" (or \"types\" list) is required")
-			}
-			return r.describeModule(typ)
-		},
+		Handler: r.catalogListModuleParams,
 	})
 
 	s.Register(mcp.Tool{
@@ -267,21 +225,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 			"rig_file":  stringSchema("Path to the .rig file to analyze."),
 			"target_db": numberSchema("Optional target output level in dB (default 0 = unity)."),
 		}),
-		Handler: func(_ context.Context, args map[string]any) (string, error) {
-			path := argString(args, "rig_file")
-			if path == "" {
-				return "", fmt.Errorf("rig_file is required")
-			}
-			file, err := readRigFile(path)
-			if err != nil {
-				return "", err
-			}
-			est, err := rig.EstimateLevel(file, argFloat(args, "target_db"))
-			if err != nil {
-				return "", err
-			}
-			return marshal(est)
-		},
+		Handler: r.estimateRigLevel,
 	})
 
 	s.Register(mcp.Tool{
@@ -728,6 +672,72 @@ func wazaToneProps() map[string]any {
 		wazaPatchProps(),
 		map[string]any{"output_dir": stringSchema("Directory to write the output into (default: current directory).")},
 	)
+}
+
+func (r *Registrar) searchCatalog(_ context.Context, args map[string]any) (string, error) {
+	query := argString(args, "query")
+	if query == "" {
+		return "", fmt.Errorf("a \"query\" is required")
+	}
+	return marshal(r.cat.Search(query, argString(args, "kind")))
+}
+
+func (r *Registrar) catalogListFXByCategory(_ context.Context, args map[string]any) (string, error) {
+	category := argString(args, "category")
+	if category == "" {
+		return "", fmt.Errorf("a \"category\" is required; see catalog_list_fx_categories")
+	}
+	matches := params.FXListingsByCategory(r.cat, category)
+	if len(matches) == 0 {
+		return "", fmt.Errorf("unknown effect category %q; see catalog_list_fx_categories", category)
+	}
+	return marshal(matches)
+}
+
+func (r *Registrar) catalogListBlockPresets(_ context.Context, args map[string]any) (string, error) {
+	typ := argString(args, "type")
+	if typ == "" {
+		return "", fmt.Errorf("a module \"type\" is required")
+	}
+	if f, ok := r.cat.FXByName(typ); ok {
+		typ = f.Name
+	}
+	presets, err := assets.Presets(strings.ToUpper(typ))
+	if err != nil {
+		return "", fmt.Errorf("no presets for module %q: %w", typ, err)
+	}
+	return marshal(presets)
+}
+
+func (r *Registrar) catalogListModuleParams(_ context.Context, args map[string]any) (string, error) {
+	names := argStrings(args["types"])
+	if len(names) > 0 {
+		if len(names) == 1 {
+			return r.describeModule(names[0])
+		}
+		return marshal(params.DescribeMany(r.cat, names))
+	}
+	typ := argString(args, "type")
+	if typ == "" {
+		return "", fmt.Errorf("a module \"type\" (or \"types\" list) is required")
+	}
+	return r.describeModule(typ)
+}
+
+func (r *Registrar) estimateRigLevel(_ context.Context, args map[string]any) (string, error) {
+	path := argString(args, "rig_file")
+	if path == "" {
+		return "", fmt.Errorf("rig_file is required")
+	}
+	file, err := readRigFile(path)
+	if err != nil {
+		return "", err
+	}
+	est, err := rig.EstimateLevel(file, argFloat(args, "target_db"))
+	if err != nil {
+		return "", err
+	}
+	return marshal(est)
 }
 
 // wazaCardProps is the setup-card argument schema: the shared tone props plus
@@ -1631,25 +1641,9 @@ func (r *Registrar) wazaWriteTSL(args map[string]any) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
-	var patches []waza.Patch
-	if _, multi := args["patches"]; multi {
-		for i, pm := range argObjects(args, "patches") {
-			spec, err := r.wazaSpec(pm)
-			if err != nil {
-				return "", fmt.Errorf("patches[%d]: %w", i, err)
-			}
-			patches = append(patches, wazaPatch(tmpl, spec))
-		}
-		if len(patches) == 0 {
-			return "", fmt.Errorf("patches must contain at least one patch")
-		}
-	} else {
-		spec, err := r.wazaSpec(args)
-		if err != nil {
-			return "", err
-		}
-		patches = append(patches, wazaPatch(tmpl, spec))
+	patches, err := r.wazaPatches(tmpl, args)
+	if err != nil {
+		return "", err
 	}
 
 	name := strings.TrimSpace(argString(args, "name"))
@@ -1672,6 +1666,31 @@ func (r *Registrar) wazaWriteTSL(args map[string]any) (string, error) {
 		return "", err
 	}
 	return fmt.Sprintf("Wrote Waza Air backup (%d patch(es)) to %s", len(patches), path), nil
+}
+
+// wazaPatches builds the requested patches from the neutral template: either a
+// single top-level patch or the "patches" array.
+func (r *Registrar) wazaPatches(tmpl waza.Patch, args map[string]any) ([]waza.Patch, error) {
+	if _, multi := args["patches"]; !multi {
+		spec, err := r.wazaSpec(args)
+		if err != nil {
+			return nil, err
+		}
+		return []waza.Patch{wazaPatch(tmpl, spec)}, nil
+	}
+
+	var patches []waza.Patch
+	for i, pm := range argObjects(args, "patches") {
+		spec, err := r.wazaSpec(pm)
+		if err != nil {
+			return nil, fmt.Errorf("patches[%d]: %w", i, err)
+		}
+		patches = append(patches, wazaPatch(tmpl, spec))
+	}
+	if len(patches) == 0 {
+		return nil, fmt.Errorf("patches must contain at least one patch")
+	}
+	return patches, nil
 }
 
 // wazaPatch builds one preset patch from the neutral template plus a resolved
@@ -1960,38 +1979,7 @@ func (r *Registrar) qcDecodePreset(args map[string]any) (string, error) {
 	d := qc.Default()
 	chains := make([]map[string]any, 0, len(preset.Chains))
 	for _, c := range preset.Chains {
-		models := make([]map[string]any, 0, len(c.Models))
-		for _, model := range c.Models {
-			name, id := "?", model.GetHash()
-			if m, ok := d.Catalog.Model(int(model.GetHash())); ok {
-				name, id = m.Name, uint32(m.ID)
-			}
-			params := make([]map[string]any, 0, len(model.Params))
-			for _, p := range model.Params {
-				pname := fmt.Sprintf("param %d", p.GetIndex())
-				var val any
-				if len(p.ParamValues) > 0 {
-					val = p.ParamValues[0].GetFloatValue()
-				}
-				if m, ok := d.Catalog.Model(int(model.GetHash())); ok && int(p.GetIndex()) < len(m.Params) {
-					spec := m.Params[p.GetIndex()]
-					pname = spec.Name
-					if f, ok := val.(float32); ok {
-						if real, err := spec.Denormalize(float64(f)); err == nil {
-							val = map[string]any{"wire": f, "real": real, "units": spec.Units}
-						}
-					}
-				}
-				params = append(params, map[string]any{"index": p.GetIndex(), "name": pname, "value": val})
-			}
-			models = append(models, map[string]any{"id": id, "name": name, "column": model.GetColumn(), "params": params})
-		}
-		chains = append(chains, map[string]any{
-			"row":      c.GetRow(),
-			"in_port":  c.GetInPortid(),
-			"out_port": c.GetOutPortid(),
-			"models":   models,
-		})
+		chains = append(chains, renderChain(d.Catalog, c))
 	}
 	return marshal(map[string]any{
 		"name":         preset.Name,
@@ -2003,6 +1991,52 @@ func (r *Registrar) qcDecodePreset(args map[string]any) (string, error) {
 		"scene_labels": preset.SceneLabels,
 		"chains":       chains,
 	})
+}
+
+// renderChain renders one grid lane with its models and their parameters.
+func renderChain(cat *qc.Catalog, c *qc.Chain) map[string]any {
+	models := make([]map[string]any, 0, len(c.Models))
+	for _, model := range c.Models {
+		models = append(models, renderModel(cat, model))
+	}
+	return map[string]any{
+		"row":      c.GetRow(),
+		"in_port":  c.GetInPortid(),
+		"out_port": c.GetOutPortid(),
+		"models":   models,
+	}
+}
+
+// renderModel resolves a model's wire hash to its name and renders each
+// parameter with its resolved name and (for measured knobs) its real value.
+func renderModel(cat *qc.Catalog, model *qc.Model) map[string]any {
+	name, id := "?", model.GetHash()
+	if m, ok := cat.Model(int(model.GetHash())); ok {
+		name, id = m.Name, uint32(m.ID)
+	}
+	params := make([]map[string]any, 0, len(model.Params))
+	for _, p := range model.Params {
+		params = append(params, renderParam(cat, model, p))
+	}
+	return map[string]any{"id": id, "name": name, "column": model.GetColumn(), "params": params}
+}
+
+func renderParam(cat *qc.Catalog, model *qc.Model, p *qc.Param) map[string]any {
+	pname := fmt.Sprintf("param %d", p.GetIndex())
+	var val any
+	if len(p.ParamValues) > 0 {
+		val = p.ParamValues[0].GetFloatValue()
+	}
+	if m, ok := cat.Model(int(model.GetHash())); ok && int(p.GetIndex()) < len(m.Params) {
+		spec := m.Params[p.GetIndex()]
+		pname = spec.Name
+		if f, ok := val.(float32); ok {
+			if real, err := spec.Denormalize(float64(f)); err == nil {
+				val = map[string]any{"wire": f, "real": real, "units": spec.Units}
+			}
+		}
+	}
+	return map[string]any{"index": p.GetIndex(), "name": pname, "value": val}
 }
 
 // qcRenderSetupCard decodes an existing .pb preset and writes a printable HTML
