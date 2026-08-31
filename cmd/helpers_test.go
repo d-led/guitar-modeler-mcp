@@ -69,35 +69,39 @@ func TestParseFootswitchFlags(t *testing.T) {
 }
 
 func TestSupportedDevices(t *testing.T) {
-	devices := supportedDevices()
-	if len(devices) != 11 {
-		t.Fatalf("supportedDevices returned %d devices, want 11", len(devices))
-	}
-
-	byName := make(map[string]deviceInfo, len(devices))
-	for _, d := range devices {
+	byName := make(map[string]deviceInfo, 11)
+	for _, d := range supportedDevices() {
 		byName[d.Name] = d
 	}
+	if len(byName) != 11 {
+		t.Fatalf("supportedDevices returned %d devices, want 11", len(byName))
+	}
 
-	if g := byName["gigboard"]; !g.FileExchange || g.FileExt != ".rig" {
-		t.Fatalf("gigboard entry = %+v", g)
+	tests := []struct {
+		name   string
+		fileEx bool
+		ext    string
+		desc   string
+	}{
+		{"gigboard", true, ".rig", ""},
+		{"ge200", true, ".mo", ""},
+		{"ge150", false, "", ""},
+		{"ge100pro", true, ".mo", ""},
+		{"wazaair", true, ".tsl", "BOSS Waza Air"},
+		{"thr", false, "", "Yamaha THR-II"},
+		{"quad-cortex", false, "", "Neural DSP Quad Cortex"},
 	}
-	if g := byName["ge200"]; !g.FileExchange || g.FileExt != ".mo" {
-		t.Fatalf("ge200 entry = %+v", g)
-	}
-	if g := byName["ge150"]; g.FileExchange || g.FileExt != "" {
-		t.Fatalf("ge150 entry = %+v, want card-only", g)
-	}
-	if g := byName["ge100pro"]; !g.FileExchange || g.FileExt != ".mo" {
-		t.Fatalf("ge100pro entry = %+v", g)
-	}
-	if g := byName["wazaair"]; !g.FileExchange || g.FileExt != ".tsl" || g.Description != "BOSS Waza Air" {
-		t.Fatalf("wazaair entry = %+v, want .tsl file exchange", g)
-	}
-	if g := byName["thr"]; g.FileExchange || g.Description != "Yamaha THR-II" {
-		t.Fatalf("thr entry = %+v, want card-only", g)
-	}
-	if g := byName["quad-cortex"]; g.FileExchange || g.FileExt != "" || g.Description != "Neural DSP Quad Cortex" {
-		t.Fatalf("quad-cortex entry = %+v, want no device file exchange (card + USB only)", g)
+	for _, tc := range tests {
+		g, ok := byName[tc.name]
+		if !ok {
+			t.Errorf("device %q missing from supportedDevices", tc.name)
+			continue
+		}
+		if g.FileExchange != tc.fileEx || g.FileExt != tc.ext {
+			t.Errorf("%s = %+v, want FileExchange=%v FileExt=%q", tc.name, g, tc.fileEx, tc.ext)
+		}
+		if tc.desc != "" && g.Description != tc.desc {
+			t.Errorf("%s Description = %q, want %q", tc.name, g.Description, tc.desc)
+		}
 	}
 }
