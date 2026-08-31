@@ -8,10 +8,12 @@ import (
 	"github.com/d-led/guitar-modeler-mcp/internal/cardchain"
 )
 
-// ParamDesc is one editable parameter of a module, with its raw device value.
+// ParamDesc is one editable parameter of a module, with its raw device value
+// and its resting/default value (nil when the default is unknown).
 type ParamDesc struct {
-	Name  string
-	Value any
+	Name    string
+	Value   any
+	Default any
 }
 
 // ModuleDesc describes one module of a preset for display: which effect it
@@ -71,38 +73,65 @@ func describeModule(label, module string, enabled bool, index uint8, m Model, pa
 }
 
 func fxParams(f FX) []ParamDesc {
-	return []ParamDesc{{"Q", f.Q}, {"Position", f.Position}, {"Peak", f.Peak}, {"Level", f.Level}}
+	return []ParamDesc{
+		{"Q", f.Q, noon}, {"Position", f.Position, noon}, {"Peak", f.Peak, noon}, {"Level", f.Level, noon},
+	}
 }
 func driveParams(d Drive) []ParamDesc {
-	return []ParamDesc{{"Volume", d.Volume}, {"Tone", d.Tone}, {"Gain", d.Gain}}
+	return []ParamDesc{
+		{"Volume", d.Volume, noon}, {"Tone", d.Tone, noon}, {"Gain", d.Gain, noon},
+	}
 }
 func ampParams(a Amp) []ParamDesc {
-	return []ParamDesc{{"Gain", a.Gain}, {"Bass", a.Bass}, {"Mid", a.Mid}, {"Treble", a.Treble}, {"Presence", a.Presence}, {"Master", a.Master}}
+	return []ParamDesc{
+		{"Gain", a.Gain, noon}, {"Bass", a.Bass, noon}, {"Mid", a.Mid, noon},
+		{"Treble", a.Treble, noon}, {"Presence", a.Presence, noon}, {"Master", a.Master, noon},
+	}
 }
 func cabParams(c Cab) []ParamDesc {
-	return []ParamDesc{{"Mic", c.Mic}, {"Center", c.Center}, {"Distance", c.Distance}, {"Tube", c.Tube}}
+	return []ParamDesc{
+		{"Mic", c.Mic, 0}, {"Center", c.Center, noon}, {"Distance", c.Distance, noon}, {"Tube", c.Tube, noon},
+	}
 }
 func nsParams(n NoiseGate) []ParamDesc {
-	return []ParamDesc{{"Attack", n.Attack}, {"Release", n.Release}, {"Threshold", n.Threshold}}
+	return []ParamDesc{
+		{"Attack", n.Attack, noon}, {"Release", n.Release, noon}, {"Threshold", n.Threshold, 0},
+	}
 }
 func eqParams(e EQ) []ParamDesc {
 	out := make([]ParamDesc, 0, 12)
 	for i, v := range e.Bands {
-		out = append(out, ParamDesc{fmt.Sprintf("Band %d", i+1), v})
+		out = append(out, ParamDesc{fmt.Sprintf("Band %d", i+1), v, noon})
 	}
 	for i, v := range e.BandsExtra {
-		out = append(out, ParamDesc{fmt.Sprintf("Band %d", i+7), v})
+		out = append(out, ParamDesc{fmt.Sprintf("Band %d", i+7), v, noon})
 	}
 	return out
 }
 func modParams(m Mod) []ParamDesc {
-	return []ParamDesc{{"Rate", m.Rate}, {"Level", m.Level}, {"Depth", m.Depth}, {"Param 4", m.Param4}, {"Param 5", m.Param5}}
+	return []ParamDesc{
+		{"Rate", m.Rate, noon}, {"Level", m.Level, noon}, {"Depth", m.Depth, noon},
+		{"Param 4", m.Param4, noon}, {"Param 5", m.Param5, noon},
+	}
 }
 func delayParams(d Delay) []ParamDesc {
-	return []ParamDesc{{"Level", d.Level}, {"Feedback", d.Feedback}, {"Time (ms)", d.TimeMS}, {"Subdivision", d.Subdivision}, {"Param 5", d.Param5}, {"Param 6", d.Param6}}
+	return []ParamDesc{
+		{"Level", d.Level, noon}, {"Feedback", d.Feedback, noon}, {"Time (ms)", d.TimeMS, neutralDelayTime},
+		{"Subdivision", d.Subdivision, 0}, {"Param 5", d.Param5, noon}, {"Param 6", d.Param6, noon},
+	}
 }
 func reverbParams(r Reverb) []ParamDesc {
-	return []ParamDesc{{"Pre-Delay", r.PreDelay}, {"Level", r.Level}, {"Decay", r.Decay}, {"Tone", r.Tone}}
+	return []ParamDesc{
+		{"Pre-Delay", r.PreDelay, noon}, {"Level", r.Level, noon}, {"Decay", r.Decay, noon}, {"Tone", r.Tone, noon},
+	}
+}
+
+// changed reports whether a parameter deviates from its resting default.
+func changed(p ParamDesc) bool {
+	if p.Default == nil {
+		return false
+	}
+	return fmt.Sprintf("%v", p.Value) != fmt.Sprintf("%v", p.Default)
 }
 
 // chainHint renders the fixed nine-slot chain with each slot's selected model,
@@ -130,6 +159,7 @@ td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;verti
 .module{font-weight:600;white-space:nowrap}
 .effect{font-weight:600}.off{color:#999}.inspired{color:#666;font-size:.85em}
 .params{color:#444;font-size:.85em}
+.hl{color:#2563eb;font-weight:600}
 ` + cardchain.CSS + `
 </style></head><body>`)
 	fmt.Fprintf(&b, "<h1>%s</h1><h2>%s — setup card</h2>", html.EscapeString(p.Name), html.EscapeString(m.Display))
@@ -155,11 +185,18 @@ td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;verti
 		fmt.Fprintf(&b, "</td></tr>")
 		if d.Enabled {
 			b.WriteString("<tr><td class=\"params\">")
-			parts := make([]string, 0, len(d.Params))
-			for _, p := range d.Params {
-				parts = append(parts, fmt.Sprintf("%s: %v", html.EscapeString(p.Name), p.Value))
+			for i, p := range d.Params {
+				if i > 0 {
+					b.WriteString(" · ")
+				}
+				name := html.EscapeString(p.Name)
+				val := html.EscapeString(fmt.Sprintf("%v", p.Value))
+				if changed(p) {
+					fmt.Fprintf(&b, "<span class=\"hl\">%s: %s</span>", name, val)
+				} else {
+					fmt.Fprintf(&b, "%s: %s", name, val)
+				}
 			}
-			b.WriteString(html.EscapeString(strings.Join(parts, " · ")))
 			b.WriteString("</td><td></td></tr>")
 		}
 		b.WriteString("</table>")

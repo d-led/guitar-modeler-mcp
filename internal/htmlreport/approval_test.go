@@ -68,3 +68,37 @@ func TestReportGreysOutBypassedModules(t *testing.T) {
 		t.Fatal("expected an 'off' badge on the bypassed Chorus")
 	}
 }
+
+// TestReportHighlightsNonDefaultParams guards the cue that a parameter was
+// dialled away from its factory default: the dialled value is flagged, a
+// default value is not.
+func TestReportHighlightsNonDefaultParams(t *testing.T) {
+	b, err := rig.NewBuilder(catalog.New())
+	if err != nil {
+		t.Fatalf("NewBuilder: %v", err)
+	}
+	file, err := b.Build(rig.Spec{
+		Name: "Changed Rig",
+		Blocks: []rig.Block{
+			{Type: "Amp", Params: map[string]any{"Type": "82 Lead 800 100W", "Master": 80.0}},
+			{Type: "Cab", Params: map[string]any{"CabType": "4x12 Green 25W", "MicType": "Dyn 57"}},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+
+	html, err := Render(file, "", catalog.New())
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	// Master was dialled to 80 (default 50): it must be flagged.
+	if !strings.Contains(html, `<div class="param changed"><span class="k">Master</span><span class="v">80</span></div>`) {
+		t.Fatal("expected the dialled amp Master to be highlighted")
+	}
+	// Bass stayed at the default 50: it must not be flagged.
+	if strings.Contains(html, `<div class="param changed"><span class="k">Bass</span>`) {
+		t.Fatal("expected the default amp Bass to stay unhighlighted")
+	}
+}

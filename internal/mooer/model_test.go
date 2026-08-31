@@ -162,6 +162,25 @@ func TestSetupCardHTML(t *testing.T) {
 	}
 }
 
+// TestSetupCardHighlightsNonDefaultParams guards the cue that a knob was
+// dialled away from its resting value: the dialled value is highlighted, a
+// noon/neutral value is not.
+func TestSetupCardHighlightsNonDefaultParams(t *testing.T) {
+	m, _ := ModelByName("ge200")
+	p := New()
+	p.Name = "Dialed"
+	index, _ := m.AmpIndex("PLX 100")
+	p.Amp = Amp{Enabled: true, Type: index, Gain: 200, Bass: noon, Mid: noon, Treble: noon, Presence: noon, Master: noon}
+
+	html := SetupCardHTML(m, p)
+	if !strings.Contains(html, `<span class="hl">Gain: 200</span>`) {
+		t.Fatal("expected the dialled Gain to be highlighted")
+	}
+	if strings.Contains(html, `<span class="hl">Bass:`) {
+		t.Fatal("expected the noon Bass to stay unhighlighted")
+	}
+}
+
 func TestResolveAmpByInspiredBy(t *testing.T) {
 	m, _ := ModelByName("ge200")
 	index, err := m.ResolveAmp("Marshall JCM800")

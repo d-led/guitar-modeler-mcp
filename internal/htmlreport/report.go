@@ -15,8 +15,9 @@ import (
 )
 
 type paramKV struct {
-	Key   string
-	Value string
+	Key     string
+	Value   string
+	Changed bool
 }
 
 type moduleInfo struct {
@@ -126,6 +127,7 @@ func isFixed(name string) bool {
 func moduleInfoFor(name string, node *rig.Node, cat *catalog.Catalog) moduleInfo {
 	info := moduleInfo{Name: name, On: nodeEnabled(node)}
 
+	defaults := rig.Defaults(name)
 	params := make([]paramKV, 0, len(node.ChildOrder))
 	for _, key := range node.ChildOrder {
 		item, ok := node.Children[key]
@@ -135,7 +137,12 @@ func moduleInfoFor(name string, node *rig.Node, cat *catalog.Catalog) moduleInfo
 		if key == "PresetName" || key == "PresetName2" {
 			continue
 		}
-		params = append(params, paramKV{Key: key, Value: itemValue(item)})
+		val := itemValue(item)
+		changed := false
+		if def, ok := defaults[key]; ok {
+			changed = val != itemValue(def)
+		}
+		params = append(params, paramKV{Key: key, Value: val, Changed: changed})
 	}
 	info.Params = params
 
@@ -340,6 +347,8 @@ const reportHTML = `<!doctype html>
   .param { font-size: .9em; }
   .param .k { color: #888; margin-right: 6px; }
   .param .v { font-weight: 600; }
+  .param.changed .v { color: #2563eb; }
+  @media (prefers-color-scheme: dark) { .param.changed .v { color: #60a5fa; } }
   .disclaimer { max-width: 860px; margin: 24px auto 0; padding-top: 16px; border-top: 1px solid #e3e3e8; font-size: .78em; color: #888; }
   @media (prefers-color-scheme: dark) { .disclaimer { border-color: #2c2c2e; } }
   {{.ChainCSS}}
@@ -377,7 +386,7 @@ const reportHTML = `<!doctype html>
     {{else if .Cab}}<div class="desc">{{.Cab.Speakers}} · {{.Cab.SpeakersRef}}{{if .Mic}} · mic {{.Mic.RealModel}}{{end}}</div>
     {{else}}<div class="desc">{{.Description}}</div>{{end}}
     <div class="params">
-      {{range .Params}}<div class="param"><span class="k">{{.Key}}</span><span class="v">{{.Value}}</span></div>{{end}}
+      {{range .Params}}<div class="param{{if .Changed}} changed{{end}}"><span class="k">{{.Key}}</span><span class="v">{{.Value}}</span></div>{{end}}
     </div>
   </div>
   {{end}}
