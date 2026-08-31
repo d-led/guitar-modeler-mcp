@@ -269,12 +269,8 @@ func TestFootswitchSceneSnapshotHeaders(t *testing.T) {
 	}
 
 	children := footswitchChildren(t, file)
-	if got := footswitchField(t, children, "UserFootSwitchText5"); got != "DRIVE" {
-		t.Fatalf("UserFootSwitchText5 = %q, want DRIVE", got)
-	}
-	if got := footswitchField(t, children, "ModeNew5"); got != "Scene" {
-		t.Fatalf("ModeNew5 = %q, want Scene", got)
-	}
+	wantEq(t, "UserFootSwitchText5", footswitchField(t, children, "UserFootSwitchText5"), "DRIVE")
+	wantEq(t, "ModeNew5", footswitchField(t, children, "ModeNew5"), "Scene")
 
 	raw, err := base64.StdEncoding.DecodeString(children["Scene5"].(map[string]any)["state"].(string))
 	if err != nil {
@@ -282,23 +278,14 @@ func TestFootswitchSceneSnapshotHeaders(t *testing.T) {
 	}
 	// Chain: slot1=Green JRC-OD, slot2=Amp, slot3=Cab, slot4=Tape Echo.
 	// Scene turns Green JRC-OD on (1) and Tape Echo off (2); Amp/Cab unchanged (0).
-	got := []byte{raw[0], raw[36], raw[36*2], raw[36*3]}
-	want := []byte{1, 0, 0, 2}
-	for i := range want {
-		if got[i] != want[i] {
-			t.Fatalf("scene header slot %d = %d, want %d (headers: %v)", i+1, got[i], want[i], got)
-		}
-	}
+	wantBytes(t, "scene headers", []byte{raw[0], raw[36], raw[36*2], raw[36*3]}, []byte{1, 0, 0, 2})
+
 	// State2Scene (the revert state) must stay "no change".
 	state2, err := base64.StdEncoding.DecodeString(children["State2Scene5"].(map[string]any)["state"].(string))
 	if err != nil {
 		t.Fatalf("decode State2Scene5: %v", err)
 	}
-	for i := 0; i < 4; i++ {
-		if state2[i*36] != 0 {
-			t.Fatalf("State2Scene5 slot %d header = %d, want 0 (no change)", i+1, state2[i*36])
-		}
-	}
+	wantBytes(t, "State2Scene5 headers", []byte{state2[0], state2[36], state2[36*2], state2[36*3]}, []byte{0, 0, 0, 0})
 }
 
 func TestFootswitchSceneRejectsUnknownBlock(t *testing.T) {

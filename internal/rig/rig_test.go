@@ -54,30 +54,16 @@ func TestBuildRoundTrips(t *testing.T) {
 
 	// Chain slots should reflect the signal order.
 	chain := patch.Children["Chain"]
-	if got := *chain.Children["ModuleType1"].Str; got != "Green JRC-OD" {
-		t.Fatalf("slot 1 = %q, want Green JRC-OD", got)
-	}
-	if got := *chain.Children["ModuleType2"].Str; got != "Amp" {
-		t.Fatalf("slot 2 = %q, want Amp", got)
-	}
-	if got := *chain.Children["ModuleType3"].Str; got != "Cab" {
-		t.Fatalf("slot 3 = %q, want Cab", got)
-	}
-	if got := *chain.Children["ModuleType4"].Str; got != "Tape Echo" {
-		t.Fatalf("slot 4 = %q, want Tape Echo", got)
-	}
-	if got := *chain.Children["ModuleType5"].Str; got != "Empty Slot" {
-		t.Fatalf("slot 5 = %q, want Empty Slot", got)
-	}
+	wantEq(t, "slot 1", *chain.Children["ModuleType1"].Str, "Green JRC-OD")
+	wantEq(t, "slot 2", *chain.Children["ModuleType2"].Str, "Amp")
+	wantEq(t, "slot 3", *chain.Children["ModuleType3"].Str, "Cab")
+	wantEq(t, "slot 4", *chain.Children["ModuleType4"].Str, "Tape Echo")
+	wantEq(t, "slot 5", *chain.Children["ModuleType5"].Str, "Empty Slot")
 
 	// Amp parameters override defaults.
 	amp := patch.Children["Amp"]
-	if got := *amp.Children["GainA"].Value; got != 70 {
-		t.Fatalf("Amp GainA = %v, want 70", got)
-	}
-	if got := *amp.Children["Type"].Str; got != "65 Black SR" {
-		t.Fatalf("Amp Type = %q, want 65 Black SR", got)
-	}
+	wantEq(t, "Amp GainA", *amp.Children["GainA"].Value, 70.0)
+	wantEq(t, "Amp Type", *amp.Children["Type"].Str, "65 Black SR")
 }
 
 func TestBuildRejectsMissingAmp(t *testing.T) {
@@ -194,20 +180,15 @@ func TestDescribeDecodesSceneSnapshot(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Describe: %v", err)
 	}
-	if len(summary.Footswitches) != 1 {
-		t.Fatalf("footswitches = %d, want 1", len(summary.Footswitches))
-	}
+	wantEq(t, "footswitches", len(summary.Footswitches), 1)
 	fs := summary.Footswitches[0]
-	if fs.Label != "DRIVE" || fs.Mode != "Scene" {
-		t.Fatalf("footswitch = %+v, want label DRIVE mode Scene", fs)
-	}
+	wantEq(t, "footswitch label", fs.Label, "DRIVE")
+	wantEq(t, "footswitch mode", fs.Mode, "Scene")
 	if fs.Scene == nil {
 		t.Fatal("scene snapshot not decoded")
 	}
-	if len(fs.Scene.On) != 1 || fs.Scene.On[0] != "Green JRC-OD" {
-		t.Fatalf("scene on = %v, want [Green JRC-OD]", fs.Scene.On)
-	}
-	if len(fs.Scene.Off) != 1 || fs.Scene.Off[0] != "BBD Delay" {
-		t.Fatalf("scene off = %v, want [BBD Delay]", fs.Scene.Off)
-	}
+	wantEq(t, "scene on count", len(fs.Scene.On), 1)
+	wantEq(t, "scene on block", fs.Scene.On[0], "Green JRC-OD")
+	wantEq(t, "scene off count", len(fs.Scene.Off), 1)
+	wantEq(t, "scene off block", fs.Scene.Off[0], "BBD Delay")
 }

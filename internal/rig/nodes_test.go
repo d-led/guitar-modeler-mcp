@@ -36,12 +36,11 @@ func TestOutputNodeWritesToAmpGain(t *testing.T) {
 	if !ok || item.Value == nil {
 		t.Fatalf("Output node missing ToAmpGain: %+v", out.Children)
 	}
-	if *item.Value != 0 {
-		t.Fatalf("ToAmpGain = %v, want 0", *item.Value)
-	}
+	wantEq(t, "ToAmpGain", *item.Value, 0.0)
 
 	rigVol, ok := out.Children["RigVolume"]
-	if !ok || rigVol.Value == nil || *rigVol.Value != 4 {
-		t.Fatalf("RigVolume = %+v, want 4", rigVol)
+	if !ok || rigVol.Value == nil {
+		t.Fatalf("Output node missing RigVolume: %+v", out.Children)
 	}
+	wantEq(t, "RigVolume", *rigVol.Value, 4.0)
 }

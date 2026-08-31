@@ -75,16 +75,7 @@ func TestSetContentAppliesPatchEdits(t *testing.T) {
 	if amp == nil {
 		t.Fatal("Amp node missing")
 	}
-	for _, item := range amp.Children {
-		switch item.Type {
-		case 0:
-			v := 42.0
-			item.Value = &v
-		case 1, 3:
-			on := true
-			item.State = &on
-		}
-	}
+	setAllAmpParams(amp)
 
 	if err := file.SetContent(content); err != nil {
 		t.Fatalf("SetContent: %v", err)
@@ -94,8 +85,29 @@ func TestSetContentAppliesPatchEdits(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Decode after SetContent: %v", err)
 	}
-	reAmp := re.Data.Patch.Children["Amp"]
-	for key, item := range reAmp.Children {
+	verifyAmpParams(t, re.Data.Patch.Children["Amp"])
+}
+
+// setAllAmpParams overwrites every numeric and boolean item of a node with a
+// known non-default value, so the round-trip can prove edits persist.
+func setAllAmpParams(node *Node) {
+	for _, item := range node.Children {
+		switch item.Type {
+		case 0:
+			v := 42.0
+			item.Value = &v
+		case 1, 3:
+			on := true
+			item.State = &on
+		}
+	}
+}
+
+// verifyAmpParams asserts every numeric and boolean item carries the value
+// setAllAmpParams wrote.
+func verifyAmpParams(t *testing.T, node *Node) {
+	t.Helper()
+	for key, item := range node.Children {
 		switch item.Type {
 		case 0:
 			if item.Value == nil || *item.Value != 42 {

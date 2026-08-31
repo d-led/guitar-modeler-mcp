@@ -29,31 +29,23 @@ func TestHardwareAssignmentsButtonsAndPedals(t *testing.T) {
 		t.Fatalf("HardwareAssignments: %v", err)
 	}
 
-	if len(hw.Buttons) != 4 {
-		t.Fatalf("buttons = %d, want 4", len(hw.Buttons))
-	}
+	wantEq(t, "buttons", len(hw.Buttons), 4)
 	got := hw.Buttons[0]
-	if got.Number != 1 || got.Module != "Wham" || got.Operation != "On" || got.Mode != "Toggle" {
-		t.Fatalf("button 1 = %+v, want {1 Wham On Toggle}", got)
-	}
-	if hw.Buttons[1].Module != "Amp" {
-		t.Fatalf("button 2 module = %q, want Amp", hw.Buttons[1].Module)
-	}
-	if hw.Buttons[2].Module != "" || hw.Buttons[3].Module != "" {
-		t.Fatalf("buttons 3/4 should be unassigned: %+v", hw.Buttons[2:])
-	}
+	wantEq(t, "button 1 number", got.Number, 1)
+	wantEq(t, "button 1 module", got.Module, "Wham")
+	wantEq(t, "button 1 operation", got.Operation, "On")
+	wantEq(t, "button 1 mode", got.Mode, "Toggle")
+	wantEq(t, "button 2 module", hw.Buttons[1].Module, "Amp")
+	wantEq(t, "button 3 module", hw.Buttons[2].Module, "")
+	wantEq(t, "button 4 module", hw.Buttons[3].Module, "")
 
-	if len(hw.Pedals) != 2 {
-		t.Fatalf("pedals = %d, want 2", len(hw.Pedals))
-	}
-	if hw.Pedals[0].Name != "Pedal 1" || hw.Pedals[0].Mode != "Classic" {
-		t.Fatalf("pedal 1 = %+v, want {Pedal 1 Classic}", hw.Pedals[0])
-	}
+	wantEq(t, "pedals", len(hw.Pedals), 2)
+	wantEq(t, "pedal 1 name", hw.Pedals[0].Name, "Pedal 1")
+	wantEq(t, "pedal 1 mode", hw.Pedals[0].Mode, "Classic")
 	// The builder intentionally resets pedal targets so a rig never references
 	// a module that is not in its chain.
-	if len(hw.Pedals[0].Targets) != 0 || len(hw.Pedals[1].Targets) != 0 {
-		t.Fatalf("expected no pedal targets: %+v %+v", hw.Pedals[0].Targets, hw.Pedals[1].Targets)
-	}
+	wantEq(t, "pedal 1 targets", len(hw.Pedals[0].Targets), 0)
+	wantEq(t, "pedal 2 targets", len(hw.Pedals[1].Targets), 0)
 }
 
 func TestHardwareAssignmentsSceneLabel(t *testing.T) {
