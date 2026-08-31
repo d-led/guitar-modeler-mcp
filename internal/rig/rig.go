@@ -564,10 +564,7 @@ func (c *chain) fillSPS(cat *catalog.Catalog, spec Spec) error {
 	if len(spec.Suffix) > spsSuffixSlots {
 		return fmt.Errorf("SPS-1 suffix has %d blocks, max %d (slots 10-11)", len(spec.Suffix), spsSuffixSlots)
 	}
-	if err := c.canonicalizeSPS(cat, spec); err != nil {
-		return err
-	}
-	return nil
+	return c.canonicalizeSPS(cat, spec)
 }
 
 func (c *chain) canonicalizeSPS(cat *catalog.Catalog, spec Spec) error {
