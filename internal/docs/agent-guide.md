@@ -277,6 +277,9 @@ Audio, ML Sound Lab, …) instead of a stock cabinet. There are two blocks:
 - The other knobs are `Gain` (dB trim), `HiCut` (Hz), `LoCut` (Hz) and `Mix`
   (%); the block also carries a `Doubling`/stereo second set (`IR2`, `Gain2`,
   …) like Amp and Cab, which the builder writes with safe defaults.
+- `estimate_rig_level` and the build-time loudness guard count the IR's `Gain`
+  (scaled by `Mix`) — a +6 dB IR reads 6 dB louder, and a large positive `Gain`
+  can trip the "very loud" refusal just like a hot cab `OutGain`.
 - **Scenes cannot change the IR file** — a scene only flips blocks on/off. To
   switch between two IRs per scene, place **two IR blocks** (each loaded with
   one file) and let the scenes toggle which one is on.
