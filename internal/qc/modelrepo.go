@@ -273,24 +273,40 @@ func (c *Catalog) Find(query string) (*ModelSpec, bool) {
 	if q == "" {
 		return nil, false
 	}
-	for _, m := range c.byName {
-		for _, m := range m {
-			if strings.EqualFold(m.Name, q) {
-				return m, true
-			}
-		}
+	if m := c.findExact(q); m != nil {
+		return m, true
 	}
-	var best *ModelSpec
+	best := c.findByBasedOn(q)
+	return best, best != nil
+}
+
+// findExact returns the first model whose name equals q, case-insensitively.
+func (c *Catalog) findExact(q string) *ModelSpec {
 	for _, list := range c.byName {
 		for _, m := range list {
-			if m.BasedOn != "" && strings.Contains(strings.ToLower(m.BasedOn), strings.ToLower(q)) {
-				if best == nil || m.ID < best.ID {
-					best = m
-				}
+			if strings.EqualFold(m.Name, q) {
+				return m
 			}
 		}
 	}
-	return best, best != nil
+	return nil
+}
+
+// findByBasedOn returns the lowest-id model whose "based on" text contains q.
+func (c *Catalog) findByBasedOn(q string) *ModelSpec {
+	var best *ModelSpec
+	lower := strings.ToLower(q)
+	for _, list := range c.byName {
+		for _, m := range list {
+			if m.BasedOn == "" || !strings.Contains(strings.ToLower(m.BasedOn), lower) {
+				continue
+			}
+			if best == nil || m.ID < best.ID {
+				best = m
+			}
+		}
+	}
+	return best
 }
 
 var (

@@ -101,52 +101,56 @@ func (c *Catalog) resolveBlock(query string) (*ModelSpec, error) {
 // in the model's parameter order.
 func applyParams(m *ModelSpec, block BlockSpec, model *Model) error {
 	seen := map[int]bool{}
-	appendParam := func(index int, wire float64) {
-		model.Params = append(model.Params, &Param{
-			XIndex:      &Param_Index{Index: uint32(index)},
-			ParamValues: []*ParamValue{{Value: &ParamValue_FloatValue{FloatValue: float32(wire)}}},
-		})
-	}
-
-	apply := func(name string, value any) error {
-		spec, index, ok := m.ResolveParam(name)
-		if !ok {
-			return fmt.Errorf("%s: unknown parameter %q (available: %s)",
-				m.Name, name, strings.Join(m.KnobNames(), ", "))
-		}
-		if seen[index] {
-			return fmt.Errorf("parameter %q set twice", name)
-		}
-		seen[index] = true
-
-		wire, err := encodeValue(spec, value)
-		if err != nil {
-			return err
-		}
-		appendParam(index, wire)
-		return nil
-	}
-
 	for name, v := range block.Params {
-		if err := apply(name, v); err != nil {
+		if err := applyNamedParam(m, model, seen, name, v); err != nil {
 			return err
 		}
 	}
 	for name, v := range block.EncodedParams {
-		_, index, ok := m.ResolveParam(name)
-		if !ok {
-			return fmt.Errorf("%s: unknown parameter %q (available: %s)",
-				m.Name, name, strings.Join(m.KnobNames(), ", "))
+		if err := applyEncodedParam(m, model, seen, name, v); err != nil {
+			return err
 		}
-		if seen[index] {
-			return fmt.Errorf("parameter %q set twice", name)
-		}
-		seen[index] = true
-		if v < 0 || v > 1 {
-			return fmt.Errorf("%s: an encoded value runs 0..1, got %g", name, v)
-		}
-		appendParam(index, v)
 	}
+	return nil
+}
+
+func appendWireParam(model *Model, index int, wire float64) {
+	model.Params = append(model.Params, &Param{
+		XIndex:      &Param_Index{Index: uint32(index)},
+		ParamValues: []*ParamValue{{Value: &ParamValue_FloatValue{FloatValue: float32(wire)}}},
+	})
+}
+
+func applyNamedParam(m *ModelSpec, model *Model, seen map[int]bool, name string, value float64) error {
+	spec, index, ok := m.ResolveParam(name)
+	if !ok {
+		return fmt.Errorf("%s: unknown parameter %q (available: %s)", m.Name, name, strings.Join(m.KnobNames(), ", "))
+	}
+	if seen[index] {
+		return fmt.Errorf("parameter %q set twice", name)
+	}
+	seen[index] = true
+	wire, err := encodeValue(spec, value)
+	if err != nil {
+		return err
+	}
+	appendWireParam(model, index, wire)
+	return nil
+}
+
+func applyEncodedParam(m *ModelSpec, model *Model, seen map[int]bool, name string, value float64) error {
+	_, index, ok := m.ResolveParam(name)
+	if !ok {
+		return fmt.Errorf("%s: unknown parameter %q (available: %s)", m.Name, name, strings.Join(m.KnobNames(), ", "))
+	}
+	if seen[index] {
+		return fmt.Errorf("parameter %q set twice", name)
+	}
+	seen[index] = true
+	if value < 0 || value > 1 {
+		return fmt.Errorf("%s: an encoded value runs 0..1, got %g", name, value)
+	}
+	appendWireParam(model, index, value)
 	return nil
 }
 
