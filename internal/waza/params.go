@@ -287,120 +287,135 @@ func (p Patch) ReadParams() Params {
 // unchanged, so only the values that were specified are touched.
 func (p Patch) WriteParams(pr Params) Patch {
 	out := NewPatch(p.Raw)
+	writeAmpParams(out.Raw, pr)
+	writeBoosterParams(out.Raw, pr)
+	writeModFXParams(out.Raw, pr)
+	writeDelayParams(out.Raw, pr)
+	writeReverbParams(out.Raw, pr)
+	writeSpatialParams(out.Raw, pr)
+	return out
+}
 
-	if idx, ok := ampTypeIndex[pr.AmpType]; ok {
-		out.Raw[offPreampType] = idx
+func setByte(raw []byte, off, v int) {
+	if v > 0 {
+		raw[off] = byte(v)
 	}
-	setByte := func(off int, v int) {
-		if v > 0 {
-			out.Raw[off] = byte(v)
-		}
+}
+
+func writeAmpParams(raw []byte, pr Params) {
+	if idx, ok := ampTypeIndex[pr.AmpType]; ok {
+		raw[offPreampType] = idx
 	}
 	if pr.AmpGain > 0 {
-		out.Raw[offPreampGain] = ampGainEncode(pr.AmpGain)
+		raw[offPreampGain] = ampGainEncode(pr.AmpGain)
 	}
-	setByte(offPreampLevel, pr.AmpVolume)
-	setByte(offPreampBass, pr.AmpBass)
-	setByte(offPreampMiddle, pr.AmpMiddle)
-	setByte(offPreampTreble, pr.AmpTreble)
-	setByte(offPreampPresence, pr.AmpPresence)
+	setByte(raw, offPreampLevel, pr.AmpVolume)
+	setByte(raw, offPreampBass, pr.AmpBass)
+	setByte(raw, offPreampMiddle, pr.AmpMiddle)
+	setByte(raw, offPreampTreble, pr.AmpTreble)
+	setByte(raw, offPreampPresence, pr.AmpPresence)
+}
 
-	if pr.BoosterType != "" {
-		out.Raw[offBoosterOnOff] = 1
-		out.Raw[offBoosterType] = boosterTypeIndex[pr.BoosterType]
-		setByte(offBoosterDrive, pr.BoosterDrive)
-		if pr.BoosterBottom != 0 {
-			out.Raw[offBoosterBottom] = byte(50 + pr.BoosterBottom)
-		}
-		setByte(offBoosterTone, pr.BoosterTone)
-		if pr.BoosterSolo {
-			out.Raw[offBoosterSoloSW] = 1
-			setByte(offBoosterSoloLv, pr.BoosterSoloLevel)
-		} else {
-			out.Raw[offBoosterSoloSW] = 0
-		}
-		setByte(offBoosterLevel, pr.BoosterLevel)
-		setByte(offBoosterMix, pr.BoosterDirectMix)
-	} else {
-		out.Raw[offBoosterOnOff] = 0
+func writeBoosterParams(raw []byte, pr Params) {
+	if pr.BoosterType == "" {
+		raw[offBoosterOnOff] = 0
+		return
 	}
+	raw[offBoosterOnOff] = 1
+	raw[offBoosterType] = boosterTypeIndex[pr.BoosterType]
+	setByte(raw, offBoosterDrive, pr.BoosterDrive)
+	if pr.BoosterBottom != 0 {
+		raw[offBoosterBottom] = byte(50 + pr.BoosterBottom)
+	}
+	setByte(raw, offBoosterTone, pr.BoosterTone)
+	if pr.BoosterSolo {
+		raw[offBoosterSoloSW] = 1
+		setByte(raw, offBoosterSoloLv, pr.BoosterSoloLevel)
+	} else {
+		raw[offBoosterSoloSW] = 0
+	}
+	setByte(raw, offBoosterLevel, pr.BoosterLevel)
+	setByte(raw, offBoosterMix, pr.BoosterDirectMix)
+}
 
-	if pr.ModType != "" {
-		out.Raw[offFX1OnOff] = 1
-		out.Raw[offFX1Type] = modFXTypeIndex[pr.ModType]
-		applyKnobs(out.Raw, pr.ModType, false, pr.ModParams)
-	} else {
-		out.Raw[offFX1OnOff] = 0
-	}
-	if pr.FXType != "" {
-		out.Raw[offFX2OnOff] = 1
-		out.Raw[offFX2Type] = modFXTypeIndex[pr.FXType]
-		applyKnobs(out.Raw, pr.FXType, true, pr.FXParams)
-	} else {
-		out.Raw[offFX2OnOff] = 0
-	}
+func writeModFXParams(raw []byte, pr Params) {
+	writeModOrFX(raw, offFX1OnOff, offFX1Type, pr.ModType, pr.ModParams, false)
+	writeModOrFX(raw, offFX2OnOff, offFX2Type, pr.FXType, pr.FXParams, true)
+}
 
-	if pr.DelayType != "" {
-		out.Raw[offDelayOnOff] = 1
-		out.Raw[offDelayType] = delayTypeIndex[pr.DelayType]
-		if pr.DelayTime > 0 {
-			out.Raw[offDelayTimeHi] = byte(pr.DelayTime / 128)
-			out.Raw[offDelayTimeLo] = byte(pr.DelayTime % 128)
-		}
-		setByte(offDelayFeedback, pr.DelayFeedback)
-		setByte(offDelayHighCut, pr.DelayHighCut)
-		setByte(offDelayLevel, pr.DelayLevel)
-		setByte(offDelayDirectMix, pr.DelayDirectMix)
-		// One requested delay means the second delay block stays off.
-		out.Raw[offDelay2OnOff] = 0
-	} else {
-		out.Raw[offDelayOnOff] = 0
-		out.Raw[offDelay2OnOff] = 0
+func writeModOrFX(raw []byte, onOff, typ int, name string, params map[string]float64, fx bool) {
+	if name == "" {
+		raw[onOff] = 0
+		return
 	}
+	raw[onOff] = 1
+	raw[typ] = modFXTypeIndex[name]
+	applyKnobs(raw, name, fx, params)
+}
 
-	if pr.ReverbType != "" {
-		out.Raw[offReverbOnOff] = 1
-		out.Raw[offReverbType] = reverbTypeIndex[pr.ReverbType]
+func writeDelayParams(raw []byte, pr Params) {
+	if pr.DelayType == "" {
+		raw[offDelayOnOff] = 0
+		raw[offDelay2OnOff] = 0
+		return
+	}
+	raw[offDelayOnOff] = 1
+	raw[offDelayType] = delayTypeIndex[pr.DelayType]
+	if pr.DelayTime > 0 {
+		raw[offDelayTimeHi] = byte(pr.DelayTime / 128)
+		raw[offDelayTimeLo] = byte(pr.DelayTime % 128)
+	}
+	setByte(raw, offDelayFeedback, pr.DelayFeedback)
+	setByte(raw, offDelayHighCut, pr.DelayHighCut)
+	setByte(raw, offDelayLevel, pr.DelayLevel)
+	setByte(raw, offDelayDirectMix, pr.DelayDirectMix)
+	// One requested delay means the second delay block stays off.
+	raw[offDelay2OnOff] = 0
+}
+
+func writeReverbParams(raw []byte, pr Params) {
+	if pr.ReverbType == "" {
+		raw[offReverbOnOff] = 0
 	} else {
-		out.Raw[offReverbOnOff] = 0
+		raw[offReverbOnOff] = 1
+		raw[offReverbType] = reverbTypeIndex[pr.ReverbType]
 	}
 	if pr.ReverbTime > 0 {
-		out.Raw[offReverbTime] = reverbTimeEncode(pr.ReverbTime)
+		raw[offReverbTime] = reverbTimeEncode(pr.ReverbTime)
 	}
 	if pr.ReverbPreDelay > 0 {
-		out.Raw[offReverbPreDelay] = byte(pr.ReverbPreDelay / 128)
-		out.Raw[offReverbPreDelay+1] = byte(pr.ReverbPreDelay % 128)
+		raw[offReverbPreDelay] = byte(pr.ReverbPreDelay / 128)
+		raw[offReverbPreDelay+1] = byte(pr.ReverbPreDelay % 128)
 	}
-	setByte(offReverbLevel, pr.ReverbLevel)
-	setByte(offReverbDirectMix, pr.ReverbDirectMix)
+	setByte(raw, offReverbLevel, pr.ReverbLevel)
+	setByte(raw, offReverbDirectMix, pr.ReverbDirectMix)
+}
 
+func writeSpatialParams(raw []byte, pr Params) {
 	if idx, ok := gyroTypeIndex[pr.Position]; ok {
-		out.Raw[offGyroType] = idx
+		raw[offGyroType] = idx
 	}
 	if pr.GuitarPosition != 0 {
-		out.Raw[offGyroPos] = gyroPositionEncode(pr.GuitarPosition)
+		raw[offGyroPos] = gyroPositionEncode(pr.GuitarPosition)
 	}
 	if idx, ok := ambienceTypeIndex[pr.Ambience]; ok {
-		out.Raw[offAmbType] = idx
+		raw[offAmbType] = idx
 	}
-	setByte(offAmbLevel, pr.AmbienceLevel)
+	setByte(raw, offAmbLevel, pr.AmbienceLevel)
 	if idx, ok := modeIndex[pr.Mode]; ok {
-		out.Raw[offModeGreen] = idx
-		out.Raw[offModeRed] = idx
-		out.Raw[offModeYellow] = idx
+		raw[offModeGreen] = idx
+		raw[offModeRed] = idx
+		raw[offModeYellow] = idx
 	}
-
 	if pr.NSOn != nil {
 		if *pr.NSOn {
-			out.Raw[offNSOn] = 1
+			raw[offNSOn] = 1
 		} else {
-			out.Raw[offNSOn] = 0
+			raw[offNSOn] = 0
 		}
 	}
-	setByte(offNSThreshold, pr.NSThreshold)
-	setByte(offNSRelease, pr.NSRelease)
-
-	return out
+	setByte(raw, offNSThreshold, pr.NSThreshold)
+	setByte(raw, offNSRelease, pr.NSRelease)
 }
 
 // ampGainEncode stores the amp gain knob (0-100) as the Katana gain byte:
