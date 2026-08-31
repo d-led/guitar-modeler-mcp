@@ -338,16 +338,20 @@ func TestSetupCardShowsValues(t *testing.T) {
 	html := d.SetupCardHTML(s)
 	for _, want := range []string{
 		"BROWN", "T-SCREAM", "TAPE ECHO", "HALL REVERB",
-		"AMP GAIN", "55", "AMP VOLUME", "68", "AMP BASS", "42",
-		"AMP MIDDLE", "50", "AMP TREBLE", "60", "AMP PRESENCE", "75",
-		"BOOSTER DRIVE", "30", "DELAY TIME", "380 ms", "DELAY FEEDBACK", "32", "REVERB LEVEL", "45",
+		"GAIN", "55", "VOLUME", "68", "BASS", "42",
+		"MIDDLE", "50", "TREBLE", "60", "PRESENCE", "75",
+		"DRIVE", "30", "TIME", "380 ms", "FEEDBACK", "32", "LEVEL", "45",
 	} {
 		if !strings.Contains(html, want) {
 			t.Fatalf("setup card missing %q:\n%s", want, html)
 		}
 	}
+	// The amp knobs sit inside the AMP block, before the delay and reverb blocks.
+	if amp, gain := strings.Index(html, "AMP"), strings.Index(html, "GAIN"); amp < 0 || gain < 0 || gain < amp {
+		t.Fatalf("expected GAIN grouped after the AMP block:\n%s", html)
+	}
 	// Unspecified knobs must not leak zeros.
-	if strings.Contains(html, "BOOSTER TONE") || strings.Contains(html, "DELAY LEVEL") {
+	if strings.Contains(html, "TONE") || strings.Contains(html, "HIGH CUT") {
 		t.Fatalf("setup card shows unspecified knobs:\n%s", html)
 	}
 }
