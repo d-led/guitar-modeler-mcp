@@ -111,64 +111,88 @@ func (c *Catalog) TranslateAmp(query string) []Match {
 
 	matches := make([]Match, 0)
 	for _, a := range amps {
-		brand := normalize(a.Brand)
-		realModel := normalize(a.RealModel)
-		model := normalize(a.Model)
-		channel := normalize(a.Channel)
-		wattage := normalize(a.Wattage)
-		var styles []string
-		for _, s := range a.Style {
-			styles = append(styles, normalize(s))
-		}
-
-		score := 0
-		var reasons []string
-
-		if brand != "" && (brand == q || strings.Contains(q, brand) || strings.Contains(brand, q)) {
-			score += 4
-			reasons = append(reasons, "brand "+a.Brand)
-		}
-		if realModel != "" && (strings.Contains(q, realModel) || strings.Contains(realModel, q)) {
-			score += 5
-			reasons = append(reasons, "model "+a.RealModel)
-		}
-
-		for _, w := range words {
-			if containsWord(realModel, w) {
-				score += 2
-			}
-			if containsWord(brand, w) {
-				score += 2
-			}
-			if containsWord(model, w) {
-				score++
-			}
-			if containsWord(channel, w) {
-				score++
-			}
-			if containsWord(wattage, w) {
-				score++
-			}
-			for _, st := range styles {
-				if st == w {
-					score++
-				}
-			}
-		}
-
-		if score == 0 {
+		score, reason, ok := scoreAmpMatch(a, q, words)
+		if !ok {
 			continue
-		}
-
-		reason := strings.Join(reasons, ", ")
-		if reason == "" {
-			reason = "close match"
 		}
 		matches = append(matches, Match{Amp: a, Score: score, Reason: reason})
 	}
 
 	sort.SliceStable(matches, func(i, j int) bool { return matches[i].Score > matches[j].Score })
 	return matches
+}
+
+// scoreAmpMatch rates one amp against a normalized query and returns the reason
+// for the match, or ok=false when the amp is irrelevant.
+func scoreAmpMatch(a Amp, q string, words []string) (score int, reason string, ok bool) {
+	brand := normalize(a.Brand)
+	realModel := normalize(a.RealModel)
+	model := normalize(a.Model)
+	channel := normalize(a.Channel)
+	wattage := normalize(a.Wattage)
+
+	var reasons []string
+	if brandMatches(q, brand) {
+		score += 4
+		reasons = append(reasons, "brand "+a.Brand)
+	}
+	if modelMatches(q, realModel) {
+		score += 5
+		reasons = append(reasons, "model "+a.RealModel)
+	}
+
+	for _, w := range words {
+		score += ampWordScore(w, realModel, brand, model, channel, wattage, a.Style)
+	}
+
+	if score == 0 {
+		return 0, "", false
+	}
+	reason = strings.Join(reasons, ", ")
+	if reason == "" {
+		reason = "close match"
+	}
+	return score, reason, true
+}
+
+func brandMatches(q, brand string) bool {
+	return brand != "" && (brand == q || strings.Contains(q, brand) || strings.Contains(brand, q))
+}
+
+func modelMatches(q, realModel string) bool {
+	return realModel != "" && (strings.Contains(q, realModel) || strings.Contains(realModel, q))
+}
+
+func ampWordScore(w, realModel, brand, model, channel, wattage string, styles []string) int {
+	score := 0
+	if containsWord(realModel, w) {
+		score += 2
+	}
+	if containsWord(brand, w) {
+		score += 2
+	}
+	if containsWord(model, w) {
+		score++
+	}
+	if containsWord(channel, w) {
+		score++
+	}
+	if containsWord(wattage, w) {
+		score++
+	}
+	if containsNormalizedStyle(styles, w) {
+		score++
+	}
+	return score
+}
+
+func containsNormalizedStyle(styles []string, w string) bool {
+	for _, st := range styles {
+		if normalize(st) == w {
+			return true
+		}
+	}
+	return false
 }
 
 // TranslateCab returns cabinet models matching a free-form description.
