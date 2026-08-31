@@ -73,54 +73,111 @@ func (b *Builder) validateBlockParams(canon string, params map[string]any) error
 	}
 
 	for key, value := range params {
-		if structuralParams[key] {
-			if key == "Colour" {
-				if s, ok := value.(string); ok && !colourPalette[s] {
-					return fmt.Errorf("module %q: invalid colour %q", canon, s)
-				}
-			}
+		handled, err := b.validateSpecialParam(canon, key, value)
+		if err != nil {
+			return err
+		}
+		if handled {
 			continue
 		}
+		if err := validateParamValue(canon, key, value, known, spec, hasSpec); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
-		switch {
-		case canon == "Amp" && (key == "Type" || key == "Type2"):
-			if s, ok := value.(string); ok {
-				if _, found := b.cat.Amp(s); !found {
-					return fmt.Errorf("unknown amp model %q", s)
-				}
+// validateSpecialParam handles the parameters that are not validated against
+// the per-module spec: the builder's own structural fields and the
+// amp/cab/mic model selections, which are checked against the catalog. handled
+// reports whether the parameter was consumed here.
+func (b *Builder) validateSpecialParam(canon, key string, value any) (handled bool, err error) {
+	if structuralParams[key] {
+		if key == "Colour" {
+			if s, ok := value.(string); ok && !colourPalette[s] {
+				return true, fmt.Errorf("module %q: invalid colour %q", canon, s)
 			}
-			continue
-		case canon == "Cab" && (key == "CabType" || key == "CabType2"):
-			if s, ok := value.(string); ok {
-				if _, found := b.cat.Cab(s); !found {
-					return fmt.Errorf("unknown cabinet model %q", s)
-				}
-			}
-			continue
-		case canon == "Cab" && (key == "MicType" || key == "MicType2"):
-			if s, ok := value.(string); ok {
-				if _, found := b.cat.Mic(s); !found {
-					return fmt.Errorf("unknown microphone model %q", s)
-				}
-			}
-			continue
 		}
+		return true, nil
+	}
+	if validate, ok := b.modelSelectionValidator(canon, key); ok {
+		return true, validate(value)
+	}
+	return false, nil
+}
 
-		if !known[key] {
-			return fmt.Errorf("module %q has no parameter %q", canon, key)
+// modelSelectionValidator returns the catalog lookup for a model-selection
+// parameter (amp Type, cab CabType, cab MicType), or ok=false for anything
+// else.
+func (b *Builder) modelSelectionValidator(canon, key string) (func(any) error, bool) {
+	if canon == "Amp" && isAmpTypeKey(key) {
+		return b.validateAmpModel, true
+	}
+	if canon == "Cab" && isCabTypeKey(key) {
+		return b.validateCabModel, true
+	}
+	if canon == "Cab" && isMicKey(key) {
+		return b.validateMicModel, true
+	}
+	return nil, false
+}
+
+func isAmpTypeKey(key string) bool {
+	return key == "Type" || key == "Type2"
+}
+
+func isCabTypeKey(key string) bool {
+	return key == "CabType" || key == "CabType2"
+}
+
+func isMicKey(key string) bool {
+	return key == "MicType" || key == "MicType2"
+}
+
+func (b *Builder) validateAmpModel(value any) error {
+	if s, ok := value.(string); ok {
+		if _, found := b.cat.Amp(s); !found {
+			return fmt.Errorf("unknown amp model %q", s)
 		}
-		if canon == "Cab" {
-			if bounds, ok := cabLevelBounds[key]; ok {
-				if n, ok := asFloat(value); ok && (n < bounds.min || n > bounds.max) {
-					return fmt.Errorf("module %q: %s = %v dB, must be within [%v, %v]", canon, key, n, bounds.min, bounds.max)
-				}
+	}
+	return nil
+}
+
+func (b *Builder) validateCabModel(value any) error {
+	if s, ok := value.(string); ok {
+		if _, found := b.cat.Cab(s); !found {
+			return fmt.Errorf("unknown cabinet model %q", s)
+		}
+	}
+	return nil
+}
+
+func (b *Builder) validateMicModel(value any) error {
+	if s, ok := value.(string); ok {
+		if _, found := b.cat.Mic(s); !found {
+			return fmt.Errorf("unknown microphone model %q", s)
+		}
+	}
+	return nil
+}
+
+// validateParamValue checks a regular parameter: it must be known, in the
+// cab's level bounds when it is a cab trim, and valid against the module spec.
+func validateParamValue(canon, key string, value any, known map[string]bool, spec modspec.Module, hasSpec bool) error {
+	if !known[key] {
+		return fmt.Errorf("module %q has no parameter %q", canon, key)
+	}
+	if canon == "Cab" {
+		if bounds, ok := cabLevelBounds[key]; ok {
+			if n, ok := asFloat(value); ok && (n < bounds.min || n > bounds.max) {
+				return fmt.Errorf("module %q: %s = %v dB, must be within [%v, %v]", canon, key, n, bounds.min, bounds.max)
 			}
 		}
-		if hasSpec {
-			if p, ok := spec[key]; ok {
-				if err := p.Validate(value); err != nil {
-					return fmt.Errorf("module %q: %w", canon, err)
-				}
+	}
+	if hasSpec {
+		if p, ok := spec[key]; ok {
+			if err := p.Validate(value); err != nil {
+				return fmt.Errorf("module %q: %w", canon, err)
 			}
 		}
 	}
