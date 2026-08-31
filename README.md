@@ -5,11 +5,10 @@
 > guarantee compatibility with every device or firmware version. Well-meant
 > contributions (fixes, corrections, new devices) are always welcome.
 
-> **Tired of mindlessly tweaking parameters, hoping to land that one sound?**
-> Describe the tone you're chasing — a song, an artist, even just a pickup type —
-> and let AI agents do the dialling. This MCP hands them the amp/cab/effect
-> catalogs, the real device preset formats and the level/placement guardrails,
-> so they write you an actual, loadable preset instead of vague advice.
+> Tired of tweaking parameters by hand hoping to land a sound? This MCP gives
+> AI assistants the device catalogs and preset formats, so they can write
+> presets for you. It's open source and comes with no guarantee — always check
+> the result on your device.
 
 **What it does:** designs guitar presets for real modelers — HeadRush Gigboard,
 Mooer GE150 Pro / GE200 / GE100 Pro, BOSS Waza Air, Yamaha THR and Neural DSP
