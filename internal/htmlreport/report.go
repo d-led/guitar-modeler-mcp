@@ -55,13 +55,45 @@ func Render(rf *rig.RigFile, note string, cat *catalog.Catalog) (string, error) 
 	}
 	patch := content.Data.Patch
 
-	tempo := ""
-	if rigNode, ok := patch.Children["Rig"]; ok {
-		if item, ok := rigNode.Children["Tempo"]; ok && item.Value != nil {
-			tempo = formatNumber(*item.Value)
-		}
+	modules := layoutModules(patch, moduleChain(patch, cat))
+
+	hw, err := rig.HardwareAssignments(rf)
+	if err != nil {
+		return "", err
 	}
 
+	var sb strings.Builder
+	if err := page.Execute(&sb, pageData{
+		Name:      rf.Name(),
+		Note:      note,
+		Tempo:     tempoOf(patch),
+		Generated: time.Now().Format("2006-01-02 15:04"),
+		Chain:     modules,
+		ChainCSS:  template.CSS(cardchain.CSS),
+		ChainHTML: template.HTML(chainHTML(patch)),
+		Buttons:   hw.Buttons,
+		Pedals:    hw.Pedals,
+	}); err != nil {
+		return "", err
+	}
+	return sb.String(), nil
+}
+
+func tempoOf(patch rig.Patch) string {
+	rigNode, ok := patch.Children["Rig"]
+	if !ok {
+		return ""
+	}
+	item, ok := rigNode.Children["Tempo"]
+	if !ok || item.Value == nil {
+		return ""
+	}
+	return formatNumber(*item.Value)
+}
+
+// moduleChain walks the patch child order and builds a moduleInfo per movable
+// module (skipping the fixed Chain/Rig/Input/Output/Mix bookkeeping nodes).
+func moduleChain(patch rig.Patch, cat *catalog.Catalog) []moduleInfo {
 	chain := make([]moduleInfo, 0, len(patch.ChildOrder))
 	for _, name := range patch.ChildOrder {
 		if isFixed(name) {
@@ -73,9 +105,12 @@ func Render(rf *rig.RigFile, note string, cat *catalog.Catalog) (string, error) 
 		}
 		chain = append(chain, moduleInfoFor(name, node, cat))
 	}
+	return chain
+}
 
-	// Lay the module cards out in grid-slot order and stamp each with its slot
-	// number, so the circled numbers in the text match the chain picture.
+// layoutModules places the modules in grid-slot order and stamps each with its
+// slot number, so the circled numbers in the text match the chain picture.
+func layoutModules(patch rig.Patch, chain []moduleInfo) []moduleInfo {
 	byName := make(map[string]moduleInfo, len(chain))
 	for _, info := range chain {
 		byName[info.Name] = info
@@ -93,27 +128,7 @@ func Render(rf *rig.RigFile, note string, cat *catalog.Catalog) (string, error) 
 		info.Slot = i + 1
 		modules = append(modules, info)
 	}
-
-	hw, err := rig.HardwareAssignments(rf)
-	if err != nil {
-		return "", err
-	}
-
-	var sb strings.Builder
-	if err := page.Execute(&sb, pageData{
-		Name:      rf.Name(),
-		Note:      note,
-		Tempo:     tempo,
-		Generated: time.Now().Format("2006-01-02 15:04"),
-		Chain:     modules,
-		ChainCSS:  template.CSS(cardchain.CSS),
-		ChainHTML: template.HTML(chainHTML(patch)),
-		Buttons:   hw.Buttons,
-		Pedals:    hw.Pedals,
-	}); err != nil {
-		return "", err
-	}
-	return sb.String(), nil
+	return modules
 }
 
 func isFixed(name string) bool {
@@ -126,7 +141,12 @@ func isFixed(name string) bool {
 
 func moduleInfoFor(name string, node *rig.Node, cat *catalog.Catalog) moduleInfo {
 	info := moduleInfo{Name: name, On: nodeEnabled(node)}
+	info.Params = moduleParams(name, node)
+	enrichModule(&info, name, node, cat)
+	return info
+}
 
+func moduleParams(name string, node *rig.Node) []paramKV {
 	defaults := rig.Defaults(name)
 	params := make([]paramKV, 0, len(node.ChildOrder))
 	for _, key := range node.ChildOrder {
@@ -144,12 +164,13 @@ func moduleInfoFor(name string, node *rig.Node, cat *catalog.Catalog) moduleInfo
 		}
 		params = append(params, paramKV{Key: key, Value: val, Changed: changed})
 	}
-	info.Params = params
+	return params
+}
 
+func enrichModule(info *moduleInfo, name string, node *rig.Node, cat *catalog.Catalog) {
 	switch {
 	case strings.EqualFold(name, "Amp"):
-		model := nodeString(node, "Type")
-		if a, ok := cat.Amp(model); ok {
+		if a, ok := cat.Amp(nodeString(node, "Type")); ok {
 			info.Amp = &a
 			info.Description = a.Description
 		}
@@ -169,7 +190,6 @@ func moduleInfoFor(name string, node *rig.Node, cat *catalog.Catalog) moduleInfo
 			info.Description = f.Description
 		}
 	}
-	return info
 }
 
 func nodeEnabled(node *rig.Node) bool {
