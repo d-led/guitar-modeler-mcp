@@ -22,29 +22,19 @@ func TestBuildPresetLaysOutASerialChain(t *testing.T) {
 		t.Fatalf("BuildPreset: %v", err)
 	}
 
-	if len(preset.Chains) != 1 {
-		t.Fatalf("chains = %d, want 1", len(preset.Chains))
-	}
+	wantEq(t, "chains", len(preset.Chains), 1)
 	chain := preset.Chains[0]
-	if chain.GetInPortid() != InputInput1 || chain.GetOutPortid() != OutputMultiple {
-		t.Fatalf("ports = %d/%d, want %d/%d", chain.GetInPortid(), chain.GetOutPortid(), InputInput1, OutputMultiple)
-	}
-	if len(chain.Models) != 3 {
-		t.Fatalf("models = %d, want 3", len(chain.Models))
-	}
+	wantEq(t, "in port", chain.GetInPortid(), InputInput1)
+	wantEq(t, "out port", chain.GetOutPortid(), OutputMultiple)
+	wantEq(t, "models", len(chain.Models), 3)
 	// TS808 = drive id 5, JCM800 = amp id 1001; the cab resolves to category 12.
-	if got := chain.Models[0].GetHash(); got != 5 {
-		t.Fatalf("block 0 hash = %d, want 5 (TS808)", got)
-	}
-	if got := chain.Models[1].GetHash(); got != 1001 {
-		t.Fatalf("block 1 hash = %d, want 1001 (JCM800)", got)
-	}
+	wantEq(t, "block 0 hash", chain.Models[0].GetHash(), uint32(5))
+	wantEq(t, "block 1 hash", chain.Models[1].GetHash(), uint32(1001))
 	if got := chain.Models[2].GetHash(); got < 12000 || got >= 13000 {
 		t.Fatalf("block 2 hash = %d, want a guitar cab (12xxx)", got)
 	}
-	if len(chain.OutputControl) != 1 || chain.OutputControl[0].GetHash() != laneOutputHash {
-		t.Fatalf("output control = %+v, want lane output (%d)", chain.OutputControl, laneOutputHash)
-	}
+	wantEq(t, "output control count", len(chain.OutputControl), 1)
+	wantEq(t, "output control hash", chain.OutputControl[0].GetHash(), uint32(laneOutputHash))
 }
 
 func TestBuildPresetEncodesGainLinearly(t *testing.T) {

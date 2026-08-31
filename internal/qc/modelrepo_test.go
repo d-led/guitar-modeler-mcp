@@ -40,20 +40,12 @@ func TestResolveParamSynonyms(t *testing.T) {
 	}
 
 	// Exact names win, even when a synonym list would also apply.
-	if spec, _, ok := twin.ResolveParam("TREBLE"); !ok || spec.Name != "TREBLE" {
-		t.Errorf("exact TREBLE = %q, want TREBLE", spec.Name)
-	}
+	assertResolvesTo(t, twin, "TREBLE", "TREBLE")
 	// The Fender Twin's gain knob is named VOLUME; MIDDLE is the catalog MID.
-	if spec, _, ok := twin.ResolveParam("GAIN"); !ok || spec.Name != "VOLUME" {
-		t.Errorf("GAIN → %q, want VOLUME", spec.Name)
-	}
-	if spec, _, ok := twin.ResolveParam("MIDDLE"); !ok || spec.Name != "MID" {
-		t.Errorf("MIDDLE → %q, want MID", spec.Name)
-	}
+	assertResolvesTo(t, twin, "GAIN", "VOLUME")
+	assertResolvesTo(t, twin, "MIDDLE", "MID")
 	// PRESENCE has no synonym fallback: it is genuinely absent on this amp.
-	if _, _, ok := twin.ResolveParam("PRESENCE"); ok {
-		t.Error("PRESENCE should not resolve on the Fender Twin Reverb")
-	}
+	assertNoResolve(t, twin, "PRESENCE")
 
 	// DRIVE is not the TS808's knob name — the synonym maps it to OVERDRIVE,
 	// which is exactly the guess the agent makes and previously had to retry.
@@ -61,8 +53,26 @@ func TestResolveParamSynonyms(t *testing.T) {
 	if !ok {
 		t.Fatal("Ibanez TS808 not found")
 	}
-	if spec, _, ok := ts.ResolveParam("DRIVE"); !ok || spec.Name != "OVERDRIVE" {
-		t.Errorf("DRIVE → %q, want OVERDRIVE", spec.Name)
+	assertResolvesTo(t, ts, "DRIVE", "OVERDRIVE")
+}
+
+// assertResolvesTo fails unless the model resolves param to the named knob.
+func assertResolvesTo(t *testing.T, m *ModelSpec, param, want string) {
+	t.Helper()
+	spec, _, ok := m.ResolveParam(param)
+	if !ok {
+		t.Fatalf("%s: %q did not resolve, want %q", m.Name, param, want)
+	}
+	if spec.Name != want {
+		t.Fatalf("%s: %q → %q, want %q", m.Name, param, spec.Name, want)
+	}
+}
+
+// assertNoResolve fails when the model resolves param to any knob.
+func assertNoResolve(t *testing.T, m *ModelSpec, param string) {
+	t.Helper()
+	if _, _, ok := m.ResolveParam(param); ok {
+		t.Fatalf("%s: %q should not resolve", m.Name, param)
 	}
 }
 
@@ -109,31 +119,21 @@ func TestNormalizeLawOnRealModels(t *testing.T) {
 	// Low-High Cut HPF FREQ: 20..20000 Hz, skew 0.3. Wire 0.25 read 217 Hz on
 	// the unit's screen (pyquadcortex hardware reading).
 	lhc, _ := c.Model(4003)
-	hp, _, ok := lhc.Param("HPF FREQ")
-	if !ok {
-		t.Fatal("Low-High Cut has no HPF FREQ")
-	}
+	hp := mustParam(t, lhc, "HPF FREQ")
 	real, err := hp.Denormalize(0.25)
 	if err != nil {
 		t.Fatalf("Denormalize: %v", err)
 	}
-	if math.Abs(real-217) > 1 {
-		t.Fatalf("HPF FREQ at wire 0.25 = %g Hz, want 217", real)
-	}
+	assertNear(t, "HPF FREQ at wire 0.25", real, 217, 1)
 
 	// Env. Filter FREQ: 100..10000 Hz, LOG_SKEW (0.3). Wire 0.25 read 197 Hz.
 	env, _ := c.Model(24003)
-	freq, _, ok := env.Param("FREQ")
-	if !ok {
-		t.Fatal("Env. Filter has no FREQ")
-	}
+	freq := mustParam(t, env, "FREQ")
 	real, err = freq.Denormalize(0.25)
 	if err != nil {
 		t.Fatalf("Denormalize: %v", err)
 	}
-	if math.Abs(real-197) > 1 {
-		t.Fatalf("Env. Filter FREQ at wire 0.25 = %g Hz, want 197", real)
-	}
+	assertNear(t, "Env. Filter FREQ at wire 0.25", real, 197, 1)
 
 	// A cab LEVEL with MIN_CABSIM_DB: -40..6 dB, skew 4.93. 0 dB sits at wire
 	// 0.5, and converting 0 dB back must round-trip to 0.
@@ -141,23 +141,45 @@ func TestNormalizeLawOnRealModels(t *testing.T) {
 	if cab == nil {
 		t.Skip("no model 12000 in this catalog")
 	}
-	level, _, ok := cab.Param("LEVEL")
-	if !ok {
-		t.Fatal("Default Cabsim has no LEVEL")
-	}
+	level := mustParam(t, cab, "LEVEL")
 	wire, err := level.Normalize(0)
 	if err != nil {
 		t.Fatalf("Normalize(0): %v", err)
 	}
-	if math.Abs(wire-0.5) > 0.01 {
-		t.Fatalf("cab LEVEL Normalize(0 dB) = %g, want ~0.5", wire)
-	}
+	assertNear(t, "cab LEVEL Normalize(0 dB)", wire, 0.5, 0.01)
 	back, err := level.Denormalize(0.5)
 	if err != nil {
 		t.Fatalf("Denormalize(0.5): %v", err)
 	}
-	if math.Abs(back) > 0.05 {
-		t.Fatalf("cab LEVEL Denormalize(0.5) = %g dB, want 0", back)
+	assertNear(t, "cab LEVEL Denormalize(0.5)", back, 0, 0.05)
+}
+
+// mustParam returns the named parameter of a model, failing when absent.
+func mustParam(t *testing.T, m *ModelSpec, name string) ParamSpec {
+	t.Helper()
+	if m == nil {
+		t.Fatalf("model not found")
+	}
+	p, _, ok := m.Param(name)
+	if !ok {
+		t.Fatalf("%s has no %s", m.Name, name)
+	}
+	return p
+}
+
+// assertNear fails unless got is within tol of want.
+func assertNear(t *testing.T, name string, got, want, tol float64) {
+	t.Helper()
+	if math.Abs(got-want) > tol {
+		t.Fatalf("%s = %g, want %g (±%g)", name, got, want, tol)
+	}
+}
+
+// wantEq fails when got differs from want, naming the checked field.
+func wantEq[T comparable](t *testing.T, name string, got, want T) {
+	t.Helper()
+	if got != want {
+		t.Fatalf("%s = %v, want %v", name, got, want)
 	}
 }
 
