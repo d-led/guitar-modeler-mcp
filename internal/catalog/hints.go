@@ -91,13 +91,15 @@ func init() {
 	if err := json.Unmarshal(hintsJSON, &h); err != nil {
 		return
 	}
-	ampBy := indexHints(h.Amps)
-	cabBy := indexHints(h.Cabs)
-	micBy := indexHints(h.Mics)
-	fxBy := indexHints(h.FXs)
+	enrichAmps(indexHints(h.Amps))
+	enrichCabs(indexHints(h.Cabs))
+	enrichMics(indexHints(h.Mics))
+	enrichFX(indexHints(h.FXs))
+}
 
+func enrichAmps(by map[string]hintEntry) {
 	for i := range amps {
-		if e, ok := lookupHint(ampBy, amps[i].Model); ok {
+		if e, ok := lookupHint(by, amps[i].Model); ok {
 			amps[i].ModeledAfter = modeledAfter(e.Brand, e.Model)
 			amps[i].Confirmed = e.Confirmed
 		}
@@ -105,14 +107,20 @@ func init() {
 			amps[i].ModeledAfter = modeledAfter(amps[i].Brand, amps[i].RealModel)
 		}
 	}
+}
+
+func enrichCabs(by map[string]hintEntry) {
 	for i := range cabs {
-		if e, ok := lookupHint(cabBy, cabs[i].Model); ok {
+		if e, ok := lookupHint(by, cabs[i].Model); ok {
 			cabs[i].ModeledAfter = modeledAfter(e.Brand, e.Model)
 			cabs[i].Confirmed = e.Confirmed
 		}
 	}
+}
+
+func enrichMics(by map[string]hintEntry) {
 	for i := range mics {
-		if e, ok := lookupHint(micBy, mics[i].Model); ok {
+		if e, ok := lookupHint(by, mics[i].Model); ok {
 			mics[i].ModeledAfter = modeledAfter(e.Brand, e.Model)
 			mics[i].Confirmed = e.Confirmed
 		}
@@ -120,8 +128,11 @@ func init() {
 			mics[i].ModeledAfter = modeledAfter("", mics[i].RealModel)
 		}
 	}
+}
+
+func enrichFX(by map[string]hintEntry) {
 	for i := range fx {
-		if e, ok := lookupHint(fxBy, fx[i].Name); ok {
+		if e, ok := lookupHint(by, fx[i].Name); ok {
 			fx[i].ModeledAfter = modeledAfter(e.Brand, e.Model)
 			fx[i].Confirmed = e.Confirmed
 		}
