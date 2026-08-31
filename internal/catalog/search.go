@@ -31,52 +31,79 @@ func (c *Catalog) Search(query, kind string) []SearchResult {
 	}
 	k := strings.ToLower(strings.TrimSpace(kind))
 
-	var results []SearchResult
-	if k == "" || k == "amp" {
-		for _, a := range amps {
-			hardware := a.ModeledAfter
-			if hardware == "" {
-				hardware = a.Brand + " " + a.RealModel
-			}
-			if r, ok := matchEntry("amp", a.Model, hardware, "", a.Description, q); ok {
-				results = append(results, r)
-			}
-		}
-	}
-	if k == "" || k == "cab" {
-		for _, cb := range cabs {
-			hardware := cb.ModeledAfter
-			if hardware == "" {
-				hardware = cb.Speakers + " " + cb.SpeakersRef
-			}
-			if r, ok := matchEntry("cab", cb.Model, hardware, "", cb.Description, q); ok {
-				results = append(results, r)
-			}
-		}
-	}
-	if k == "" || k == "mic" {
-		for _, m := range mics {
-			hardware := m.ModeledAfter
-			if hardware == "" {
-				hardware = m.Kind + " " + m.RealModel
-			}
-			if r, ok := matchEntry("mic", m.Model, hardware, "", m.Description, q); ok {
-				results = append(results, r)
-			}
-		}
-	}
-	if k == "" || k == "fx" {
-		for _, f := range fx {
-			if r, ok := matchEntry("fx", f.Name, f.ModeledAfter, f.Category, f.Description, q); ok {
-				r.Gain = f.Gain
-				results = append(results, r)
-			}
-		}
-	}
+	results := searchAmps(k, q)
+	results = append(results, searchCabs(k, q)...)
+	results = append(results, searchMics(k, q)...)
+	results = append(results, searchFX(k, q)...)
 
 	sort.SliceStable(results, func(i, j int) bool { return results[i].Score > results[j].Score })
 	if len(results) > 20 {
 		results = results[:20]
+	}
+	return results
+}
+
+func searchAmps(k, q string) []SearchResult {
+	if k != "" && k != "amp" {
+		return nil
+	}
+	var results []SearchResult
+	for _, a := range amps {
+		hardware := a.ModeledAfter
+		if hardware == "" {
+			hardware = a.Brand + " " + a.RealModel
+		}
+		if r, ok := matchEntry("amp", a.Model, hardware, "", a.Description, q); ok {
+			results = append(results, r)
+		}
+	}
+	return results
+}
+
+func searchCabs(k, q string) []SearchResult {
+	if k != "" && k != "cab" {
+		return nil
+	}
+	var results []SearchResult
+	for _, cb := range cabs {
+		hardware := cb.ModeledAfter
+		if hardware == "" {
+			hardware = cb.Speakers + " " + cb.SpeakersRef
+		}
+		if r, ok := matchEntry("cab", cb.Model, hardware, "", cb.Description, q); ok {
+			results = append(results, r)
+		}
+	}
+	return results
+}
+
+func searchMics(k, q string) []SearchResult {
+	if k != "" && k != "mic" {
+		return nil
+	}
+	var results []SearchResult
+	for _, m := range mics {
+		hardware := m.ModeledAfter
+		if hardware == "" {
+			hardware = m.Kind + " " + m.RealModel
+		}
+		if r, ok := matchEntry("mic", m.Model, hardware, "", m.Description, q); ok {
+			results = append(results, r)
+		}
+	}
+	return results
+}
+
+func searchFX(k, q string) []SearchResult {
+	if k != "" && k != "fx" {
+		return nil
+	}
+	var results []SearchResult
+	for _, f := range fx {
+		if r, ok := matchEntry("fx", f.Name, f.ModeledAfter, f.Category, f.Description, q); ok {
+			r.Gain = f.Gain
+			results = append(results, r)
+		}
 	}
 	return results
 }
@@ -127,30 +154,37 @@ func fuzzyScore(query, target string) float64 {
 		return 1
 	}
 
-	qWords := strings.Fields(q)
-	tWords := strings.Fields(t)
-	var hits float64
-	for _, qw := range qWords {
-		best := 0.0
-		for _, tw := range tWords {
-			switch {
-			case tw == qw:
-				best = 1
-			case len(qw) >= 3 && strings.HasPrefix(tw, qw):
-				if best < 0.7 {
-					best = 0.7
-				}
-			}
-		}
-		hits += best
-	}
-	tokenScore := hits / float64(len(qWords))
-
+	tokenScore := wordOverlapScore(strings.Fields(q), strings.Fields(t))
 	bigram := diceCoefficient(stripSpaces(q), stripSpaces(t))
 	if tokenScore > bigram {
 		return tokenScore
 	}
 	return bigram
+}
+
+// wordOverlapScore rates how much of the query's words appear in the target:
+// exact word matches score 1, partial prefixes of 3+ letters score 0.7.
+func wordOverlapScore(qWords, tWords []string) float64 {
+	var hits float64
+	for _, qw := range qWords {
+		hits += bestWordScore(qw, tWords)
+	}
+	return hits / float64(len(qWords))
+}
+
+func bestWordScore(qw string, tWords []string) float64 {
+	best := 0.0
+	for _, tw := range tWords {
+		switch {
+		case tw == qw:
+			return 1
+		case len(qw) >= 3 && strings.HasPrefix(tw, qw):
+			if best < 0.7 {
+				best = 0.7
+			}
+		}
+	}
+	return best
 }
 
 // diceCoefficient is the Sørensen–Dice similarity of two strings' character
