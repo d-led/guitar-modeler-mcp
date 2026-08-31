@@ -56,15 +56,8 @@ func TestDesignAppliesAmpAndCabParams(t *testing.T) {
 		t.Fatalf("Design: %v", err)
 	}
 
-	var amp, cab rig.Block
-	for _, b := range res.Spec.Blocks {
-		switch b.Type {
-		case "Amp":
-			amp = b
-		case "Cab":
-			cab = b
-		}
-	}
+	amp := blockByType(res.Spec.Blocks, "Amp")
+	cab := blockByType(res.Spec.Blocks, "Cab")
 	if amp.Params["Type"] != "65 Black SR" {
 		t.Fatalf("amp type = %v, want 65 Black SR", amp.Params["Type"])
 	}
@@ -77,6 +70,16 @@ func TestDesignAppliesAmpAndCabParams(t *testing.T) {
 	if cab.Params["Breakup"] != 30.0 || cab.Params["OnAxis"] != false {
 		t.Fatalf("cab params = %v, want Breakup 30, OnAxis false", cab.Params)
 	}
+}
+
+// blockByType returns the first chain block of the given type, or a zero block.
+func blockByType(blocks []rig.Block, typ string) rig.Block {
+	for _, b := range blocks {
+		if b.Type == typ {
+			return b
+		}
+	}
+	return rig.Block{}
 }
 
 func TestDesignAutoAssignsExpressionPedal(t *testing.T) {
@@ -199,22 +202,32 @@ func TestDesignDualAmpBuildsParallelPaths(t *testing.T) {
 	if spec.Routing != rig.RoutingSPS {
 		t.Fatalf("routing = %q, want SPS-1", spec.Routing)
 	}
-	if len(spec.Prefix) != 1 || spec.Prefix[0].Type != "Green JRC-OD" {
-		t.Fatalf("prefix = %v, want [Green JRC-OD]", spec.Prefix)
-	}
-	if len(spec.PathA) != 2 || spec.PathA[0].Type != "Amp" || spec.PathA[1].Type != "Cab" {
-		t.Fatalf("path A = %v, want [Amp Cab]", spec.PathA)
-	}
-	if len(spec.PathB) != 2 || spec.PathB[0].Type != "Amp" || spec.PathB[1].Type != "Cab" {
-		t.Fatalf("path B = %v, want [Amp Cab]", spec.PathB)
-	}
-	if len(spec.Suffix) != 1 || spec.Suffix[0].Type != "Eleven Reverb" {
-		t.Fatalf("suffix = %v, want [Eleven Reverb]", spec.Suffix)
-	}
+	assertBlockTypes(t, "prefix", spec.Prefix, []string{"Green JRC-OD"})
+	assertBlockTypes(t, "path A", spec.PathA, []string{"Amp", "Cab"})
+	assertBlockTypes(t, "path B", spec.PathB, []string{"Amp", "Cab"})
+	assertBlockTypes(t, "suffix", spec.Suffix, []string{"Eleven Reverb"})
 
 	ampB := spec.PathB[0]
 	if ampB.Params["Type"] != "67 Black Duo" {
 		t.Fatalf("path B amp type = %v, want 67 Black Duo", ampB.Params["Type"])
+	}
+}
+
+// assertBlockTypes fails unless the section's blocks have exactly the wanted
+// types in order.
+func assertBlockTypes(t *testing.T, section string, blocks []rig.Block, want []string) {
+	t.Helper()
+	got := make([]string, len(blocks))
+	for i, b := range blocks {
+		got[i] = b.Type
+	}
+	if len(got) != len(want) {
+		t.Fatalf("%s = %v, want %v", section, got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("%s = %v, want %v", section, got, want)
+		}
 	}
 }
 
