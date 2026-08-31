@@ -107,51 +107,74 @@ func Modules() []string {
 func (p Param) Validate(value any) error {
 	switch p.Kind {
 	case "range":
-		v, ok := asFloat(value)
-		if !ok {
-			return fmt.Errorf("%s expects a number, got %T", p.Label, value)
-		}
-		if p.Min != nil && v < *p.Min {
-			return fmt.Errorf("%s = %v is below the minimum %v%s", p.Label, v, *p.Min, p.Unit)
-		}
-		if p.Max != nil && v > *p.Max {
-			return fmt.Errorf("%s = %v is above the maximum %v%s", p.Label, v, *p.Max, p.Unit)
-		}
+		return p.validateRange(value)
 	case "set":
-		s, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("%s expects a string option, got %T", p.Label, value)
-		}
-		if !contains(p.Values, s) {
-			return fmt.Errorf("%s: %q is not a valid option (allowed: %v)", p.Label, s, p.Values)
-		}
+		return p.validateSet(value)
 	case "sync":
-		// A tempo-synced parameter: either a number within the range or a note
-		// value such as "1/4".
-		if v, ok := asFloat(value); ok {
-			if p.Min != nil && v < *p.Min {
-				return fmt.Errorf("%s = %v is below the minimum %v%s", p.Label, v, *p.Min, p.Unit)
-			}
-			if p.Max != nil && v > *p.Max {
-				return fmt.Errorf("%s = %v is above the maximum %v%s", p.Label, v, *p.Max, p.Unit)
-			}
-			return nil
-		}
-		s, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("%s expects a number or note value, got %T", p.Label, value)
-		}
-		if !contains(p.Values, s) {
-			return fmt.Errorf("%s: %q is not a valid note value (allowed: %v)", p.Label, s, p.Values)
-		}
+		return p.validateSync(value)
 	case "toggle":
-		if _, ok := value.(bool); !ok {
-			return fmt.Errorf("%s expects a boolean, got %T", p.Label, value)
-		}
+		return p.validateToggle(value)
 	case "string":
-		if _, ok := value.(string); !ok {
-			return fmt.Errorf("%s expects a string, got %T", p.Label, value)
-		}
+		return p.validateString(value)
+	}
+	return nil
+}
+
+func (p Param) validateRange(value any) error {
+	v, ok := asFloat(value)
+	if !ok {
+		return fmt.Errorf("%s expects a number, got %T", p.Label, value)
+	}
+	return p.validateRangeBounds(v)
+}
+
+func (p Param) validateRangeBounds(v float64) error {
+	if p.Min != nil && v < *p.Min {
+		return fmt.Errorf("%s = %v is below the minimum %v%s", p.Label, v, *p.Min, p.Unit)
+	}
+	if p.Max != nil && v > *p.Max {
+		return fmt.Errorf("%s = %v is above the maximum %v%s", p.Label, v, *p.Max, p.Unit)
+	}
+	return nil
+}
+
+func (p Param) validateSet(value any) error {
+	s, ok := value.(string)
+	if !ok {
+		return fmt.Errorf("%s expects a string option, got %T", p.Label, value)
+	}
+	if !contains(p.Values, s) {
+		return fmt.Errorf("%s: %q is not a valid option (allowed: %v)", p.Label, s, p.Values)
+	}
+	return nil
+}
+
+func (p Param) validateSync(value any) error {
+	// A tempo-synced parameter: either a number within the range or a note
+	// value such as "1/4".
+	if v, ok := asFloat(value); ok {
+		return p.validateRangeBounds(v)
+	}
+	s, ok := value.(string)
+	if !ok {
+		return fmt.Errorf("%s expects a number or note value, got %T", p.Label, value)
+	}
+	if !contains(p.Values, s) {
+		return fmt.Errorf("%s: %q is not a valid note value (allowed: %v)", p.Label, s, p.Values)
+	}
+	return nil
+}
+
+func (p Param) validateToggle(value any) error {
+	if _, ok := value.(bool); !ok {
+		return fmt.Errorf("%s expects a boolean, got %T", p.Label, value)
+	}
+	return nil
+}
+
+func (p Param) validateString(value any) error {
+	if _, ok := value.(string); !ok {
+		return fmt.Errorf("%s expects a string, got %T", p.Label, value)
 	}
 	return nil
 }
