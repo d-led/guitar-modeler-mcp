@@ -70,6 +70,40 @@ func resultText(t *testing.T, resp map[string]any) string {
 	return block["text"].(string)
 }
 
+// mustContain fails unless text contains every wanted substring.
+func mustContain(t *testing.T, text string, wants ...string) {
+	t.Helper()
+	for _, want := range wants {
+		if !strings.Contains(text, want) {
+			t.Fatalf("output missing %q:\n%s", want, text)
+		}
+	}
+}
+
+// singleGlob returns the single match of a pattern, failing when there are
+// zero or more than one.
+func singleGlob(t *testing.T, pattern string) []string {
+	t.Helper()
+	return mustGlobCount(t, pattern, 1)
+}
+
+// mustGlobCount returns exactly n matches of a pattern.
+func mustGlobCount(t *testing.T, pattern string, n int) []string {
+	t.Helper()
+	matches, err := filepath.Glob(pattern)
+	if err != nil || len(matches) != n {
+		t.Fatalf("expected %d %s (got %v, err %v)", n, pattern, matches, err)
+	}
+	return matches
+}
+
+func wantEq[T comparable](t *testing.T, name string, got, want T) {
+	t.Helper()
+	if got != want {
+		t.Fatalf("%s = %v, want %v", name, got, want)
+	}
+}
+
 func TestIntegrationInitializeAndToolList(t *testing.T) {
 	s := newIntegrationServer(t)
 
@@ -147,17 +181,13 @@ func TestIntegrationMooerCatalogDesignAndCard(t *testing.T) {
 		"name":      "device_list",
 		"arguments": map[string]any{},
 	}))
-	if !strings.Contains(devices, "ge150") || !strings.Contains(devices, "file_exchange") {
-		t.Fatalf("device_list missing ge150/file_exchange: %s", devices)
-	}
+	mustContain(t, devices, "ge150", "file_exchange")
 
 	amps := resultText(t, rpc(t, s, 2, "tools/call", map[string]any{
 		"name":      "mooer_catalog_list_amps",
 		"arguments": map[string]any{"model": "ge200"},
 	}))
-	if !strings.Contains(amps, "800") || !strings.Contains(amps, "Marshall JCM800") {
-		t.Fatalf("mooer_catalog_list_amps(ge200) missing 800/JCM800: %s", amps)
-	}
+	mustContain(t, amps, "800", "Marshall JCM800")
 
 	design := resultText(t, rpc(t, s, 3, "tools/call", map[string]any{
 		"name": "mooer_design",
@@ -172,21 +202,11 @@ func TestIntegrationMooerCatalogDesignAndCard(t *testing.T) {
 			},
 		},
 	}))
-	if !strings.Contains(design, "Setup card:") || !strings.Contains(design, ".mo") {
-		t.Fatalf("mooer_design output missing card/.mo: %s", design)
-	}
+	mustContain(t, design, "Setup card:", ".mo")
 
-	mos, err := filepath.Glob(filepath.Join(dir, "*.mo"))
-	if err != nil || len(mos) != 1 {
-		t.Fatalf("expected one .mo in %s (got %v, err %v)", dir, mos, err)
-	}
-	cards, err := filepath.Glob(filepath.Join(dir, "*.html"))
-	if err != nil || len(cards) != 1 {
-		t.Fatalf("expected one setup card .html in %s (got %v, err %v)", dir, cards, err)
-	}
-	if got := filepath.Base(cards[0]); got != "Mooer Test.ge200.html" {
-		t.Fatalf("setup card filename = %q, want Mooer Test.ge200.html", got)
-	}
+	_ = singleGlob(t, filepath.Join(dir, "*.mo"))
+	cards := singleGlob(t, filepath.Join(dir, "*.html"))
+	wantEq(t, "setup card filename", filepath.Base(cards[0]), "Mooer Test.ge200.html")
 }
 
 func TestIntegrationMooerCardOnlyDevice(t *testing.T) {
@@ -223,9 +243,7 @@ func TestIntegrationWazaTSLAndCard(t *testing.T) {
 		"name":      "device_list",
 		"arguments": map[string]any{},
 	}))
-	if !strings.Contains(devices, "wazaair") || !strings.Contains(devices, ".tsl") {
-		t.Fatalf("device_list missing wazaair/.tsl: %s", devices)
-	}
+	mustContain(t, devices, "wazaair", ".tsl")
 
 	// Write a backup from the built-in template plus a full tone.
 	out := resultText(t, rpc(t, s, 2, "tools/call", map[string]any{
@@ -246,31 +264,22 @@ func TestIntegrationWazaTSLAndCard(t *testing.T) {
 			"reverb_level": 45,
 		},
 	}))
-	if !strings.Contains(out, ".tsl") {
-		t.Fatalf("waza_write_tsl output missing .tsl path: %s", out)
-	}
+	mustContain(t, out, ".tsl")
 
-	tsls, err := filepath.Glob(filepath.Join(dir, "*.tsl"))
-	if err != nil || len(tsls) != 1 {
-		t.Fatalf("expected one .tsl in %s (got %v, err %v)", dir, tsls, err)
-	}
+	tsls := singleGlob(t, filepath.Join(dir, "*.tsl"))
 
 	// Read it back: the name and the applied parameter values must round-trip.
 	read := resultText(t, rpc(t, s, 3, "tools/call", map[string]any{
 		"name":      "waza_read_tsl",
 		"arguments": map[string]any{"input_file": tsls[0]},
 	}))
-	for _, want := range []string{
-		"\"device\": \"WAZA-AIR\"", "Brown Practice",
-		"\"amp\": \"BROWN\"", "\"gain\": 55", "\"volume\": 68", "\"bass\": 42",
-		"\"middle\": 50", "\"treble\": 60",
-		"\"booster\": \"T-SCREAM\"", "\"delay\": \"TAPE ECHO\"", "\"delay_time_ms\": 380",
-		"\"reverb\": \"HALL REVERB\"", "\"reverb_level\": 45",
-	} {
-		if !strings.Contains(read, want) {
-			t.Fatalf("waza_read_tsl missing %q:\n%s", want, read)
-		}
-	}
+	mustContain(t, read,
+		`"device": "WAZA-AIR"`, "Brown Practice",
+		`"amp": "BROWN"`, `"gain": 55`, `"volume": 68`, `"bass": 42`,
+		`"middle": 50`, `"treble": 60`,
+		`"booster": "T-SCREAM"`, `"delay": "TAPE ECHO"`, `"delay_time_ms": 380`,
+		`"reverb": "HALL REVERB"`, `"reverb_level": 45`,
+	)
 
 	// The setup card is still produced.
 	card := resultText(t, rpc(t, s, 4, "tools/call", map[string]any{
@@ -282,18 +291,14 @@ func TestIntegrationWazaTSLAndCard(t *testing.T) {
 			"output_dir": dir,
 		},
 	}))
-	if !strings.Contains(card, "setup card") || !strings.Contains(card, ".wazaair.html") {
-		t.Fatalf("waza_setup_card unexpected output: %s", card)
-	}
+	mustContain(t, card, "setup card", ".wazaair.html")
 
 	// The AIRSTEP BW modes are listed and can be printed on the card.
 	modes := resultText(t, rpc(t, s, 5, "tools/call", map[string]any{
 		"name":      "waza_catalog_list_modes",
 		"arguments": map[string]any{},
 	}))
-	if !strings.Contains(modes, "airstep-bw") || !strings.Contains(modes, "Toggle DELAY") || !strings.Contains(modes, "CH 6") {
-		t.Fatalf("waza_catalog_list_modes missing AIRSTEP bindings: %s", modes)
-	}
+	mustContain(t, modes, "airstep-bw", "Toggle DELAY", "CH 6")
 
 	cardWithMode := resultText(t, rpc(t, s, 6, "tools/call", map[string]any{
 		"name": "waza_setup_card",
@@ -305,18 +310,14 @@ func TestIntegrationWazaTSLAndCard(t *testing.T) {
 			"output_dir":   dir,
 		},
 	}))
-	if !strings.Contains(cardWithMode, "setup card") {
-		t.Fatalf("waza_setup_card(airstep_mode) unexpected output: %s", cardWithMode)
-	}
+	mustContain(t, cardWithMode, "setup card")
 
 	// A bad mode is rejected rather than silently ignored.
 	bad := resultText(t, rpc(t, s, 7, "tools/call", map[string]any{
 		"name":      "waza_setup_card",
 		"arguments": map[string]any{"name": "X", "amp": "BROWN", "airstep_mode": 9, "output_dir": dir},
 	}))
-	if !strings.Contains(bad, "unknown AIRSTEP BW mode 9") {
-		t.Fatalf("airstep_mode 9 should be rejected, got %q", bad)
-	}
+	mustContain(t, bad, "unknown AIRSTEP BW mode 9")
 }
 
 func TestIntegrationWazaMultiPatchBackup(t *testing.T) {
@@ -368,18 +369,14 @@ func TestIntegrationThrSetupCard(t *testing.T) {
 		"name":      "device_list",
 		"arguments": map[string]any{},
 	}))
-	if !strings.Contains(devices, "Yamaha THR-II") || !strings.Contains(devices, "thr10") {
-		t.Fatalf("device_list missing THR models: %s", devices)
-	}
+	mustContain(t, devices, "Yamaha THR-II", "thr10")
 
 	// The amp catalog exposes the official 24-cell grid with descriptions.
 	amps := resultText(t, rpc(t, s, 2, "tools/call", map[string]any{
 		"name":      "thr_catalog_list_amps",
 		"arguments": map[string]any{"query": "twin"},
 	}))
-	if !strings.Contains(amps, "CLEAN CLASSIC") || !strings.Contains(amps, "Fender Twin Reverb") {
-		t.Fatalf("thr_catalog_list_amps missing CLEAN CLASSIC/Twin: %s", amps)
-	}
+	mustContain(t, amps, "CLEAN CLASSIC", "Fender Twin Reverb")
 
 	// The setup card resolves a description to an amp and writes the file.
 	card := resultText(t, rpc(t, s, 3, "tools/call", map[string]any{
@@ -405,31 +402,20 @@ func TestIntegrationThrSetupCard(t *testing.T) {
 			"output_dir":    dir,
 		},
 	}))
-	if !strings.Contains(card, ".thr.html") {
-		t.Fatalf("thr_setup_card output missing .thr.html: %s", card)
-	}
-	cards, _ := filepath.Glob(filepath.Join(dir, "*.html"))
-	if len(cards) != 1 {
-		t.Fatalf("expected one .html card in %s, got %v", dir, cards)
-	}
+	mustContain(t, card, ".thr.html")
+	cards := singleGlob(t, filepath.Join(dir, "*.html"))
 	body, err := os.ReadFile(cards[0])
 	if err != nil {
 		t.Fatalf("read setup card: %v", err)
 	}
-	for _, want := range []string{"Gain: 42", "Master: 68", "Time (ms): 380", "Level: 40", "Decay: 55"} {
-		if !strings.Contains(string(body), want) {
-			t.Fatalf("setup card missing %q:\n%s", want, body)
-		}
-	}
+	mustContain(t, string(body), "Gain: 42", "Master: 68", "Time (ms): 380", "Level: 40", "Decay: 55")
 
 	// The effects catalog now includes cabinets, echo and reverb types.
 	fx := resultText(t, rpc(t, s, 4, "tools/call", map[string]any{
 		"name":      "thr_catalog_list_fx",
 		"arguments": map[string]any{},
 	}))
-	if !strings.Contains(fx, "Brown 4x12") || !strings.Contains(fx, "Digital Delay") || !strings.Contains(fx, "Spring") {
-		t.Fatalf("thr_catalog_list_fx missing cabs/echo/reverb: %s", fx)
-	}
+	mustContain(t, fx, "Brown 4x12", "Digital Delay", "Spring")
 }
 
 func TestIntegrationDesignDecodeReportRoundTrip(t *testing.T) {
@@ -627,17 +613,12 @@ func TestIntegrationCreateSetlist(t *testing.T) {
 				"output_dir": dir,
 			},
 		}))
-		if !strings.Contains(out, "Rig file:") {
-			t.Fatalf("design_rig output missing rig path: %s", out)
-		}
+		mustContain(t, out, "Rig file:")
 	}
 	design(1, "Clean")
 	design(2, "Drive")
 
-	rigs, err := filepath.Glob(filepath.Join(dir, "*.rig"))
-	if err != nil || len(rigs) != 2 {
-		t.Fatalf("expected two .rig files, got %v (%v)", rigs, err)
-	}
+	rigs := mustGlobCount(t, filepath.Join(dir, "*.rig"), 2)
 
 	out := resultText(t, rpc(t, s, 3, "tools/call", map[string]any{
 		"name": "create_setlist",
@@ -647,14 +628,9 @@ func TestIntegrationCreateSetlist(t *testing.T) {
 			"output_dir": dir,
 		},
 	}))
-	if !strings.Contains(out, "Setlist \"Song\"") {
-		t.Fatalf("create_setlist output missing setlist name: %s", out)
-	}
+	mustContain(t, out, "Setlist \"Song\"")
 
-	setlists, err := filepath.Glob(filepath.Join(dir, "*.setlist"))
-	if err != nil || len(setlists) != 1 {
-		t.Fatalf("expected one .setlist, got %v (%v)", setlists, err)
-	}
+	setlists := singleGlob(t, filepath.Join(dir, "*.setlist"))
 	data, err := os.ReadFile(setlists[0])
 	if err != nil {
 		t.Fatalf("read setlist: %v", err)
@@ -666,9 +642,8 @@ func TestIntegrationCreateSetlist(t *testing.T) {
 	if err := json.Unmarshal(data, &parsed); err != nil {
 		t.Fatalf("parse setlist: %v", err)
 	}
-	if len(parsed.Rigs) != 2 || len(parsed.RigNames) != 2 {
-		t.Fatalf("setlist should reference two rigs: %+v", parsed)
-	}
+	wantEq(t, "setlist rigs", len(parsed.Rigs), 2)
+	wantEq(t, "setlist rig names", len(parsed.RigNames), 2)
 }
 
 func TestIntegrationGuideAndFxCategories(t *testing.T) {
@@ -722,18 +697,14 @@ func TestIntegrationQuadCortexDesignAndDecode(t *testing.T) {
 		"name":      "qc_translate_amp",
 		"arguments": map[string]any{"query": "JCM800"},
 	}))
-	if !strings.Contains(amp, "Marshall JCM800") || !strings.Contains(amp, `"id": 1001`) {
-		t.Fatalf("qc_translate_amp(JCM800) = %s, want Marshall JCM800 id 1001", amp)
-	}
+	mustContain(t, amp, "Marshall JCM800", `"id": 1001`)
 
 	// The model's parameters expose the screen scale for the design step.
 	params := resultText(t, rpc(t, s, 2, "tools/call", map[string]any{
 		"name":      "qc_list_model_params",
 		"arguments": map[string]any{"model": "JCM800"},
 	}))
-	if !strings.Contains(params, "GAIN") {
-		t.Fatalf("qc_list_model_params(JCM800) missing GAIN: %s", params)
-	}
+	mustContain(t, params, "GAIN")
 
 	// Design a serial preset and read it back.
 	dir := t.TempDir()
@@ -751,46 +722,28 @@ func TestIntegrationQuadCortexDesignAndDecode(t *testing.T) {
 			"output_dir": dir,
 		},
 	}))
-	var designed map[string]any
-	if err := json.Unmarshal([]byte(design), &designed); err != nil {
-		t.Fatalf("qc_design output not JSON: %v", design)
-	}
-	path, _ := designed["path"].(string)
-	if path == "" {
-		t.Fatalf("qc_design returned no path: %s", design)
-	}
+	path, card, _ := parseQCDesign(t, design)
 	if _, err := os.Stat(path); err != nil {
 		t.Fatalf("qc_design file missing: %v", err)
 	}
-	card, _ := designed["card"].(string)
-	if card == "" {
-		t.Fatalf("qc_design returned no setup card: %s", design)
+	cardBody, err := os.ReadFile(card)
+	if err != nil {
+		t.Fatalf("qc_design setup card missing: %v", err)
 	}
-	if b, err := os.ReadFile(card); err != nil || !strings.Contains(string(b), "QC Integration Tone") {
-		t.Fatalf("qc_design setup card missing or empty: %v", err)
-	}
-	if caveat, _ := designed["caveat"].(string); !strings.Contains(caveat, "not a file the Quad Cortex imports") {
-		t.Fatalf("qc_design caveat missing the hardware note: %v", caveat)
-	}
+	mustContain(t, string(cardBody), "QC Integration Tone")
 
 	decoded := resultText(t, rpc(t, s, 4, "tools/call", map[string]any{
 		"name":      "qc_decode_preset",
 		"arguments": map[string]any{"path": path, "serial": "QA00XXXXX"},
 	}))
-	for _, want := range []string{"QC Integration Tone", "Marshall JCM800", "TS808", "GAIN"} {
-		if !strings.Contains(decoded, want) {
-			t.Fatalf("qc_decode_preset missing %q: %s", want, decoded)
-		}
-	}
+	mustContain(t, decoded, "QC Integration Tone", "Marshall JCM800", "TS808", "GAIN")
 
 	// Rendering a card from the written file works too.
 	rendered := resultText(t, rpc(t, s, 5, "tools/call", map[string]any{
 		"name":      "qc_render_setup_card",
 		"arguments": map[string]any{"path": path, "serial": "QA00XXXXX", "output_dir": dir},
 	}))
-	if !strings.Contains(rendered, "QC Integration Tone") {
-		t.Fatalf("qc_render_setup_card missing preset name: %s", rendered)
-	}
+	mustContain(t, rendered, "QC Integration Tone")
 
 	// A wrong serial must refuse to decode.
 	resp := rpc(t, s, 6, "tools/call", map[string]any{
@@ -801,6 +754,29 @@ func TestIntegrationQuadCortexDesignAndDecode(t *testing.T) {
 	if isErr, _ := result["isError"].(bool); !isErr {
 		t.Fatalf("expected isError for wrong serial, got: %v", resp)
 	}
+}
+
+// parseQCDesign decodes the qc_design JSON result and validates the paths it
+// reports, returning the preset, card and caveat strings.
+func parseQCDesign(t *testing.T, design string) (path, card, caveat string) {
+	t.Helper()
+	var designed map[string]any
+	if err := json.Unmarshal([]byte(design), &designed); err != nil {
+		t.Fatalf("qc_design output not JSON: %v", design)
+	}
+	path, _ = designed["path"].(string)
+	if path == "" {
+		t.Fatalf("qc_design returned no path: %s", design)
+	}
+	card, _ = designed["card"].(string)
+	if card == "" {
+		t.Fatalf("qc_design returned no setup card: %s", design)
+	}
+	caveat, _ = designed["caveat"].(string)
+	if !strings.Contains(caveat, "not a file the Quad Cortex imports") {
+		t.Fatalf("qc_design caveat missing the hardware note: %v", caveat)
+	}
+	return path, card, caveat
 }
 
 func TestIntegrationQCUSBRequiresConfirmation(t *testing.T) {
