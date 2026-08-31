@@ -65,6 +65,12 @@ var capabilityParams = map[string][]string{
 	"Sync": {"tempo sync"}, "LFOSync": {"tempo sync"},
 }
 
+// reverbTerms are the option words that mark a parameter as a reverb type.
+var reverbTerms = []string{
+	"Plate", "Hall", "Room", "Church", "Cathedral", "Arena",
+	"Theater", "Reflection", "Garage", "Studio", "NonLinear",
+}
+
 // valueCapabilities derives a capability from the enumerated options of a
 // parameter (e.g. a Mode whose options are semitone intervals).
 func valueCapabilities(paramName string, values []string) []string {
@@ -75,12 +81,7 @@ func valueCapabilities(paramName string, values []string) []string {
 	switch {
 	case strings.Contains(joined, "Semi"):
 		return []string{"pitch shift"}
-	case strings.Contains(joined, "Plate") || strings.Contains(joined, "Hall") ||
-		strings.Contains(joined, "Room") || strings.Contains(joined, "Church") ||
-		strings.Contains(joined, "Cathedral") || strings.Contains(joined, "Arena") ||
-		strings.Contains(joined, "Theater") || strings.Contains(joined, "Reflection") ||
-		strings.Contains(joined, "Garage") || strings.Contains(joined, "Studio") ||
-		strings.Contains(joined, "NonLinear"):
+	case containsAny(joined, reverbTerms...):
 		return []string{"reverb"}
 	case strings.Contains(joined, "Chorus"):
 		return []string{"chorus"}
@@ -88,6 +89,15 @@ func valueCapabilities(paramName string, values []string) []string {
 		return []string{"flanger"}
 	}
 	return nil
+}
+
+func containsAny(haystack string, needles ...string) bool {
+	for _, n := range needles {
+		if strings.Contains(haystack, n) {
+			return true
+		}
+	}
+	return false
 }
 
 // Capabilities computes the capability keywords for a module from its
