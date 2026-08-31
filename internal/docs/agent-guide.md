@@ -177,6 +177,26 @@ Keep it tight and don't spiral:
   device: AI model, parameter and routing choices can be off, and the card is
   the human verification step against the actual hardware.
 
+## HeadRush Gigboard — capabilities at a glance
+
+- **11 chain slots**, three routings: `S` (serial), `SPS-1` (serial→parallel→
+  serial), `PS-1` (parallel from the input). Serial is the default.
+- **4 stomp switches (FS5–FS8)** + **2 expression pedals** (Pedal1, Pedal2).
+  A wah/whammy needs a pedal (sweep) **and** a footswitch (on/off).
+- **Scenes flip blocks on/off only — they never change a parameter value.** To
+  switch a sound *per scene*, toggle whole blocks (two IRs, two boosts, a
+  corrective EQ). `LastScene` marks the scene active at load (the first one).
+- **A custom IR (`IR`/`IR (1024)`) replaces the cabinet** — pass it in `fx` and
+  the designer drops the cab. Selector: `[directory](<folder>)[name](<file>)`,
+  root = `[IR ROOT]`; `IR (1024)` is half the DSP.
+- **Preset names are stored and displayed ALL CAPS** (the device's convention);
+  put the human title in `note`.
+- **Amp `Master` = loudness, `Gain` = drive.** Gain-stage with the amp, not the
+  output: RigVolume is a final trim (designer default +6 dB compensates a 50%
+  master).
+- Bypassed blocks render **grey** in the report (chain, card badge, and the
+  stomp button), so what starts off is visible at a glance.
+
 ## Tools and workflow
 
 1. `search_catalog` — fuzzy-search every amp, cab, mic and effect by device name
