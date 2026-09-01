@@ -48,6 +48,32 @@ const CSS = `.chain{display:flex;flex-wrap:wrap;align-items:center;gap:.3rem .5r
 .chain .mark{color:#bbb;flex:none;font-size:1.1em;line-height:1}
 .slotbadge{display:inline-flex;align-items:center;justify-content:center;min-width:1.45em;height:1.45em;border-radius:50%;background:#6b6b73;color:#fff;font-weight:700;font-size:.8em;margin-right:.45em;vertical-align:middle}`
 
+// headCSS is the shared setup-card stylesheet preamble, before the chain CSS.
+// Every device backend's setup card uses it so the cards render consistently.
+const headCSS = `body{font-family:system-ui,-apple-system,sans-serif;max-width:720px;margin:2rem auto;padding:0 1rem;color:#1a1a1a}
+h1{margin-bottom:.25rem}h2{font-size:1rem;color:#555;margin-top:0}
+table{width:100%;border-collapse:collapse;margin-bottom:1rem}
+td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;vertical-align:top}
+.module{font-weight:600;white-space:nowrap}
+.effect{font-weight:600}`
+
+// Head writes the shared <head>, <style> preamble and opening <body> of a
+// setup card: the escaped title, the common card styles, extraCSS (appended
+// inside the style block), the chain CSS, and the opening <body>. Callers
+// write the card body and closing tags themselves.
+func Head(b *strings.Builder, title, extraCSS string) {
+	b.WriteString("<!doctype html><html><head><meta charset=\"utf-8\">")
+	b.WriteString("<title>")
+	b.WriteString(html.EscapeString(title))
+	b.WriteString("</title><style>\n")
+	b.WriteString(headCSS)
+	if extraCSS != "" {
+		b.WriteByte('\n')
+		b.WriteString(extraCSS)
+	}
+	b.WriteString("\n" + CSS + "\n</style></head><body>")
+}
+
 // Render returns the numbered chain visualisation as an HTML fragment: serial
 // steps joined by arrows, and parallel junctions drawn as stacked branches
 // between split and merge markers.

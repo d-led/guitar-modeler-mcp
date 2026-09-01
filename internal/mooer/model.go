@@ -3,6 +3,8 @@ package mooer
 import (
 	"fmt"
 	"strings"
+
+	"github.com/d-led/guitar-modeler-mcp/internal/device"
 )
 
 // ModuleOrder is the fixed signal-chain order of the device's nine modules.
@@ -10,11 +12,9 @@ import (
 var ModuleOrder = []string{"fx", "od", "amp", "cab", "ns", "eq", "mod", "delay", "reverb"}
 
 // Item is one named model on a Mooer device: the on-device screen name and the
-// real hardware it emulates (empty when not documented).
-type Item struct {
-	Name       string `json:"name"`
-	InspiredBy string `json:"inspired_by,omitempty"`
-}
+// real hardware it emulates (empty when not documented). The type is shared
+// across the device backends.
+type Item = device.Item
 
 // Model describes one Mooer multi-effects device: its fixed module chain, its
 // per-module model lists (in effect_type index order), and whether presets can

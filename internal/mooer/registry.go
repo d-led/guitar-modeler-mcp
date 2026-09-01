@@ -1,6 +1,6 @@
 package mooer
 
-import "strings"
+import "github.com/d-led/guitar-modeler-mcp/internal/device"
 
 // models is the registry of supported Mooer devices, in display order.
 var models = []Model{ge150pro(), ge200(), ge150(), ge100pro()}
@@ -13,13 +13,7 @@ func Models() []Model {
 // ModelByName returns the model with the given identifier, matching
 // case-insensitively against both the stable name and the display name.
 func ModelByName(name string) (Model, bool) {
-	q := strings.ToLower(strings.TrimSpace(name))
-	for _, m := range models {
-		if strings.ToLower(m.Name) == q || strings.ToLower(m.Display) == q {
-			return m, true
-		}
-	}
-	return Model{}, false
+	return device.FindByName(models, name, func(m Model) (string, string) { return m.Name, m.Display })
 }
 
 // Default returns the canonical Mooer model used for cross-device mapping

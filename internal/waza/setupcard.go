@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/d-led/guitar-modeler-mcp/internal/cardchain"
+	"github.com/d-led/guitar-modeler-mcp/internal/device"
 )
 
 // Spec is a tone to dial in on the Waza Air: the selected amp, effects and
@@ -72,7 +73,7 @@ type stringResolver struct {
 func (d Device) Resolve(s Spec) (Spec, error) {
 	var err error
 	for _, step := range d.itemResolvers(&s) {
-		if *step.target, err = resolve(step.items, *step.target, step.label); err != nil {
+		if *step.target, err = device.ResolveItem(step.items, *step.target, step.label); err != nil {
 			return s, err
 		}
 	}
@@ -102,24 +103,6 @@ func (d Device) stringResolvers(s *Spec) []stringResolver {
 		{&s.Position, d.Position},
 		{&s.Mode, d.Mode},
 	}
-}
-
-func resolve(items []Item, query, label string) (string, error) {
-	q := strings.TrimSpace(query)
-	if q == "" {
-		return "", nil
-	}
-	for _, it := range items {
-		if strings.EqualFold(it.Name, q) {
-			return it.Name, nil
-		}
-	}
-	for _, it := range items {
-		if it.InspiredBy != "" && strings.Contains(strings.ToLower(it.InspiredBy), strings.ToLower(q)) {
-			return it.Name, nil
-		}
-	}
-	return "", fmt.Errorf("no %s matches %q", label, q)
 }
 
 func resolveString(options []string, query string) (string, error) {
@@ -184,17 +167,7 @@ func (d Device) SetupCardHTMLWithAirStep(s Spec, m AirStepMode) string {
 
 func (d Device) setupCardHTML(s Spec, mode *AirStepMode) string {
 	var b strings.Builder
-	b.WriteString("<!doctype html><html><head><meta charset=\"utf-8\">")
-	fmt.Fprintf(&b, "<title>%s — %s</title>", html.EscapeString(s.Name), html.EscapeString(d.Display))
-	b.WriteString(`<style>
-body{font-family:system-ui,-apple-system,sans-serif;max-width:720px;margin:2rem auto;padding:0 1rem;color:#1a1a1a}
-h1{margin-bottom:.25rem}h2{font-size:1rem;color:#555;margin-top:1.25rem}
-table{width:100%;border-collapse:collapse;margin-bottom:1rem}
-td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;vertical-align:top}
-.module{font-weight:600;white-space:nowrap}
-.effect{font-weight:600}.inspired{color:#666;font-size:.85em}
-` + cardchain.CSS + `
-</style></head><body>`)
+	cardchain.Head(&b, s.Name+" — "+d.Display, `.inspired{color:#666;font-size:.85em}`)
 	fmt.Fprintf(&b, "<h1>%s</h1><h2>%s — setup card</h2>", html.EscapeString(s.Name), html.EscapeString(d.Display))
 
 	b.WriteString(chainHint(d.Chain, s))

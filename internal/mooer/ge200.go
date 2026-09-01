@@ -1,5 +1,7 @@
 package mooer
 
+import "github.com/d-led/guitar-modeler-mcp/internal/device"
+
 // ge200 is the Mooer GE200. Its model tables come from the official GE200
 // owner's manual (the "based on" column) and are shared by the GE150 — the two
 // devices ship the same 55 amps, 26 cabs and 151 effects. The GE200 edits
@@ -19,7 +21,7 @@ func ge200() Model {
 }
 
 // mooerAmps is the shared 55-amp list (GE200/GE150), in effect_type order.
-var mooerAmps = items(
+var mooerAmps = device.Items(
 	[2]string{"65 US DLX", "Fender '65 Deluxe Reverb"},
 	[2]string{"65 US TW", "Fender '65 Twin Reverb"},
 	[2]string{"59 US BASS", "Fender '59 Bassman"},
@@ -78,7 +80,7 @@ var mooerAmps = items(
 )
 
 // mooerCabs is the shared 26-cab list, in effect_type order.
-var mooerCabs = items(
+var mooerCabs = device.Items(
 	[2]string{"US DLX 112", "Fender Deluxe Reverb 1x12"},
 	[2]string{"US TWN 212", "Fender Twin Reverb 2x12"},
 	[2]string{"US BASS 410", "Fender Bassman 4x10"},
@@ -109,7 +111,7 @@ var mooerCabs = items(
 
 // mooerEffects is the shared per-module effect list, in effect_type order.
 var mooerEffects = map[string][]Item{
-	"fx": items(
+	"fx": device.Items(
 		[2]string{"CRY WAH", "Dunlop GCB95"},
 		[2]string{"535 WAH", "Dunlop 535Q"},
 		[2]string{"AUTO WAH", "Mooer @Wah"},
@@ -119,7 +121,7 @@ var mooerEffects = map[string][]Item{
 		[2]string{"YELLOW COMP", "Mooer Yellow Comp"},
 		[2]string{"BLUE COMP", "Mooer Blue Comp"},
 	),
-	"od": items(
+	"od": device.Items(
 		[2]string{"TUBE DR", "B.K. Butler Tube Driver"},
 		[2]string{"808", "Ibanez TS808"},
 		[2]string{"PURE BOOST", "Mooer Pure Boost"},
@@ -141,18 +143,18 @@ var mooerEffects = map[string][]Item{
 		[2]string{"FULLDS", "Fulltone GT-500"},
 		[2]string{"GOLD CLON", "Klon Centaur"},
 	),
-	"ns": items(
+	"ns": device.Items(
 		[2]string{"NOISE KILLER", "Mooer Noise Killer"},
 		[2]string{"INTEL REDUCER", "Mooer Intelligent Noise Reduction"},
 		[2]string{"NOISE GATE", "Mooer Digital Noise Gate"},
 	),
-	"eq": items(
+	"eq": device.Items(
 		[2]string{"EQ-G", "5-band Graphic EQ"},
 		[2]string{"EQ-B", "5-band Bass Graphic EQ"},
 		[2]string{"EQ-G6", "6-band Graphic EQ"},
 		[2]string{"CUSTOM EQ", "Parametric EQ"},
 	),
-	"mod": items(
+	"mod": device.Items(
 		[2]string{"PHASER", "MXR Phase 90"},
 		[2]string{"STEP PHASER", "Square Wave Phaser"},
 		[2]string{"FAT PHASER", "Low Frequency Phaser"},
@@ -173,7 +175,7 @@ var mooerEffects = map[string][]Item{
 		[2]string{"SLOW GEAR", "BOSS SG-1 Slow Gear"},
 		[2]string{"LOFI", "Low Rate Sampling Filter"},
 	),
-	"delay": items(
+	"delay": device.Items(
 		[2]string{"DIGITAL", "Digital Delay"},
 		[2]string{"ANALOG", "Analog BBD Delay"},
 		[2]string{"DYNAMIC", "Dynamic Delay"},
@@ -184,7 +186,7 @@ var mooerEffects = map[string][]Item{
 		[2]string{"DUAL DELAY", "Dual Delay"},
 		[2]string{"PINGPONG", "Stereo Ping-Pong Delay"},
 	),
-	"reverb": items(
+	"reverb": device.Items(
 		[2]string{"ROOM", "Room Reverb"},
 		[2]string{"HALL", "Hall Reverb"},
 		[2]string{"CHURCH", "Church Reverb"},
@@ -193,13 +195,4 @@ var mooerEffects = map[string][]Item{
 		[2]string{"MOD", "Modulated Reverb"},
 		[2]string{"CAVE", "Cave Reverb"},
 	),
-}
-
-// items converts name/inspired-by pairs into Item values, preserving order.
-func items(pairs ...[2]string) []Item {
-	out := make([]Item, len(pairs))
-	for i, p := range pairs {
-		out[i] = Item{Name: p[0], InspiredBy: p[1]}
-	}
-	return out
 }

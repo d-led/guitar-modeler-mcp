@@ -48,18 +48,8 @@ func NewSpec() Spec {
 // SetupCardHTML renders a printable setup card for a resolved Spec.
 func (d Device) SetupCardHTML(s Spec) string {
 	var b strings.Builder
-	b.WriteString("<!doctype html><html><head><meta charset=\"utf-8\">")
-	fmt.Fprintf(&b, "<title>%s — %s</title>", html.EscapeString(s.Name), html.EscapeString(d.Display))
-	b.WriteString(`<style>
-body{font-family:system-ui,-apple-system,sans-serif;max-width:720px;margin:2rem auto;padding:0 1rem;color:#1a1a1a}
-h1{margin-bottom:.25rem}h2{font-size:1rem;color:#555;margin-top:0}
-table{width:100%;border-collapse:collapse;margin-bottom:1rem}
-td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;vertical-align:top}
-.module{font-weight:600;white-space:nowrap}
-.effect{font-weight:600}.off{color:#999}.inspired{color:#666;font-size:.85em}
-.params{color:#444;font-size:.85em;font-variant-numeric:tabular-nums}
-` + cardchain.CSS + `
-</style></head><body>`)
+	cardchain.Head(&b, s.Name+" — "+d.Display, `.off{color:#999}.inspired{color:#666;font-size:.85em}
+.params{color:#444;font-size:.85em;font-variant-numeric:tabular-nums}`)
 	fmt.Fprintf(&b, "<h1>%s</h1><h2>%s — setup card</h2>", html.EscapeString(s.Name), html.EscapeString(d.Display))
 
 	b.WriteString(chainHint(d.Chain, s))

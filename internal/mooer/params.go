@@ -1,29 +1,11 @@
 package mooer
 
-import "strings"
+import "github.com/d-led/guitar-modeler-mcp/internal/device"
 
 // Params holds raw device parameter values keyed by canonical name. Values are
 // in the device's raw 0-100 scale (50 = noon) unless noted (delay time is
 // milliseconds).
 type Params map[string]float64
-
-// canonicalParamKey normalises an agent-supplied parameter name to a canonical
-// key: lower-case with every non-alphanumeric run collapsed to an underscore,
-// so "GAIN", "Time (ms)" and "time_ms" all match "time_ms".
-func canonicalParamKey(s string) string {
-	var b strings.Builder
-	lastUnderscore := false
-	for _, r := range strings.ToLower(strings.TrimSpace(s)) {
-		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
-			b.WriteRune(r)
-			lastUnderscore = false
-		} else if !lastUnderscore {
-			b.WriteByte('_')
-			lastUnderscore = true
-		}
-	}
-	return strings.Trim(b.String(), "_")
-}
 
 // normalizeParams canonicalises every key once, so the per-module appliers can
 // look keys up directly. Absent/unknown keys are simply not applied.
@@ -33,7 +15,7 @@ func normalizeParams(params Params) Params {
 	}
 	out := make(Params, len(params))
 	for k, v := range params {
-		out[canonicalParamKey(k)] = v
+		out[device.CanonicalKey(k)] = v
 	}
 	return out
 }

@@ -1,5 +1,7 @@
 package mooer
 
+import "github.com/d-led/guitar-modeler-mcp/internal/device"
+
 // ge100pro is the Mooer GE100 Pro. It is a newer, larger device (72 amps, 67
 // cabs and 240+ effects); the tables below are the core models from its
 // published mapping. It supports preset transfer via USB.
@@ -10,7 +12,7 @@ func ge100pro() Model {
 		FileExchange: true,
 		FileExt:      ".mo",
 		ModuleOrder:  append([]string(nil), ModuleOrder...),
-		Amps: items(
+		Amps: device.Items(
 			[2]string{"65 US TWIN", "Fender '65 Twin Reverb"},
 			[2]string{"59 US BASS", "Fender '59 Bassman"},
 			[2]string{"US SONIC", "Fender Super Reverb"},
@@ -27,7 +29,7 @@ func ge100pro() Model {
 			[2]string{"BE 100", "Friedman BE-100"},
 			[2]string{"GAS STATION", "Diezel Hagen / Herbert"},
 		),
-		Cabs: items(
+		Cabs: device.Items(
 			[2]string{"US TWIN 212", "Fender 2x12 Open Back (Jensen C12K)"},
 			[2]string{"UK 412 V", "Marshall 4x12 Closed Back (Celestion V30)"},
 			[2]string{"CITRUS 412", "Orange 4x12 (Celestion V30)"},
@@ -35,7 +37,7 @@ func ge100pro() Model {
 			[2]string{"UK 212 V", "Vox 2x12 Open Back (Celestion Alnico Blue)"},
 		),
 		Effects: map[string][]Item{
-			"od": items(
+			"od": device.Items(
 				[2]string{"808 / TS9", "Ibanez Tube Screamer"},
 				[2]string{"PURE OD", "Mooer Pure Boost (Xotic RC Booster)"},
 				[2]string{"FLEX OD", "Mooer Flex Boost (Xotic AC Booster)"},

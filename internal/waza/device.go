@@ -4,12 +4,12 @@
 // owner's manual and its "Effect Parameter List".
 package waza
 
+import "github.com/d-led/guitar-modeler-mcp/internal/device"
+
 // Item is one selectable model: the on-device name and the real hardware it
-// emulates (empty when not documented).
-type Item struct {
-	Name       string `json:"name"`
-	InspiredBy string `json:"inspired_by,omitempty"`
-}
+// emulates (empty when not documented). The type is shared across the device
+// backends.
+type Item = device.Item
 
 // Device describes the Waza Air and its selectable models.
 type Device struct {
@@ -48,14 +48,14 @@ func Default() Device {
 		FileExchange: true,
 		FileExt:      ".tsl",
 		Chain:        []string{"BOOSTER", "AMP", "MOD", "FX", "DELAY", "REVERB"},
-		Amps: items(
+		Amps: device.Items(
 			[2]string{"CLEAN", "Roland JC-120 / Fender Twin Reverb"},
 			[2]string{"CRUNCH", "Marshall Plexi 1959 / Fender Tweed"},
 			[2]string{"LEAD", "EVH 5150 / Peavey 5150 lead channel"},
 			[2]string{"BROWN", "Soldano SLO-100 (EVH brown sound)"},
 			[2]string{"FLAT", "Studio DI / Acoustic Preamp"},
 		),
-		Boosters: items(
+		Boosters: device.Items(
 			[2]string{"CLEAN BOOST", ""},
 			[2]string{"TREBLE BOOST", ""},
 			[2]string{"MID BOOST", ""},
@@ -77,7 +77,7 @@ func Default() Device {
 			[2]string{"MUFF FUZZ", "EHX Big Muff Pi"},
 			[2]string{"OCT FUZZ", ""},
 		),
-		ModFX: items(
+		ModFX: device.Items(
 			[2]string{"CHORUS", ""},
 			[2]string{"FLANGER", ""},
 			[2]string{"PHASER", ""},
@@ -95,7 +95,7 @@ func Default() Device {
 			[2]string{"PEDAL WAH", ""},
 			[2]string{"GRAPHIC EQ", ""},
 		),
-		Delays: items(
+		Delays: device.Items(
 			[2]string{"DIGITAL DELAY", ""},
 			[2]string{"ANALOG DELAY", ""},
 			[2]string{"TAPE ECHO", "Maestro Echoplex EP-3 / Roland RE-201 Space Echo"},
@@ -103,7 +103,7 @@ func Default() Device {
 			[2]string{"MODULATE", ""},
 			[2]string{"SDE-3000", "Roland SDE-3000 digital delay"},
 		),
-		Reverbs: items(
+		Reverbs: device.Items(
 			[2]string{"PLATE REVERB", ""},
 			[2]string{"SPRING REVERB", ""},
 			[2]string{"HALL REVERB", ""},
@@ -115,12 +115,4 @@ func Default() Device {
 		Position:     []string{"SURROUND", "STATIC", "STAGE"},
 		Mode:         []string{"DELAY", "DLY+REV", "REVERB"},
 	}
-}
-
-func items(pairs ...[2]string) []Item {
-	out := make([]Item, len(pairs))
-	for i, p := range pairs {
-		out[i] = Item{Name: p[0], InspiredBy: p[1]}
-	}
-	return out
 }

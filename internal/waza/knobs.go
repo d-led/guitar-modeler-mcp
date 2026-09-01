@@ -2,7 +2,8 @@ package waza
 
 import (
 	"math"
-	"strings"
+
+	"github.com/d-led/guitar-modeler-mcp/internal/device"
 )
 
 // knobCase discriminates how a knob value is encoded in the patch record.
@@ -231,23 +232,6 @@ var effectKnobTable = map[string]effectKnobs{
 	}},
 }
 
-// canonicalKey normalises an agent-supplied knob name to the table's key:
-// lower-case with every non-alphanumeric run collapsed to a single underscore.
-func canonicalKey(s string) string {
-	var b strings.Builder
-	lastUnderscore := false
-	for _, r := range strings.ToLower(strings.TrimSpace(s)) {
-		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
-			b.WriteRune(r)
-			lastUnderscore = false
-		} else if !lastUnderscore {
-			b.WriteByte('_')
-			lastUnderscore = true
-		}
-	}
-	return strings.Trim(b.String(), "_")
-}
-
 // applyKnobs writes the given knob values for an effect into the record. `fx`
 // selects the FX block (true) or the MOD block (false). Unknown effect or knob
 // names are ignored, so a typo never corrupts the patch.
@@ -264,7 +248,7 @@ func applyKnobs(raw []byte, effect string, fx bool, values map[string]float64) {
 	// so agents can use either the on-device label or the canonical key.
 	norm := make(map[string]float64, len(values))
 	for k, v := range values {
-		norm[canonicalKey(k)] = v
+		norm[device.CanonicalKey(k)] = v
 	}
 	// Write in table order so the chorus rate/depth/effect_level aliases win
 	// over the low_* names.

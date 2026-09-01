@@ -8,14 +8,13 @@ package thr
 import (
 	"fmt"
 	"strings"
+
+	"github.com/d-led/guitar-modeler-mcp/internal/device"
 )
 
 // Item is one selectable effect, with the real hardware it emulates (empty
-// when not documented).
-type Item struct {
-	Name       string `json:"name"`
-	InspiredBy string `json:"inspired_by,omitempty"`
-}
+// when not documented). The type is shared across the device backends.
+type Item = device.Item
 
 // AmpCell is one position of the amp selector. On the THR-II, Type is the
 // selector group (CLEAN..FLAT) and Mode the variant (CLASSIC/BOUTIQUE/MODERN).
@@ -48,24 +47,24 @@ type Device struct {
 
 // Effect lists shared across the THR line (the two physical knobs).
 var (
-	thrModulation = items(
+	thrModulation = device.Items(
 		[2]string{"CHORUS", ""},
 		[2]string{"FLANGER", ""},
 		[2]string{"PHASER", ""},
 		[2]string{"TREMOLO", ""},
 	)
-	thrEcho = items(
+	thrEcho = device.Items(
 		[2]string{"Tape", ""},
 		[2]string{"Digital Delay", ""},
 	)
-	thrReverb = items(
+	thrReverb = device.Items(
 		[2]string{"Plate", ""},
 		[2]string{"Hall", ""},
 		[2]string{"Spring", ""},
 		[2]string{"Room", ""},
 	)
 	// thrCabs is the THR-II cabinet list, in the app's selector order.
-	thrCabs = items(
+	thrCabs = device.Items(
 		[2]string{"Brown 4x12", ""},
 		[2]string{"American 4x12", ""},
 		[2]string{"Vintage 4x12", ""},
@@ -84,14 +83,6 @@ var (
 		[2]string{"British Blues 2x12", ""},
 	)
 )
-
-func items(pairs ...[2]string) []Item {
-	out := make([]Item, len(pairs))
-	for i, p := range pairs {
-		out[i] = Item{Name: p[0], InspiredBy: p[1]}
-	}
-	return out
-}
 
 // ampGrid builds THR-II amp cells: name, type, mode, description, inspired-by.
 func ampGrid(rows ...[5]string) []AmpCell {
@@ -223,13 +214,7 @@ func Models() []Device {
 // ModelByName returns the device with the given identifier, matching
 // case-insensitively against the stable name or the display name.
 func ModelByName(name string) (Device, bool) {
-	q := strings.ToLower(strings.TrimSpace(name))
-	for _, m := range models {
-		if strings.ToLower(m.Name) == q || strings.ToLower(m.Display) == q {
-			return m, true
-		}
-	}
-	return Device{}, false
+	return device.FindByName(models, name, func(d Device) (string, string) { return d.Name, d.Display })
 }
 
 // Default returns the canonical THR device (the THR-II).
@@ -251,13 +236,13 @@ func (d Device) Resolve(s Spec) (Spec, error) {
 	if s.Cab, err = d.resolveCab(s.Cab); err != nil {
 		return s, err
 	}
-	if s.Mod, err = resolveItem(d.Modulation, s.Mod, "modulation"); err != nil {
+	if s.Mod, err = device.ResolveItem(d.Modulation, s.Mod, "modulation"); err != nil {
 		return s, err
 	}
-	if s.Echo, err = resolveItem(d.Echo, s.Echo, "echo"); err != nil {
+	if s.Echo, err = device.ResolveItem(d.Echo, s.Echo, "echo"); err != nil {
 		return s, err
 	}
-	if s.Reverb, err = resolveItem(d.Reverb, s.Reverb, "reverb"); err != nil {
+	if s.Reverb, err = device.ResolveItem(d.Reverb, s.Reverb, "reverb"); err != nil {
 		return s, err
 	}
 	return s, nil
@@ -272,7 +257,7 @@ func (d Device) resolveCab(query string) (string, error) {
 	if len(d.Cabs) == 0 {
 		return "", fmt.Errorf("this THR model has no selectable cabinet")
 	}
-	return resolveItem(d.Cabs, query, "cabinet")
+	return device.ResolveItem(d.Cabs, query, "cabinet")
 }
 
 func (d Device) resolveAmp(query string) (AmpCell, error) {
@@ -280,7 +265,7 @@ func (d Device) resolveAmp(query string) (AmpCell, error) {
 	if q == "" {
 		return AmpCell{}, fmt.Errorf("an amp is required")
 	}
-	qn := norm(q)
+	qn := device.Norm(q)
 
 	// Full cell name ("clean classic").
 	if c, ok := d.ampByName(qn); ok {
@@ -299,7 +284,7 @@ func (d Device) resolveAmp(query string) (AmpCell, error) {
 
 func (d Device) ampByName(qn string) (AmpCell, bool) {
 	for _, c := range d.Amps {
-		if norm(c.Name) == qn {
+		if device.Norm(c.Name) == qn {
 			return c, true
 		}
 	}
@@ -317,7 +302,7 @@ func (d Device) ampBySelector(q string) (AmpCell, bool) {
 
 func (d Device) ampByInspiredBy(qn string) (AmpCell, bool) {
 	for _, c := range d.Amps {
-		if c.InspiredBy != "" && strings.Contains(norm(c.InspiredBy), qn) {
+		if c.InspiredBy != "" && strings.Contains(device.Norm(c.InspiredBy), qn) {
 			return c, true
 		}
 	}
@@ -339,27 +324,4 @@ func (d Device) ampCell(name string) (AmpCell, bool) {
 		}
 	}
 	return AmpCell{}, false
-}
-
-func resolveItem(items []Item, query, label string) (string, error) {
-	q := strings.TrimSpace(query)
-	if q == "" {
-		return "", nil
-	}
-	for _, it := range items {
-		if strings.EqualFold(it.Name, q) {
-			return it.Name, nil
-		}
-	}
-	for _, it := range items {
-		if it.InspiredBy != "" && strings.Contains(norm(it.InspiredBy), norm(q)) {
-			return it.Name, nil
-		}
-	}
-	return "", fmt.Errorf("no %s matches %q", label, query)
-}
-
-func norm(s string) string {
-	s = strings.ReplaceAll(s, "·", " ")
-	return strings.Join(strings.Fields(strings.ToLower(strings.TrimSpace(s))), " ")
 }
