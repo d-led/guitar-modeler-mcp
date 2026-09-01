@@ -161,7 +161,7 @@ func writeDesignOutput(a *app, res *design.Result, f *designFlags) error {
 		return err
 	}
 	htmlPath := filepath.Join(f.out, file.Name()+".gigboard.html")
-	if err := os.WriteFile(htmlPath, []byte(html), 0o644); err != nil {
+	if err := os.WriteFile(htmlPath, []byte(html), 0o600); err != nil {
 		return err
 	}
 

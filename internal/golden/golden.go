@@ -16,10 +16,10 @@ func Assert(t *testing.T, name string, got []byte) {
 	path := filepath.Join("testdata", name+".golden")
 
 	if os.Getenv("UPDATE_GOLDEN") == "1" {
-		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 			t.Fatalf("mkdir for golden file: %v", err)
 		}
-		if err := os.WriteFile(path, got, 0o644); err != nil {
+		if err := os.WriteFile(path, got, 0o600); err != nil {
 			t.Fatalf("write golden file: %v", err)
 		}
 		return

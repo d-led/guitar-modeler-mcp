@@ -72,7 +72,7 @@ func (s *Setlist) Marshal() ([]byte, error) { return json.Marshal(s) }
 
 // Write persists the setlist to dir/<name>.setlist and returns the path.
 func (s *Setlist) Write(dir string) (string, error) {
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return "", err
 	}
 	name := sanitizeFileName(s.name)
@@ -84,7 +84,7 @@ func (s *Setlist) Write(dir string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := os.WriteFile(path, data, 0o644); err != nil {
+	if err := os.WriteFile(path, data, 0o600); err != nil {
 		return "", err
 	}
 	return path, nil

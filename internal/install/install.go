@@ -88,10 +88,10 @@ func Install(t Target, s Server) (string, bool, error) {
 	if !changed {
 		return path, false, nil
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return "", false, err
 	}
-	if err := os.WriteFile(path, out, 0o644); err != nil {
+	if err := os.WriteFile(path, out, 0o600); err != nil {
 		return "", false, fmt.Errorf("write config: %w", err)
 	}
 	return path, true, nil
@@ -117,7 +117,7 @@ func Uninstall(t Target, name string) (string, bool, error) {
 	if !changed {
 		return path, false, nil
 	}
-	if err := os.WriteFile(path, out, 0o644); err != nil {
+	if err := os.WriteFile(path, out, 0o600); err != nil {
 		return "", false, fmt.Errorf("write config: %w", err)
 	}
 	return path, true, nil

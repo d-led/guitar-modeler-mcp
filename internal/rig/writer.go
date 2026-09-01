@@ -46,7 +46,7 @@ func StoredName(name string) (string, bool) {
 // Write persists the rig file into dir using the rig name as the file name.
 // It returns the absolute path of the written file.
 func (f *RigFile) Write(dir string) (string, error) {
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return "", err
 	}
 	name := sanitizeFileName(f.Name())
@@ -58,7 +58,7 @@ func (f *RigFile) Write(dir string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := os.WriteFile(path, data, 0o644); err != nil {
+	if err := os.WriteFile(path, data, 0o600); err != nil {
 		return "", err
 	}
 	return path, nil

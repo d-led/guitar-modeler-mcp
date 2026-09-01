@@ -29,7 +29,7 @@ func UnmarshalMO(data []byte) (Preset, error) {
 
 // WriteMOFile writes a preset to a .mo file.
 func WriteMOFile(path string, p Preset) error {
-	return os.WriteFile(path, MarshalMO(p), 0o644)
+	return os.WriteFile(path, MarshalMO(p), 0o600)
 }
 
 // ReadMOFile reads a preset from a .mo file.

@@ -86,7 +86,7 @@ func WriteTSLFile(path string, b *Backup) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, data, 0o644)
+	return os.WriteFile(path, data, 0o600)
 }
 
 // NewBackup returns an empty Waza Air backup.

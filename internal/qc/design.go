@@ -208,11 +208,11 @@ func WritePresetWithCard(serial string, spec DesignSpec, outputDir string) (pbPa
 	}
 	stem := sanitizeName(spec.Name)
 	pbPath = filepath.Join(outputDir, stem+".pb")
-	if err := os.WriteFile(pbPath, data, 0o644); err != nil {
+	if err := os.WriteFile(pbPath, data, 0o600); err != nil {
 		return "", "", "", fmt.Errorf("write preset: %w", err)
 	}
 	cardPath = filepath.Join(outputDir, stem+".html")
-	if err := os.WriteFile(cardPath, []byte(SetupCardHTML(cat, preset)), 0o644); err != nil {
+	if err := os.WriteFile(cardPath, []byte(SetupCardHTML(cat, preset)), 0o600); err != nil {
 		return "", "", "", fmt.Errorf("write setup card: %w", err)
 	}
 	view, err := PresetJSON(cat, preset)
@@ -220,7 +220,7 @@ func WritePresetWithCard(serial string, spec DesignSpec, outputDir string) (pbPa
 		return "", "", "", err
 	}
 	jsonPath = filepath.Join(outputDir, stem+".json")
-	if err := os.WriteFile(jsonPath, []byte(view), 0o644); err != nil {
+	if err := os.WriteFile(jsonPath, []byte(view), 0o600); err != nil {
 		return "", "", "", fmt.Errorf("write preset JSON view: %w", err)
 	}
 	return pbPath, cardPath, jsonPath, nil

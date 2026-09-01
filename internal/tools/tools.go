@@ -805,7 +805,7 @@ func (r *Registrar) designRig(args map[string]any) (string, error) {
 		return "", err
 	}
 	htmlPath := filepath.Join(outDir, file.Name()+".gigboard.html")
-	if err := os.WriteFile(htmlPath, []byte(html), 0o644); err != nil {
+	if err := os.WriteFile(htmlPath, []byte(html), 0o600); err != nil {
 		return "", err
 	}
 
@@ -830,7 +830,7 @@ func (r *Registrar) renderReport(args map[string]any) (string, error) {
 		outDir = filepath.Dir(path)
 	}
 	htmlPath := filepath.Join(outDir, file.Name()+".gigboard.html")
-	if err := os.WriteFile(htmlPath, []byte(html), 0o644); err != nil {
+	if err := os.WriteFile(htmlPath, []byte(html), 0o600); err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("Wrote report: %s", fileLink(htmlPath)), nil
@@ -1473,7 +1473,7 @@ func (r *Registrar) writeMooerOutput(m mooer.Model, p mooer.Preset, outDir strin
 	}
 
 	cardPath := filepath.Join(outDir, base+"."+m.Name+".html")
-	if err := os.WriteFile(cardPath, []byte(mooer.SetupCardHTML(m, p)), 0o644); err != nil {
+	if err := os.WriteFile(cardPath, []byte(mooer.SetupCardHTML(m, p)), 0o600); err != nil {
 		return "", err
 	}
 	fmt.Fprintf(&b, "Setup card: %s\n", cardPath)
@@ -1511,7 +1511,7 @@ func (r *Registrar) renderSetupCard(args map[string]any) (string, error) {
 		outDir = filepath.Dir(path)
 	}
 	cardPath := filepath.Join(outDir, sanitizeFileBase(p.Name)+"."+m.Name+".html")
-	if err := os.WriteFile(cardPath, []byte(mooer.SetupCardHTML(m, p)), 0o644); err != nil {
+	if err := os.WriteFile(cardPath, []byte(mooer.SetupCardHTML(m, p)), 0o600); err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("Wrote setup card to %s", cardPath), nil
@@ -1630,7 +1630,7 @@ func (r *Registrar) wazaSetupCard(args map[string]any) (string, error) {
 	}
 
 	path := filepath.Join(outDir, sanitizeFileBase(spec.Name)+"."+d.Name+".html")
-	if err := os.WriteFile(path, []byte(card), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte(card), 0o600); err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("Wrote Waza Air setup card to %s", path), nil
@@ -2061,7 +2061,7 @@ func (r *Registrar) qcRenderSetupCard(args map[string]any) (string, error) {
 	}
 	stem := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
 	cardPath := filepath.Join(outDir, stem+".html")
-	if err := os.WriteFile(cardPath, []byte(qc.SetupCardHTML(d.Catalog, preset)), 0o644); err != nil {
+	if err := os.WriteFile(cardPath, []byte(qc.SetupCardHTML(d.Catalog, preset)), 0o600); err != nil {
 		return "", fmt.Errorf("write setup card: %w", err)
 	}
 	view, err := qc.PresetJSON(d.Catalog, preset)
@@ -2069,7 +2069,7 @@ func (r *Registrar) qcRenderSetupCard(args map[string]any) (string, error) {
 		return "", err
 	}
 	jsonPath := filepath.Join(outDir, stem+".json")
-	if err := os.WriteFile(jsonPath, []byte(view), 0o644); err != nil {
+	if err := os.WriteFile(jsonPath, []byte(view), 0o600); err != nil {
 		return "", fmt.Errorf("write preset JSON view: %w", err)
 	}
 	return marshal(map[string]any{"card": cardPath, "json": jsonPath, "name": preset.Name, "caveat": qc.Caveat})
@@ -2261,7 +2261,7 @@ func (r *Registrar) thrSetupCard(args map[string]any) (string, error) {
 		outDir = "."
 	}
 	path := filepath.Join(outDir, sanitizeFileBase(resolved.Name)+"."+d.Name+".html")
-	if err := os.WriteFile(path, []byte(d.SetupCardHTML(resolved)), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte(d.SetupCardHTML(resolved)), 0o600); err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("Wrote %s setup card to %s", d.Display, path), nil
