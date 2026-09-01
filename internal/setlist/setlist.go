@@ -4,13 +4,14 @@
 package setlist
 
 import (
-	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/d-led/guitar-modeler-mcp/internal/fileutil"
 )
 
 // Setlist is a device .setlist file. The setlist's own name is not part of the
@@ -41,7 +42,7 @@ func New(name string, entries []Entry) (*Setlist, error) {
 	if len(entries) == 0 {
 		return nil, fmt.Errorf("a setlist needs at least one rig")
 	}
-	id, err := newUUID()
+	id, err := fileutil.NewUUID()
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +76,7 @@ func (s *Setlist) Write(dir string) (string, error) {
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return "", err
 	}
-	name := sanitizeFileName(s.name)
+	name := fileutil.SanitizeName(s.name)
 	if name == "" {
 		name = "setlist"
 	}
@@ -88,29 +89,4 @@ func (s *Setlist) Write(dir string) (string, error) {
 		return "", err
 	}
 	return path, nil
-}
-
-func newUUID() (string, error) {
-	var b [16]byte
-	if _, err := rand.Read(b[:]); err != nil {
-		return "", fmt.Errorf("generate uuid: %w", err)
-	}
-	b[6] = (b[6] & 0x0f) | 0x40 // version 4
-	b[8] = (b[8] & 0x3f) | 0x80 // variant
-	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16]), nil
-}
-
-// sanitizeFileName keeps only printable ASCII filesystem-safe characters.
-func sanitizeFileName(name string) string {
-	var b strings.Builder
-	for _, r := range name {
-		switch {
-		case (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9'),
-			r == ' ', r == '-', r == '_', r == '.':
-			b.WriteRune(r)
-		default:
-			b.WriteRune('_')
-		}
-	}
-	return strings.TrimRight(strings.TrimSpace(b.String()), ". ")
 }

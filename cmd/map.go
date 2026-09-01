@@ -1,9 +1,7 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -11,7 +9,6 @@ import (
 
 	"github.com/d-led/guitar-modeler-mcp/internal/mooer"
 	"github.com/d-led/guitar-modeler-mcp/internal/presetmap"
-	"github.com/d-led/guitar-modeler-mcp/internal/rig"
 )
 
 func newMapCmd() *cobra.Command {
@@ -78,15 +75,11 @@ func dispatchMap(a *app, path, out, src, dst string) error {
 }
 
 func mapGigboardToMooer(a *app, path, out, src, dst string) error {
-	data, err := os.ReadFile(path)
+	file, err := readRigFile(path)
 	if err != nil {
 		return err
 	}
-	var file rig.RigFile
-	if err := json.Unmarshal(data, &file); err != nil {
-		return fmt.Errorf("parse rig file: %w", err)
-	}
-	p, err := a.table.GigboardToMooer(&file)
+	p, err := a.table.GigboardToMooer(file)
 	if err != nil {
 		return err
 	}

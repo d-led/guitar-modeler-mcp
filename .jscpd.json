@@ -1,8 +1,8 @@
 {
-  "threshold": 3,
+  "threshold": 0.5,
   "reporters": ["consoleFull"],
   "mode": "strict",
-  "minLines": 5,
+  "minLines": 7,
   "minTokens": 80,
   "format": ["go"],
   "ignore": [

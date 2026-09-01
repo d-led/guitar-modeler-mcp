@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/d-led/guitar-modeler-mcp/internal/fileutil"
 )
 
 // Name returns the rig's display name from the Patch's Rig node.
@@ -49,7 +51,7 @@ func (f *RigFile) Write(dir string) (string, error) {
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return "", err
 	}
-	name := sanitizeFileName(f.Name())
+	name := fileutil.SanitizeName(f.Name())
 	if name == "" {
 		name = "rig"
 	}
@@ -62,21 +64,4 @@ func (f *RigFile) Write(dir string) (string, error) {
 		return "", err
 	}
 	return path, nil
-}
-
-// sanitizeFileName keeps only printable ASCII filesystem-safe characters;
-// anything else (accented letters, emoji, control characters) becomes an
-// underscore, so the file name is portable across machines and file systems.
-func sanitizeFileName(name string) string {
-	var b strings.Builder
-	for _, r := range name {
-		switch {
-		case (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9'),
-			r == ' ', r == '-', r == '_', r == '.':
-			b.WriteRune(r)
-		default:
-			b.WriteRune('_')
-		}
-	}
-	return strings.TrimRight(strings.TrimSpace(b.String()), ". ")
 }

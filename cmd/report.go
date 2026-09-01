@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,7 +8,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/d-led/guitar-modeler-mcp/internal/htmlreport"
-	"github.com/d-led/guitar-modeler-mcp/internal/rig"
 )
 
 func newReportCmd() *cobra.Command {
@@ -26,15 +24,11 @@ func newReportCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			data, err := os.ReadFile(rigFile)
+			file, err := readRigFile(rigFile)
 			if err != nil {
 				return err
 			}
-			var file rig.RigFile
-			if err := json.Unmarshal(data, &file); err != nil {
-				return fmt.Errorf("parse rig file: %w", err)
-			}
-			html, err := htmlreport.Render(&file, note, a.cat)
+			html, err := htmlreport.Render(file, note, a.cat)
 			if err != nil {
 				return err
 			}

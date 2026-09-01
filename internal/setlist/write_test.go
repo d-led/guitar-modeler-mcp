@@ -17,23 +17,6 @@ func TestName(t *testing.T) {
 	}
 }
 
-func TestSanitizeFileName(t *testing.T) {
-	for _, tc := range []struct {
-		in   string
-		want string
-	}{
-		{"Brown Sound", "Brown Sound"},
-		{"sl/ash:chars", "sl_ash_chars"},
-		{"trailing...", "trailing"},
-		{"  padded  ", "padded"},
-		{"UPPER_lower-123.ok", "UPPER_lower-123.ok"},
-	} {
-		if got := sanitizeFileName(tc.in); got != tc.want {
-			t.Fatalf("sanitizeFileName(%q) = %q, want %q", tc.in, got, tc.want)
-		}
-	}
-}
-
 func TestWrite(t *testing.T) {
 	s, err := New("My Song", []Entry{{ID: "11111111-1111-4111-8111-111111111111", Name: "Clean"}})
 	if err != nil {

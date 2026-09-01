@@ -121,15 +121,25 @@ func appendWireParam(model *Model, index int, wire float64) {
 	})
 }
 
-func applyNamedParam(m *ModelSpec, model *Model, seen map[int]bool, name string, value float64) error {
+// resolveParam validates a knob name and marks it seen, returning its spec and
+// wire index. Shared by the named-value and pre-encoded value appliers.
+func resolveParam(m *ModelSpec, seen map[int]bool, name string) (ParamSpec, int, error) {
 	spec, index, ok := m.ResolveParam(name)
 	if !ok {
-		return fmt.Errorf("%s: unknown parameter %q (available: %s)", m.Name, name, strings.Join(m.KnobNames(), ", "))
+		return ParamSpec{}, 0, fmt.Errorf("%s: unknown parameter %q (available: %s)", m.Name, name, strings.Join(m.KnobNames(), ", "))
 	}
 	if seen[index] {
-		return fmt.Errorf("parameter %q set twice", name)
+		return ParamSpec{}, 0, fmt.Errorf("parameter %q set twice", name)
 	}
 	seen[index] = true
+	return spec, index, nil
+}
+
+func applyNamedParam(m *ModelSpec, model *Model, seen map[int]bool, name string, value float64) error {
+	spec, index, err := resolveParam(m, seen, name)
+	if err != nil {
+		return err
+	}
 	wire, err := encodeValue(spec, value)
 	if err != nil {
 		return err
@@ -139,14 +149,10 @@ func applyNamedParam(m *ModelSpec, model *Model, seen map[int]bool, name string,
 }
 
 func applyEncodedParam(m *ModelSpec, model *Model, seen map[int]bool, name string, value float64) error {
-	_, index, ok := m.ResolveParam(name)
-	if !ok {
-		return fmt.Errorf("%s: unknown parameter %q (available: %s)", m.Name, name, strings.Join(m.KnobNames(), ", "))
+	_, index, err := resolveParam(m, seen, name)
+	if err != nil {
+		return err
 	}
-	if seen[index] {
-		return fmt.Errorf("parameter %q set twice", name)
-	}
-	seen[index] = true
 	if value < 0 || value > 1 {
 		return fmt.Errorf("%s: an encoded value runs 0..1, got %g", name, value)
 	}

@@ -195,36 +195,47 @@ func containsNormalizedStyle(styles []string, w string) bool {
 	return false
 }
 
+// match is a catalog model together with its fuzzy-match score.
+type match[T any] struct {
+	item  T
+	score int
+}
+
+// rankMatches scores every item against the normalised query and returns the
+// matches with a positive score, best first.
+func rankMatches[T any](q string, items []T, hay func(T) string) []match[T] {
+	var found []match[T]
+	for _, it := range items {
+		score := 0
+		haystack := normalize(hay(it))
+		if strings.Contains(haystack, q) {
+			score += 3
+		}
+		for _, w := range strings.Fields(q) {
+			if containsWord(haystack, w) {
+				score++
+			}
+		}
+		if score > 0 {
+			found = append(found, match[T]{item: it, score: score})
+		}
+	}
+	sort.SliceStable(found, func(i, j int) bool { return found[i].score > found[j].score })
+	return found
+}
+
 // TranslateCab returns cabinet models matching a free-form description.
 func (c *Catalog) TranslateCab(query string) []Cab {
 	q := normalize(query)
 	if q == "" {
 		return nil
 	}
-	type scored struct {
-		cab   Cab
-		score int
-	}
-	var found []scored
-	for _, cb := range cabs {
-		score := 0
-		hay := normalize(cb.Model + " " + cb.Speakers + " " + cb.SpeakersRef + " " + cb.Description)
-		if strings.Contains(hay, q) {
-			score += 3
-		}
-		for _, w := range strings.Fields(q) {
-			if containsWord(hay, w) {
-				score++
-			}
-		}
-		if score > 0 {
-			found = append(found, scored{cb, score})
-		}
-	}
-	sort.SliceStable(found, func(i, j int) bool { return found[i].score > found[j].score })
+	found := rankMatches(q, cabs, func(cb Cab) string {
+		return cb.Model + " " + cb.Speakers + " " + cb.SpeakersRef + " " + cb.Description
+	})
 	out := make([]Cab, 0, len(found))
 	for _, f := range found {
-		out = append(out, f.cab)
+		out = append(out, f.item)
 	}
 	return out
 }
@@ -235,30 +246,12 @@ func (c *Catalog) TranslateMic(query string) []Mic {
 	if q == "" {
 		return nil
 	}
-	type scored struct {
-		mic   Mic
-		score int
-	}
-	var found []scored
-	for _, m := range mics {
-		hay := normalize(m.Model + " " + m.Kind + " " + m.RealModel + " " + m.Description)
-		score := 0
-		if strings.Contains(hay, q) {
-			score += 3
-		}
-		for _, w := range strings.Fields(q) {
-			if containsWord(hay, w) {
-				score++
-			}
-		}
-		if score > 0 {
-			found = append(found, scored{m, score})
-		}
-	}
-	sort.SliceStable(found, func(i, j int) bool { return found[i].score > found[j].score })
+	found := rankMatches(q, mics, func(m Mic) string {
+		return m.Model + " " + m.Kind + " " + m.RealModel + " " + m.Description
+	})
 	out := make([]Mic, 0, len(found))
 	for _, f := range found {
-		out = append(out, f.mic)
+		out = append(out, f.item)
 	}
 	return out
 }

@@ -1,13 +1,10 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 
-	"github.com/d-led/guitar-modeler-mcp/internal/rig"
 	"github.com/d-led/guitar-modeler-mcp/internal/setlist"
 )
 
@@ -24,13 +21,9 @@ func newSetlistCmd() *cobra.Command {
 		RunE: func(_ *cobra.Command, args []string) error {
 			entries := make([]setlist.Entry, 0, len(args))
 			for _, p := range args {
-				data, err := os.ReadFile(p)
+				file, err := readRigFile(p)
 				if err != nil {
 					return err
-				}
-				var file rig.RigFile
-				if err := json.Unmarshal(data, &file); err != nil {
-					return fmt.Errorf("parse rig file %q: %w", p, err)
 				}
 				entries = append(entries, setlist.Entry{ID: file.ID, Name: file.Name()})
 			}

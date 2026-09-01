@@ -1,13 +1,13 @@
 package rig
 
 import (
-	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/d-led/guitar-modeler-mcp/internal/assets"
 	"github.com/d-led/guitar-modeler-mcp/internal/catalog"
+	"github.com/d-led/guitar-modeler-mcp/internal/fileutil"
 )
 
 // RigFile is the outer JSON document of a .rig file.
@@ -246,7 +246,7 @@ func (b *Builder) newRigFile(spec Spec, content Content) (*RigFile, error) {
 	if color < 1 || color > 9 {
 		return nil, fmt.Errorf("rig colour must be 1..9, got %d", spec.Color)
 	}
-	id, err := newUUID()
+	id, err := fileutil.NewUUID()
 	if err != nil {
 		return nil, err
 	}
@@ -289,14 +289,4 @@ func strParam(params map[string]any, key string) string {
 		}
 	}
 	return ""
-}
-
-func newUUID() (string, error) {
-	var b [16]byte
-	if _, err := rand.Read(b[:]); err != nil {
-		return "", fmt.Errorf("generate uuid: %w", err)
-	}
-	b[6] = (b[6] & 0x0f) | 0x40 // version 4
-	b[8] = (b[8] & 0x3f) | 0x80 // variant
-	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16]), nil
 }

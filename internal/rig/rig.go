@@ -568,21 +568,12 @@ func (c *chain) fillSPS(cat *catalog.Catalog, spec Spec) error {
 }
 
 func (c *chain) canonicalizeSPS(cat *catalog.Catalog, spec Spec) error {
-	var err error
-	c.prefix, err = canonicalizeBlocks(cat, spec.Prefix)
+	prefix, err := canonicalizeBlocks(cat, spec.Prefix)
 	if err != nil {
 		return err
 	}
-	c.pathA, err = canonicalizeBlocks(cat, spec.PathA)
-	if err != nil {
-		return err
-	}
-	c.pathB, err = canonicalizeBlocks(cat, spec.PathB)
-	if err != nil {
-		return err
-	}
-	c.suffix, err = canonicalizeBlocks(cat, spec.Suffix)
-	return err
+	c.prefix = prefix
+	return c.setParallelPaths(cat, spec)
 }
 
 func (c *chain) fillPS(cat *catalog.Catalog, spec Spec) error {
@@ -595,17 +586,26 @@ func (c *chain) fillPS(cat *catalog.Catalog, spec Spec) error {
 	if len(spec.PathB) > psPathBSlots {
 		return fmt.Errorf("PS-1 path B has %d blocks, max %d", len(spec.PathB), psPathBSlots)
 	}
-	var err error
-	c.pathA, err = canonicalizeBlocks(cat, spec.PathA)
+	return c.setParallelPaths(cat, spec)
+}
+
+// setParallelPaths canonicalises the two parallel branches and the shared
+// suffix, which every parallel routing topology has in common.
+func (c *chain) setParallelPaths(cat *catalog.Catalog, spec Spec) error {
+	pathA, err := canonicalizeBlocks(cat, spec.PathA)
 	if err != nil {
 		return err
 	}
-	c.pathB, err = canonicalizeBlocks(cat, spec.PathB)
+	pathB, err := canonicalizeBlocks(cat, spec.PathB)
 	if err != nil {
 		return err
 	}
-	c.suffix, err = canonicalizeBlocks(cat, spec.Suffix)
-	return err
+	suffix, err := canonicalizeBlocks(cat, spec.Suffix)
+	if err != nil {
+		return err
+	}
+	c.pathA, c.pathB, c.suffix = pathA, pathB, suffix
+	return nil
 }
 
 func canonicalizeBlocks(cat *catalog.Catalog, blocks []Block) ([]Block, error) {
