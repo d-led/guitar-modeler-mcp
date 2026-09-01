@@ -183,8 +183,8 @@ func formatWire(spec ParamSpec, wire float64) string {
 		}
 		return formatWireRaw(wire)
 	}
-	if real, err := spec.Denormalize(wire); err == nil {
-		return formatReal(spec, real)
+	if realVal, err := spec.Denormalize(wire); err == nil {
+		return formatReal(spec, realVal)
 	}
 	return formatWireRaw(wire)
 }
@@ -200,14 +200,14 @@ func formatWireRaw(wire float64) string {
 
 // formatReal renders a screen value: the catalog's endpoint labels ("OFF",
 // "MIN", ...) at the bounds, or the rounded value plus its unit otherwise.
-func formatReal(spec ParamSpec, real float64) string {
-	if spec.MinLabel != "" && real <= spec.Min {
+func formatReal(spec ParamSpec, value float64) string {
+	if spec.MinLabel != "" && value <= spec.Min {
 		return spec.MinLabel
 	}
-	if spec.MaxLabel != "" && real >= spec.Max {
+	if spec.MaxLabel != "" && value >= spec.Max {
 		return spec.MaxLabel
 	}
-	rounded := roundForDisplay(real, spec.Units)
+	rounded := roundForDisplay(value, spec.Units)
 	text := strconv.FormatFloat(rounded, 'f', -1, 64)
 	if spec.Units != "" {
 		return text + " " + spec.Units
@@ -217,7 +217,7 @@ func formatReal(spec ParamSpec, real float64) string {
 
 // roundForDisplay rounds a real value to the precision a screen would show for
 // its unit, so a knob set to 0 dB reads "0 dB" rather than "-0.0002 dB".
-func roundForDisplay(real float64, units string) float64 {
+func roundForDisplay(value float64, units string) float64 {
 	places := 2
 	switch units {
 	case "dB", "dB/oct":
@@ -230,7 +230,7 @@ func roundForDisplay(real float64, units string) float64 {
 		places = 2
 	}
 	p := math.Pow(10, float64(places))
-	rounded := math.Round(real*p) / p
+	rounded := math.Round(value*p) / p
 	if rounded == 0 {
 		// Normalise -0 (from rounding a tiny negative) to plain 0.
 		return 0

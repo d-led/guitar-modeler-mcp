@@ -2031,8 +2031,8 @@ func renderParam(cat *qc.Catalog, model *qc.Model, p *qc.Param) map[string]any {
 		spec := m.Params[p.GetIndex()]
 		pname = spec.Name
 		if f, ok := val.(float32); ok {
-			if real, err := spec.Denormalize(float64(f)); err == nil {
-				val = map[string]any{"wire": f, "real": real, "units": spec.Units}
+			if realVal, err := spec.Denormalize(float64(f)); err == nil {
+				val = map[string]any{"wire": f, "real": realVal, "units": spec.Units}
 			}
 		}
 	}

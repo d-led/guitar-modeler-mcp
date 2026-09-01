@@ -21,12 +21,12 @@ const (
 type knob struct {
 	name   string
 	offset int
-	case_  knobCase
+	kind   knobCase
 	limits []float64
 }
 
-func min(name string, offset, lo, hi int) knob {
-	return knob{name: name, offset: offset, case_: knobMinmax, limits: []float64{float64(lo), float64(hi)}}
+func minmax(name string, offset, lo, hi int) knob {
+	return knob{name: name, offset: offset, kind: knobMinmax, limits: []float64{float64(lo), float64(hi)}}
 }
 
 func lst(name string, offset int, values ...int) knob {
@@ -34,15 +34,15 @@ func lst(name string, offset int, values ...int) knob {
 	for i, v := range values {
 		limits[i] = float64(v)
 	}
-	return knob{name: name, offset: offset, case_: knobListed, limits: limits}
+	return knob{name: name, offset: offset, kind: knobListed, limits: limits}
 }
 
 func scl(name string, offset int, base, slope float64, lo, hi int) knob {
-	return knob{name: name, offset: offset, case_: knobScaled, limits: []float64{base, slope, float64(lo), float64(hi)}}
+	return knob{name: name, offset: offset, kind: knobScaled, limits: []float64{base, slope, float64(lo), float64(hi)}}
 }
 
 func two(name string, offset, lo, hi int) knob {
-	return knob{name: name, offset: offset, case_: knobTwoBytes, limits: []float64{float64(lo), float64(hi)}}
+	return knob{name: name, offset: offset, kind: knobTwoBytes, limits: []float64{float64(lo), float64(hi)}}
 }
 
 // set writes a value into the record. A value of NaN leaves the byte(s)
@@ -51,7 +51,7 @@ func (k knob) set(raw []byte, v float64) {
 	if math.IsNaN(v) {
 		return
 	}
-	switch k.case_ {
+	switch k.kind {
 	case knobListed:
 		for _, allowed := range k.limits {
 			if v == allowed {
@@ -74,7 +74,7 @@ func (k knob) set(raw []byte, v float64) {
 // get reads the knob's value, decoding scaled and two-byte encodings back into
 // their input units. Listed and minmax knobs return the raw byte.
 func (k knob) get(raw []byte) float64 {
-	switch k.case_ {
+	switch k.kind {
 	case knobScaled:
 		base, slope := k.limits[0], k.limits[1]
 		return (float64(raw[k.offset]) - base) / slope
@@ -102,28 +102,28 @@ const fxEffectDelta = 268
 // are transcribed from waza-tsl's known_indexes.py.
 var effectKnobTable = map[string]effectKnobs{
 	"T.WAH": {fxEffectDelta, []knob{
-		lst("mode", 204, 0, 1), lst("polarity", 205, 0, 1), min("sens", 206, 0, 100),
-		min("frequency", 207, 0, 100), min("peak", 208, 0, 100), min("direct_mix", 209, 0, 100),
-		min("effect_level", 210, 0, 100),
+		lst("mode", 204, 0, 1), lst("polarity", 205, 0, 1), minmax("sens", 206, 0, 100),
+		minmax("frequency", 207, 0, 100), minmax("peak", 208, 0, 100), minmax("direct_mix", 209, 0, 100),
+		minmax("effect_level", 210, 0, 100),
 	}},
 	"AUTO WAH": {fxEffectDelta, []knob{
-		lst("mode", 212, 0, 1), min("frequency", 213, 0, 100), min("peak", 214, 0, 100),
-		min("rate", 215, 0, 100), min("depth", 216, 0, 100), min("direct_mix", 217, 0, 100),
-		min("effect_level", 218, 0, 100),
+		lst("mode", 212, 0, 1), minmax("frequency", 213, 0, 100), minmax("peak", 214, 0, 100),
+		minmax("rate", 215, 0, 100), minmax("depth", 216, 0, 100), minmax("direct_mix", 217, 0, 100),
+		minmax("effect_level", 218, 0, 100),
 	}},
 	"PEDAL WAH": {fxEffectDelta, []knob{
-		lst("type", 220, 0, 1, 2, 3, 4, 5), min("pedal_position", 221, 0, 100),
-		min("pedal_min", 222, 0, 100), min("pedal_max", 223, 0, 100),
-		min("effect_level", 224, 0, 100), min("direct_mix", 225, 0, 100),
+		lst("type", 220, 0, 1, 2, 3, 4, 5), minmax("pedal_position", 221, 0, 100),
+		minmax("pedal_min", 222, 0, 100), minmax("pedal_max", 223, 0, 100),
+		minmax("effect_level", 224, 0, 100), minmax("direct_mix", 225, 0, 100),
 	}},
 	"COMP": {fxEffectDelta, []knob{
-		lst("type", 227, 0, 1, 2, 3, 4, 5, 6), min("sustain", 228, 0, 100),
-		min("attack", 229, 0, 100), scl("tone", 230, 50, 1, 0, 100), min("level", 231, 0, 100),
+		lst("type", 227, 0, 1, 2, 3, 4, 5, 6), minmax("sustain", 228, 0, 100),
+		minmax("attack", 229, 0, 100), scl("tone", 230, 50, 1, 0, 100), minmax("level", 231, 0, 100),
 	}},
 	"LIMITER": {fxEffectDelta, []knob{
-		lst("type", 233, 0, 1, 2), min("attack", 234, 0, 100), min("threshold", 235, 0, 100),
+		lst("type", 233, 0, 1, 2), minmax("attack", 234, 0, 100), minmax("threshold", 235, 0, 100),
 		lst("ratio", 236, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17),
-		min("release", 237, 0, 100), min("level", 238, 0, 100),
+		minmax("release", 237, 0, 100), minmax("level", 238, 0, 100),
 	}},
 	"GRAPHIC EQ": {fxEffectDelta, []knob{
 		scl("31hz", 240, 20, 1, 0, 40), scl("62hz", 241, 20, 1, 0, 40), scl("125hz", 242, 20, 1, 0, 40),
@@ -132,102 +132,102 @@ var effectKnobTable = map[string]effectKnobs{
 		scl("16khz", 249, 20, 1, 0, 40), scl("level", 250, 20, 1, 0, 40),
 	}},
 	"PARAMETRIC EQ": {fxEffectDelta, []knob{
-		min("low_cut", 252, 0, 17), scl("low_gain", 253, 20, 1, 0, 40), min("low_mid_frequency", 254, 0, 27),
+		minmax("low_cut", 252, 0, 17), scl("low_gain", 253, 20, 1, 0, 40), minmax("low_mid_frequency", 254, 0, 27),
 		lst("low_mid_q", 255, 0, 1, 2, 3, 4, 5), scl("low_mid_gain", 256, 20, 1, 0, 40),
-		min("high_mid_frequency", 257, 0, 27), lst("high_mid_q", 258, 0, 1, 2, 3, 4, 5),
+		minmax("high_mid_frequency", 257, 0, 27), lst("high_mid_q", 258, 0, 1, 2, 3, 4, 5),
 		scl("high_mid_gain", 259, 20, 1, 0, 40), scl("high_gain", 260, 20, 1, 0, 40),
-		min("high_cut", 261, 0, 14), scl("level", 262, 20, 1, 0, 40),
+		minmax("high_cut", 261, 0, 14), scl("level", 262, 20, 1, 0, 40),
 	}},
 	"GUITAR SIM": {fxEffectDelta, []knob{
 		lst("type", 270, 0, 1, 2, 3, 4, 5, 6, 7), scl("low", 271, 50, 1, 0, 100),
-		scl("high", 272, 50, 1, 0, 100), min("level", 273, 0, 100), min("body", 274, 0, 100),
+		scl("high", 272, 50, 1, 0, 100), minmax("level", 273, 0, 100), minmax("body", 274, 0, 100),
 	}},
 	"SLOW GEAR": {fxEffectDelta, []knob{
-		min("sens", 276, 0, 100), min("rise_time", 277, 0, 100), min("level", 278, 0, 100),
+		minmax("sens", 276, 0, 100), minmax("rise_time", 277, 0, 100), minmax("level", 278, 0, 100),
 	}},
 	"WAVE SYNTH": {fxEffectDelta, []knob{
-		lst("wave", 288, 0, 1), min("cutoff", 289, 0, 100), min("resonance", 290, 0, 100),
-		min("filter_sens", 291, 0, 100), min("filter_decay", 292, 0, 100), min("filter_depth", 293, 0, 100),
-		min("synth_level", 294, 0, 100), min("direct_mix", 295, 0, 100),
+		lst("wave", 288, 0, 1), minmax("cutoff", 289, 0, 100), minmax("resonance", 290, 0, 100),
+		minmax("filter_sens", 291, 0, 100), minmax("filter_decay", 292, 0, 100), minmax("filter_depth", 293, 0, 100),
+		minmax("synth_level", 294, 0, 100), minmax("direct_mix", 295, 0, 100),
 	}},
 	"OCTAVE": {fxEffectDelta, []knob{
-		lst("range", 305, 0, 1, 2, 3), min("effect_level", 306, 0, 100), min("direct_mix", 307, 0, 100),
+		lst("range", 305, 0, 1, 2, 3), minmax("effect_level", 306, 0, 100), minmax("direct_mix", 307, 0, 100),
 	}},
 	"PITCH SHIFTER": {fxEffectDelta, []knob{
 		lst("voice", 309, 0, 1), lst("ps1_mode", 310, 0, 1, 2, 3), scl("ps1_pitch", 311, 24, 1, 0, 48),
-		scl("ps1_fine", 312, 50, 1, 0, 100), two("ps1_pre_delay", 313, 0, 300), min("ps1_level", 315, 0, 100),
+		scl("ps1_fine", 312, 50, 1, 0, 100), two("ps1_pre_delay", 313, 0, 300), minmax("ps1_level", 315, 0, 100),
 		lst("ps2_mode", 316, 0, 1, 2, 3), scl("ps2_pitch", 317, 24, 1, 0, 48),
-		scl("ps2_fine", 318, 50, 1, 0, 100), two("ps2_pre_delay", 319, 0, 300), min("ps2_level", 321, 0, 100),
-		min("ps1_feedback", 322, 0, 100), min("direct_mix", 323, 0, 100),
+		scl("ps2_fine", 318, 50, 1, 0, 100), two("ps2_pre_delay", 319, 0, 300), minmax("ps2_level", 321, 0, 100),
+		minmax("ps1_feedback", 322, 0, 100), minmax("direct_mix", 323, 0, 100),
 	}},
 	"HARMONIST": {fxEffectDelta, []knob{
 		lst("voice", 325, 0, 1), lst("hr1_harmony", 326, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29),
-		two("hr1_pre_delay", 327, 0, 300), min("hr1_level", 329, 0, 100),
+		two("hr1_pre_delay", 327, 0, 300), minmax("hr1_level", 329, 0, 100),
 		lst("hr2_harmony", 330, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29),
-		two("hr2_pre_delay", 331, 0, 300), min("hr2_level", 333, 0, 100),
-		min("hr1_feedback", 334, 0, 100), min("direct_mix", 335, 0, 100),
+		two("hr2_pre_delay", 331, 0, 300), minmax("hr2_level", 333, 0, 100),
+		minmax("hr1_feedback", 334, 0, 100), minmax("direct_mix", 335, 0, 100),
 	}},
 	"AC PROCESSOR": {fxEffectDelta, []knob{
 		lst("type", 365, 0, 1, 2, 3), scl("bass", 366, 50, 1, 0, 100), scl("middle", 367, 50, 1, 0, 100),
-		min("middle_frequency", 368, 0, 27), scl("treble", 369, 50, 1, 0, 100),
-		scl("presence", 370, 50, 1, 0, 100), min("level", 371, 0, 100),
+		minmax("middle_frequency", 368, 0, 27), scl("treble", 369, 50, 1, 0, 100),
+		scl("presence", 370, 50, 1, 0, 100), minmax("level", 371, 0, 100),
 	}},
 	"PHASER": {fxEffectDelta, []knob{
-		lst("type", 373, 0, 1, 2, 3), min("rate", 374, 0, 100), min("depth", 375, 0, 100),
-		min("manual", 376, 0, 100), min("resonance", 377, 0, 100), min("step_rate", 378, 0, 101),
-		min("effect_level", 379, 0, 100), min("direct_mix", 380, 0, 100),
+		lst("type", 373, 0, 1, 2, 3), minmax("rate", 374, 0, 100), minmax("depth", 375, 0, 100),
+		minmax("manual", 376, 0, 100), minmax("resonance", 377, 0, 100), minmax("step_rate", 378, 0, 101),
+		minmax("effect_level", 379, 0, 100), minmax("direct_mix", 380, 0, 100),
 	}},
 	"FLANGER": {fxEffectDelta, []knob{
-		min("rate", 382, 0, 100), min("depth", 383, 0, 100), min("manual", 384, 0, 100),
-		min("resonance", 385, 0, 100), lst("low_cut", 387, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
-		min("effect_level", 388, 0, 100), min("direct_mix", 389, 0, 100),
+		minmax("rate", 382, 0, 100), minmax("depth", 383, 0, 100), minmax("manual", 384, 0, 100),
+		minmax("resonance", 385, 0, 100), lst("low_cut", 387, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
+		minmax("effect_level", 388, 0, 100), minmax("direct_mix", 389, 0, 100),
 	}},
 	"TREMOLO": {fxEffectDelta, []knob{
-		min("wave_shape", 391, 0, 100), min("rate", 392, 0, 100), min("depth", 393, 0, 100), min("level", 394, 0, 100),
+		minmax("wave_shape", 391, 0, 100), minmax("rate", 392, 0, 100), minmax("depth", 393, 0, 100), minmax("level", 394, 0, 100),
 	}},
 	"ROTARY": {fxEffectDelta, []knob{
-		min("rate", 398, 0, 100), min("depth", 401, 0, 100), min("level", 402, 0, 100),
+		minmax("rate", 398, 0, 100), minmax("depth", 401, 0, 100), minmax("level", 402, 0, 100),
 	}},
 	"UNI-V": {fxEffectDelta, []knob{
-		min("rate", 404, 0, 100), min("depth", 405, 0, 100), min("level", 406, 0, 100),
+		minmax("rate", 404, 0, 100), minmax("depth", 405, 0, 100), minmax("level", 406, 0, 100),
 	}},
 	"SLICER": {fxEffectDelta, []knob{
 		lst("pattern", 415, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19),
-		min("rate", 416, 0, 100), min("trigger_sens", 417, 0, 100),
-		min("effect_level", 418, 0, 100), min("direct_mix", 419, 0, 100),
+		minmax("rate", 416, 0, 100), minmax("trigger_sens", 417, 0, 100),
+		minmax("effect_level", 418, 0, 100), minmax("direct_mix", 419, 0, 100),
 	}},
 	"VIBRATO": {fxEffectDelta, []knob{
-		min("rate", 421, 0, 100), min("depth", 422, 0, 100), min("level", 425, 0, 100),
+		minmax("rate", 421, 0, 100), minmax("depth", 422, 0, 100), minmax("level", 425, 0, 100),
 	}},
 	"RING MOD": {fxEffectDelta, []knob{
-		lst("mode", 427, 0, 1), min("frequency", 428, 0, 100),
-		min("effect_level", 429, 0, 100), min("direct_mix", 430, 0, 100),
+		lst("mode", 427, 0, 1), minmax("frequency", 428, 0, 100),
+		minmax("effect_level", 429, 0, 100), minmax("direct_mix", 430, 0, 100),
 	}},
 	"HUMANIZER": {fxEffectDelta, []knob{
 		lst("mode", 432, 0, 1), lst("vowel1", 433, 0, 1, 2, 3, 4), lst("vowel2", 434, 0, 1, 2, 3, 4),
-		min("sens", 435, 0, 100), min("rate", 436, 0, 100), min("depth", 437, 0, 100),
-		min("manual", 438, 0, 100), min("level", 439, 0, 100),
+		minmax("sens", 435, 0, 100), minmax("rate", 436, 0, 100), minmax("depth", 437, 0, 100),
+		minmax("manual", 438, 0, 100), minmax("level", 439, 0, 100),
 	}},
 	"CHORUS": {fxEffectDelta, []knob{
 		lst("xover_frequency", 441, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16),
-		min("low_rate", 442, 0, 100), min("low_depth", 443, 0, 100), scl("low_pre_delay", 444, 0, 2, 0, 80),
-		min("low_level", 445, 0, 100),
-		min("high_rate", 446, 0, 100), min("high_depth", 447, 0, 100), scl("high_pre_delay", 448, 0, 2, 0, 80),
-		min("high_level", 449, 0, 100), min("direct_mix", 450, 0, 100),
+		minmax("low_rate", 442, 0, 100), minmax("low_depth", 443, 0, 100), scl("low_pre_delay", 444, 0, 2, 0, 80),
+		minmax("low_level", 445, 0, 100),
+		minmax("high_rate", 446, 0, 100), minmax("high_depth", 447, 0, 100), scl("high_pre_delay", 448, 0, 2, 0, 80),
+		minmax("high_level", 449, 0, 100), minmax("direct_mix", 450, 0, 100),
 		// Aliases matching the Waza Air's simple "Rate/Depth/Effect Level" UI:
 		// they target the chorus's low band.
-		min("rate", 442, 0, 100), min("depth", 443, 0, 100), min("effect_level", 445, 0, 100),
+		minmax("rate", 442, 0, 100), minmax("depth", 443, 0, 100), minmax("effect_level", 445, 0, 100),
 	}},
 	"AC GUITAR SIM": {15, []knob{
-		scl("high", 2064, 50, 1, 0, 100), min("body", 2065, 0, 100),
-		scl("low", 2066, 50, 1, 0, 100), min("level", 2068, 0, 100),
+		scl("high", 2064, 50, 1, 0, 100), minmax("body", 2065, 0, 100),
+		scl("low", 2066, 50, 1, 0, 100), minmax("level", 2068, 0, 100),
 	}},
 	"PHASER 90E": {6, []knob{
-		lst("script", 2109, 0, 1), min("speed", 2110, 0, 100),
+		lst("script", 2109, 0, 1), minmax("speed", 2110, 0, 100),
 	}},
 	"FLANGER 117E": {6, []knob{
-		min("manual", 2111, 0, 100), min("width", 2112, 0, 100),
-		min("speed", 2113, 0, 100), min("regen", 2114, 0, 100),
+		minmax("manual", 2111, 0, 100), minmax("width", 2112, 0, 100),
+		minmax("speed", 2113, 0, 100), minmax("regen", 2114, 0, 100),
 	}},
 }
 

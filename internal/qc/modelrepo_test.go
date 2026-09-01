@@ -120,20 +120,20 @@ func TestNormalizeLawOnRealModels(t *testing.T) {
 	// the unit's screen (pyquadcortex hardware reading).
 	lhc, _ := c.Model(4003)
 	hp := mustParam(t, lhc, "HPF FREQ")
-	real, err := hp.Denormalize(0.25)
+	realVal, err := hp.Denormalize(0.25)
 	if err != nil {
 		t.Fatalf("Denormalize: %v", err)
 	}
-	assertNear(t, "HPF FREQ at wire 0.25", real, 217, 1)
+	assertNear(t, "HPF FREQ at wire 0.25", realVal, 217, 1)
 
 	// Env. Filter FREQ: 100..10000 Hz, LOG_SKEW (0.3). Wire 0.25 read 197 Hz.
 	env, _ := c.Model(24003)
 	freq := mustParam(t, env, "FREQ")
-	real, err = freq.Denormalize(0.25)
+	realVal, err = freq.Denormalize(0.25)
 	if err != nil {
 		t.Fatalf("Denormalize: %v", err)
 	}
-	assertNear(t, "Env. Filter FREQ at wire 0.25", real, 197, 1)
+	assertNear(t, "Env. Filter FREQ at wire 0.25", realVal, 197, 1)
 
 	// A cab LEVEL with MIN_CABSIM_DB: -40..6 dB, skew 4.93. 0 dB sits at wire
 	// 0.5, and converting 0 dB back must round-trip to 0.
@@ -194,8 +194,8 @@ func TestLaneLevelLinearLaw(t *testing.T) {
 	if math.Abs(wire-0.76923077) > 1e-4 {
 		t.Fatalf("VOLUME Normalize(0 dB) = %g, want 0.76923077", wire)
 	}
-	if real, _ := p.Denormalize(0.76923077); math.Abs(real) > 1e-4 {
-		t.Fatalf("VOLUME Denormalize = %g dB, want 0", real)
+	if realVal, _ := p.Denormalize(0.76923077); math.Abs(realVal) > 1e-4 {
+		t.Fatalf("VOLUME Denormalize = %g dB, want 0", realVal)
 	}
 }
 

@@ -12,7 +12,7 @@ func classifyGain(a Amp) string {
 	}
 
 	channel := strings.ToLower(a.Channel)
-	real := strings.ToLower(a.RealModel)
+	realModel := strings.ToLower(a.RealModel)
 	desc := strings.ToLower(a.Description)
 	name := strings.ToLower(a.Model)
 
@@ -29,8 +29,8 @@ func classifyGain(a Amp) string {
 		{name, []string{"lead"}, "high gain"},
 		{channel, []string{"crunch", "raw", "vintage", "blue", "green", "orange"}, "crunch"},
 		{desc, []string{"high-gain", "high gain"}, "high gain"},
-		{real, []string{"jcm800", "jcm 800"}, "high gain"},
-		{real, []string{"plexi", "super lead", "jtm"}, "crunch"},
+		{realModel, []string{"jcm800", "jcm 800"}, "high gain"},
+		{realModel, []string{"plexi", "super lead", "jtm"}, "crunch"},
 	}
 	for _, s := range signals {
 		if containsAny(s.field, s.words...) {

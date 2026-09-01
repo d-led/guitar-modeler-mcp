@@ -182,11 +182,11 @@ func encodeValue(spec ParamSpec, value any) (float64, error) {
 	if spec.unmeasured {
 		return 0, fmt.Errorf("%s: bounds are unmeasured; put it in encoded_params as a 0..1 value", spec.Name)
 	}
-	real, ok := value.(float64)
+	number, ok := value.(float64)
 	if !ok {
 		return 0, fmt.Errorf("%s: expected a number, got %T", spec.Name, value)
 	}
-	return spec.Normalize(real)
+	return spec.Normalize(number)
 }
 
 // WritePresetWithCard renders and encrypts a preset for the given serial and

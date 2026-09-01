@@ -72,7 +72,7 @@ type ParamSpec struct {
 
 // Normalize converts a value in the parameter's own units to the wire's 0..1,
 // applying the catalog's skew. Values outside the range are refused.
-func (p ParamSpec) Normalize(real float64) (float64, error) {
+func (p ParamSpec) Normalize(value float64) (float64, error) {
 	if p.padding {
 		return 0, fmt.Errorf("%s is a wire placeholder, not a knob", p.Name)
 	}
@@ -83,7 +83,7 @@ func (p ParamSpec) Normalize(real float64) (float64, error) {
 	if span <= 0 {
 		return 0, fmt.Errorf("%s: degenerate range %g..%g", p.Name, p.Min, p.Max)
 	}
-	fraction := (real - p.Min) / span
+	fraction := (value - p.Min) / span
 	fraction = math.Min(1, math.Max(0, fraction))
 	return math.Pow(fraction, p.Skew), nil
 }
@@ -390,17 +390,17 @@ func parseParamSpec(p xmlParam) (ParamSpec, error) {
 	}
 	spec.Skew = skew
 
-	min, minMeasured, err := resolveBound(p.Min)
+	minVal, minMeasured, err := resolveBound(p.Min)
 	if err != nil {
 		return ParamSpec{}, err
 	}
-	max, maxMeasured, err := resolveBound(p.Max)
+	maxVal, maxMeasured, err := resolveBound(p.Max)
 	if err != nil {
 		return ParamSpec{}, err
 	}
 	spec.unmeasured = !minMeasured || !maxMeasured
-	spec.Min = min
-	spec.Max = max
+	spec.Min = minVal
+	spec.Max = maxVal
 	return spec, nil
 }
 

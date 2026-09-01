@@ -420,9 +420,9 @@ func validateLevels(spec Spec) error {
 
 // validatePara rejects out-of-range path mix values.
 func validatePara(spec Spec) error {
-	check := func(name string, v *float64, min, max float64) error {
-		if v != nil && (*v < min || *v > max) {
-			return fmt.Errorf("%s = %v, must be within [%v, %v]", name, *v, min, max)
+	check := func(name string, v *float64, lo, hi float64) error {
+		if v != nil && (*v < lo || *v > hi) {
+			return fmt.Errorf("%s = %v, must be within [%v, %v]", name, *v, lo, hi)
 		}
 		return nil
 	}

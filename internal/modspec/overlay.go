@@ -86,7 +86,7 @@ func fixEditorRangeBugs() {
 	fixRange("Tron Filter", "Reso", nil, fp(100))         // editor said 10, device observed 70
 }
 
-func fixRange(module, key string, min, max *float64) {
+func fixRange(module, key string, lo, hi *float64) {
 	m, ok := modules[module]
 	if !ok {
 		return
@@ -95,11 +95,11 @@ func fixRange(module, key string, min, max *float64) {
 	if !ok || p.Kind != "range" {
 		return
 	}
-	if min != nil {
-		p.Min = min
+	if lo != nil {
+		p.Min = lo
 	}
-	if max != nil {
-		p.Max = max
+	if hi != nil {
+		p.Max = hi
 	}
 	m[key] = p
 }

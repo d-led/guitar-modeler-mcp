@@ -159,14 +159,14 @@ func pedalFor(template []byte, assignments []Pedal) (map[string]any, error) {
 				break
 			}
 			n := fmt.Sprintf("%d", i+1)
-			max := a.Max
-			if max == 0 {
-				max = 100
+			maxVal := a.Max
+			if maxVal == 0 {
+				maxVal = 100
 			}
 			children["Module"+n] = map[string]any{"string": a.Module, "type": 8}
 			children["Param"+n] = map[string]any{"string": a.Param, "type": 8}
 			children["Min"+n] = map[string]any{"type": 0, "value": a.Min}
-			children["Max"+n] = map[string]any{"type": 0, "value": max}
+			children["Max"+n] = map[string]any{"type": 0, "value": maxVal}
 		}
 	}
 	return pedal, nil
