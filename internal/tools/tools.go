@@ -2012,7 +2012,7 @@ func renderChain(cat *qc.Catalog, c *qc.Chain) map[string]any {
 func renderModel(cat *qc.Catalog, model *qc.Model) map[string]any {
 	name, id := "?", model.GetHash()
 	if m, ok := cat.Model(int(model.GetHash())); ok {
-		name, id = m.Name, uint32(m.ID)
+		name, id = m.Name, uint32(m.ID) // #nosec G115 -- catalog model IDs fit in uint32
 	}
 	params := make([]map[string]any, 0, len(model.Params))
 	for _, p := range model.Params {

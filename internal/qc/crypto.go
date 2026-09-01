@@ -3,7 +3,7 @@ package qc
 import (
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/sha1"
+	"crypto/sha1" // #nosec G505 -- SHA-1 reproduces the Quad Cortex EVP_BytesToKey KDF
 	"fmt"
 )
 
@@ -61,14 +61,14 @@ func deriveKeyIV(serial string) (key, iv []byte, err error) {
 	out := make([]byte, 0, aesKeySize+aesBlockSize)
 	var prev []byte
 	for len(out) < aesKeySize+aesBlockSize {
-		h := sha1.New()
+		h := sha1.New() // #nosec G401 -- SHA-1 reproduces the Quad Cortex KDF
 		if prev != nil {
 			h.Write(prev)
 		}
 		h.Write(data)
 		digest := h.Sum(nil)
 		for i := 1; i < deriveIters; i++ {
-			h = sha1.New()
+			h = sha1.New() // #nosec G401 -- SHA-1 reproduces the Quad Cortex KDF
 			h.Write(digest)
 			digest = h.Sum(nil)
 		}

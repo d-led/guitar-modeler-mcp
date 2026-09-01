@@ -60,7 +60,13 @@ revive -config revive.toml ./...
 
 section "gosec"
 need gosec "go install github.com/securego/gosec/v2/cmd/gosec@latest"
-gosec -quiet ./...
+# -exclude-generated skips the protoc-generated preset.pb.go (unsafe from
+# protoc-gen-go, not our code). G304/G703 flag reading and writing paths that
+# come from the user's own arguments — that is the tool's entire purpose, so
+# the findings are expected rather than bugs.
+gosec -quiet -exclude-generated \
+  -exclude-rules="internal/install/install.go:G304;internal/golden/golden.go:G304;internal/mooer/file.go:G304;internal/waza/tsl.go:G304;internal/tools/tools.go:G304,G703;cmd/setlist.go:G304;cmd/report.go:G304;cmd/map.go:G304" \
+  ./...
 
 section "govulncheck"
 need govulncheck "go install golang.org/x/vuln/cmd/govulncheck@latest"

@@ -74,7 +74,7 @@ func Run(ctx context.Context, cmd Command) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	out, err := exec.CommandContext(ctx, path, argv...).CombinedOutput()
+	out, err := exec.CommandContext(ctx, path, argv...).CombinedOutput() // #nosec G204 -- qcctl is the documented Quad Cortex USB binary
 	if err != nil {
 		return "", fmt.Errorf("qcctl %s failed: %v\n%s", cmd.String(), err, strings.TrimSpace(string(out)))
 	}

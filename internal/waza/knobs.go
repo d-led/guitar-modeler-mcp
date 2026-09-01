@@ -60,14 +60,14 @@ func (k knob) set(raw []byte, v float64) {
 			}
 		}
 	case knobMinmax:
-		raw[k.offset] = byte(clamp(int(math.Round(v)), int(k.limits[0]), int(k.limits[1])))
+		raw[k.offset] = byte(clamp(int(math.Round(v)), int(k.limits[0]), int(k.limits[1]))) // #nosec G115 -- clamped to the knob's byte range
 	case knobScaled:
 		base, slope, lo, hi := k.limits[0], k.limits[1], k.limits[2], k.limits[3]
-		raw[k.offset] = byte(clamp(int(math.Round(base+slope*v)), int(lo), int(hi)))
+		raw[k.offset] = byte(clamp(int(math.Round(base+slope*v)), int(lo), int(hi))) // #nosec G115 -- clamped to the knob's byte range
 	case knobTwoBytes:
 		val := clamp(int(math.Round(v)), int(k.limits[0]), int(k.limits[1]))
-		raw[k.offset] = byte(val / 128)
-		raw[k.offset+1] = byte(val % 128)
+		raw[k.offset] = byte(val / 128)   // #nosec G115 -- high byte of a clamped two-byte value
+		raw[k.offset+1] = byte(val % 128) // #nosec G115 -- low byte of a clamped two-byte value
 	}
 }
 

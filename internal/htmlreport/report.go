@@ -69,8 +69,8 @@ func Render(rf *rig.RigFile, note string, cat *catalog.Catalog) (string, error) 
 		Tempo:     tempoOf(patch),
 		Generated: time.Now().Format("2006-01-02 15:04"),
 		Chain:     modules,
-		ChainCSS:  template.CSS(cardchain.CSS),
-		ChainHTML: template.HTML(chainHTML(patch)),
+		ChainCSS:  template.CSS(cardchain.CSS),     // #nosec G203 -- trusted package CSS, not user input
+		ChainHTML: template.HTML(chainHTML(patch)), // #nosec G203 -- trusted package HTML, not user input
 		Buttons:   hw.Buttons,
 		Pedals:    hw.Pedals,
 	}); err != nil {

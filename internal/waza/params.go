@@ -298,7 +298,7 @@ func (p Patch) WriteParams(pr Params) Patch {
 
 func setByte(raw []byte, off, v int) {
 	if v > 0 {
-		raw[off] = byte(v)
+		raw[off] = byte(v) // #nosec G115 -- v is a validated 0..100 knob value
 	}
 }
 
@@ -325,7 +325,7 @@ func writeBoosterParams(raw []byte, pr Params) {
 	raw[offBoosterType] = boosterTypeIndex[pr.BoosterType]
 	setByte(raw, offBoosterDrive, pr.BoosterDrive)
 	if pr.BoosterBottom != 0 {
-		raw[offBoosterBottom] = byte(50 + pr.BoosterBottom)
+		raw[offBoosterBottom] = byte(50 + pr.BoosterBottom) // #nosec G115 -- bottom is -50..50, so 50+bottom is 0..100
 	}
 	setByte(raw, offBoosterTone, pr.BoosterTone)
 	if pr.BoosterSolo {
@@ -362,7 +362,7 @@ func writeDelayParams(raw []byte, pr Params) {
 	raw[offDelayOnOff] = 1
 	raw[offDelayType] = delayTypeIndex[pr.DelayType]
 	if pr.DelayTime > 0 {
-		raw[offDelayTimeHi] = byte(pr.DelayTime / 128)
+		raw[offDelayTimeHi] = byte(pr.DelayTime / 128) // #nosec G115 -- high byte of a two-byte ms value
 		raw[offDelayTimeLo] = byte(pr.DelayTime % 128)
 	}
 	setByte(raw, offDelayFeedback, pr.DelayFeedback)
@@ -384,7 +384,7 @@ func writeReverbParams(raw []byte, pr Params) {
 		raw[offReverbTime] = reverbTimeEncode(pr.ReverbTime)
 	}
 	if pr.ReverbPreDelay > 0 {
-		raw[offReverbPreDelay] = byte(pr.ReverbPreDelay / 128)
+		raw[offReverbPreDelay] = byte(pr.ReverbPreDelay / 128) // #nosec G115 -- high byte of a two-byte ms value
 		raw[offReverbPreDelay+1] = byte(pr.ReverbPreDelay % 128)
 	}
 	setByte(raw, offReverbLevel, pr.ReverbLevel)
@@ -421,7 +421,7 @@ func writeSpatialParams(raw []byte, pr Params) {
 // ampGainEncode stores the amp gain knob (0-100) as the Katana gain byte:
 // stored = round(20 + 0.8*gain), clamped to [20, 100].
 func ampGainEncode(gain int) byte {
-	return byte(clamp(int(math.Round(20+0.8*float64(gain))), 20, 100))
+	return byte(clamp(int(math.Round(20+0.8*float64(gain))), 20, 100)) // #nosec G115 -- clamped to 20..100
 }
 
 // ampGainDecode recovers the amp gain knob (0-100) from a stored gain byte:
@@ -433,7 +433,7 @@ func ampGainDecode(stored byte) int {
 // gyroPositionEncode stores the guitar position in degrees (-180..+180) as
 // the gyro byte: stored = 60 + position/3.
 func gyroPositionEncode(position int) byte {
-	return byte(clamp(int(math.Round(60+float64(position)/3)), 0, 120))
+	return byte(clamp(int(math.Round(60+float64(position)/3)), 0, 120)) // #nosec G115 -- clamped to 0..120
 }
 
 // gyroPositionDecode recovers the guitar position in degrees from the stored
@@ -445,7 +445,7 @@ func gyroPositionDecode(stored byte) int {
 // reverbTimeEncode stores the reverb time in seconds (0.1-10.0) as the reverb
 // time byte: stored = -1 + 10*seconds.
 func reverbTimeEncode(seconds float64) byte {
-	return byte(clamp(int(math.Round(-1+10*seconds)), 0, 99))
+	return byte(clamp(int(math.Round(-1+10*seconds)), 0, 99)) // #nosec G115 -- clamped to 0..99
 }
 
 // reverbTimeDecode recovers the reverb time in seconds from the stored byte:

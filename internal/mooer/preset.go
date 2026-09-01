@@ -175,7 +175,7 @@ func (p Preset) Marshal() []byte {
 	}
 	dataSize := PresetSize - offSize - 2
 	buf[offSize] = byte(dataSize >> 8)
-	buf[offSize+1] = byte(dataSize)
+	buf[offSize+1] = byte(dataSize) // #nosec G115 -- dataSize is a small fixed record size
 
 	copy(buf[offName:offName+nameSize], asciiName(p.Name, nameSize))
 
@@ -316,7 +316,7 @@ func unmarshalMod(src []byte) Mod {
 func (m Delay) marshal(dst []byte) {
 	dst[0], dst[1], dst[2] = 0, boolByte(m.Enabled), m.Type
 	dst[3], dst[4] = m.Level, m.Feedback
-	dst[5] = byte(m.TimeMS)
+	dst[5] = byte(m.TimeMS) // #nosec G115 -- low byte of a uint16 ms value
 	dst[6] = byte(m.TimeMS >> 8)
 	dst[7], dst[8], dst[9] = m.Subdivision, m.Param5, m.Param6
 }

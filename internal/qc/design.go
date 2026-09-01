@@ -75,7 +75,7 @@ func BuildPreset(cat *Catalog, spec DesignSpec) (*BinaryPreset, error) {
 			return nil, err
 		}
 		model := &Model{
-			XHash:   &Model_Hash{Hash: uint32(m.ID)},
+			XHash:   &Model_Hash{Hash: uint32(m.ID)}, // #nosec G115 -- catalog model IDs fit in uint32
 			XColumn: &Model_Column{Column: uint32(col)},
 		}
 		if err := applyParams(m, block, model); err != nil {
@@ -116,7 +116,7 @@ func applyParams(m *ModelSpec, block BlockSpec, model *Model) error {
 
 func appendWireParam(model *Model, index int, wire float64) {
 	model.Params = append(model.Params, &Param{
-		XIndex:      &Param_Index{Index: uint32(index)},
+		XIndex:      &Param_Index{Index: uint32(index)}, // #nosec G115 -- parameter indices fit in uint32
 		ParamValues: []*ParamValue{{Value: &ParamValue_FloatValue{FloatValue: float32(wire)}}},
 	})
 }
