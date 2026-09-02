@@ -102,3 +102,34 @@ func TestReportHighlightsNonDefaultParams(t *testing.T) {
 		t.Fatal("expected the default amp Bass to stay unhighlighted")
 	}
 }
+
+// TestReportChainFollowsDarkScheme guards the chain visualisation's contrast on
+// a dark canvas: the rest of the report turns dark under prefers-color-scheme,
+// so the chain pills must ship a dark palette too instead of staying light.
+func TestReportChainFollowsDarkScheme(t *testing.T) {
+	b, err := rig.NewBuilder(catalog.New())
+	if err != nil {
+		t.Fatalf("NewBuilder: %v", err)
+	}
+	file, err := b.Build(rig.Spec{
+		Name: "Dark Chain",
+		Blocks: []rig.Block{
+			{Type: "Amp", Params: map[string]any{"Type": "82 Lead 800 100W"}},
+			{Type: "Cab", Params: map[string]any{"CabType": "4x12 Green 25W", "MicType": "Dyn 57"}},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+
+	html, err := Render(file, "", catalog.New())
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+	if !strings.Contains(html, "--cc-slot-bg:#2c2c2e") {
+		t.Fatal("expected the report to ship a dark palette for the chain slot background")
+	}
+	if !strings.Contains(html, "--cc-slot-bg:#f4f4f4") {
+		t.Fatal("expected the report to keep the light chain palette for light canvases")
+	}
+}

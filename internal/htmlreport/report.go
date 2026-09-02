@@ -34,15 +34,16 @@ type moduleInfo struct {
 }
 
 type pageData struct {
-	Name      string
-	Note      string
-	Tempo     string
-	Generated string
-	Chain     []moduleInfo
-	ChainCSS  template.CSS
-	ChainHTML template.HTML
-	Buttons   []rig.ButtonAssign
-	Pedals    []rig.PedalAssign
+	Name         string
+	Note         string
+	Tempo        string
+	Generated    string
+	Chain        []moduleInfo
+	ChainCSS     template.CSS
+	ChainDarkCSS template.CSS
+	ChainHTML    template.HTML
+	Buttons      []rig.ButtonAssign
+	Pedals       []rig.PedalAssign
 }
 
 var page = template.Must(template.New("report").Parse(reportHTML))
@@ -64,15 +65,16 @@ func Render(rf *rig.RigFile, note string, cat *catalog.Catalog) (string, error) 
 
 	var sb strings.Builder
 	if err := page.Execute(&sb, pageData{
-		Name:      rf.Name(),
-		Note:      note,
-		Tempo:     tempoOf(patch),
-		Generated: time.Now().Format("2006-01-02 15:04"),
-		Chain:     modules,
-		ChainCSS:  template.CSS(cardchain.CSS),     // #nosec G203 -- trusted package CSS, not user input
-		ChainHTML: template.HTML(chainHTML(patch)), // #nosec G203 -- trusted package HTML, not user input
-		Buttons:   hw.Buttons,
-		Pedals:    hw.Pedals,
+		Name:         rf.Name(),
+		Note:         note,
+		Tempo:        tempoOf(patch),
+		Generated:    time.Now().Format("2006-01-02 15:04"),
+		Chain:        modules,
+		ChainCSS:     template.CSS(cardchain.CSS),           // #nosec G203 -- trusted package CSS, not user input
+		ChainDarkCSS: template.CSS(cardchain.DarkSchemeCSS), // #nosec G203 -- trusted package CSS, not user input
+		ChainHTML:    template.HTML(chainHTML(patch)),       // #nosec G203 -- trusted package HTML, not user input
+		Buttons:      hw.Buttons,
+		Pedals:       hw.Pedals,
 	}); err != nil {
 		return "", err
 	}
@@ -372,6 +374,7 @@ const reportHTML = `<!doctype html>
   .disclaimer { max-width: 860px; margin: 24px auto 0; padding-top: 16px; border-top: 1px solid #e3e3e8; font-size: .78em; color: #888; }
   @media (prefers-color-scheme: dark) { .disclaimer { border-color: #2c2c2e; } }
   {{.ChainCSS}}
+  {{.ChainDarkCSS}}
 </style>
 </head>
 <body>

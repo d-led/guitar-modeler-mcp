@@ -64,3 +64,27 @@ func TestSlotNumbersAreCircles(t *testing.T) {
 		t.Error("the slot number badge should be a circle")
 	}
 }
+
+// TestPaletteIsDarkSchemeOptIn guards the theming contract: setup cards embed
+// only CSS and print on white paper, so CSS must keep the light palette even
+// when the viewer's OS is dark. A host that renders on a dark canvas (the rig
+// report) opts in by appending DarkSchemeCSS, which must flip the palette to
+// dark and never leave the light slot background in place.
+func TestPaletteIsDarkSchemeOptIn(t *testing.T) {
+	if strings.Contains(CSS, "prefers-color-scheme") {
+		t.Error("CSS alone must not change on a dark OS: light-only cards would lose contrast on white")
+	}
+	for _, want := range []string{
+		"prefers-color-scheme: dark",
+		"--cc-slot-bg:#2c2c2e",
+		"--cc-par-bg:#1c1c1e",
+		"--cc-badge:#636366",
+	} {
+		if !strings.Contains(DarkSchemeCSS, want) {
+			t.Errorf("DarkSchemeCSS should set %q for dark canvases", want)
+		}
+	}
+	if strings.Contains(DarkSchemeCSS, "#f4f4f4") {
+		t.Error("dark palette must not keep the light slot background")
+	}
+}

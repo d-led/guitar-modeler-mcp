@@ -34,19 +34,31 @@ type Branch struct {
 	Steps []Step
 }
 
-// CSS is the stylesheet for the chain visualisation. Include it once in the
-// card's <style> block.
-const CSS = `.chain{display:flex;flex-wrap:wrap;align-items:center;gap:.3rem .5rem;margin:0 0 1.25rem}
-.chain .slot{display:inline-flex;align-items:center;gap:.4rem;background:#f4f4f4;border:1px solid #ddd;border-radius:6px;padding:.2rem .55rem;font-size:.85em;min-width:0}
-.chain .slotno{font-weight:700;color:#fff;background:#6b6b73;border-radius:50%;min-width:1.45em;height:1.45em;line-height:1.45em;text-align:center;flex:none;display:inline-flex;align-items:center;justify-content:center}
+// CSS is the stylesheet for the chain visualisation. Every colour sits behind
+// a custom property whose light-theme value is declared on :root, so the
+// palette has a single, overridable source. Light-only hosts (the printable
+// setup cards) include just CSS. Hosts that can render on a dark canvas (the
+// rig report) append DarkSchemeCSS after CSS to flip the palette.
+const CSS = `:root{--cc-slot-bg:#f4f4f4;--cc-slot-bd:#ddd;--cc-par-bg:#fafafa;--cc-badge:#6b6b73;--cc-arrow:#aaa;--cc-mark:#bbb;--cc-parlabel:#888}
+.chain{display:flex;flex-wrap:wrap;align-items:center;gap:.3rem .5rem;margin:0 0 1.25rem}
+.chain .slot{display:inline-flex;align-items:center;gap:.4rem;background:var(--cc-slot-bg);border:1px solid var(--cc-slot-bd);border-radius:6px;padding:.2rem .55rem;font-size:.85em;min-width:0}
+.chain .slotno{font-weight:700;color:#fff;background:var(--cc-badge);border-radius:50%;min-width:1.45em;height:1.45em;line-height:1.45em;text-align:center;flex:none;display:inline-flex;align-items:center;justify-content:center}
 .chain .name{overflow-wrap:anywhere}
-.chain .arrow{color:#aaa;flex:none}
+.chain .arrow{color:var(--cc-arrow);flex:none}
 .chain .off{opacity:.55}
-.chain .par{display:flex;flex-direction:column;gap:.3rem;border:1px solid #ddd;border-radius:8px;padding:.4rem .5rem;background:#fafafa}
+.chain .par{display:flex;flex-direction:column;gap:.3rem;border:1px solid var(--cc-slot-bd);border-radius:8px;padding:.4rem .5rem;background:var(--cc-par-bg)}
 .chain .branch{display:flex;flex-wrap:wrap;align-items:center;gap:.3rem .5rem}
-.chain .parlabel{font-size:.75em;font-weight:700;color:#888;min-width:1.1em;flex:none}
-.chain .mark{color:#bbb;flex:none;font-size:1.1em;line-height:1}
-.slotbadge{display:inline-flex;align-items:center;justify-content:center;min-width:1.45em;height:1.45em;border-radius:50%;background:#6b6b73;color:#fff;font-weight:700;font-size:.8em;margin-right:.45em;vertical-align:middle}`
+.chain .parlabel{font-size:.75em;font-weight:700;color:var(--cc-parlabel);min-width:1.1em;flex:none}
+.chain .mark{color:var(--cc-mark);flex:none;font-size:1.1em;line-height:1}
+.slotbadge{display:inline-flex;align-items:center;justify-content:center;min-width:1.45em;height:1.45em;border-radius:50%;background:var(--cc-badge);color:#fff;font-weight:700;font-size:.8em;margin-right:.45em;vertical-align:middle}`
+
+// DarkSchemeCSS flips the chain palette for hosts that already render on a
+// dark canvas (the rig report's prefers-color-scheme: dark theme). It only
+// overrides the custom properties declared in CSS, so it must appear after CSS
+// in the same <style> block; hosts that never render dark simply omit it.
+const DarkSchemeCSS = `@media (prefers-color-scheme: dark){
+:root{--cc-slot-bg:#2c2c2e;--cc-slot-bd:#3a3a3c;--cc-par-bg:#1c1c1e;--cc-badge:#636366;--cc-arrow:#8e8e93;--cc-mark:#8e8e93;--cc-parlabel:#98989d}
+}`
 
 // headCSS is the shared setup-card stylesheet preamble, before the chain CSS.
 // Every device backend's setup card uses it so the cards render consistently.
