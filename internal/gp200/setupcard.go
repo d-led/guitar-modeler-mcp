@@ -10,13 +10,15 @@ import (
 )
 
 // ParamDesc is one editable parameter of a block: its display name, the value
-// the preset sets, the resting default, and the option display names when the
-// parameter is a switch/combox (nil for a plain knob).
+// the preset sets, the resting default, the option display names when the
+// parameter is a switch/combox (nil for a plain knob), and its display unit
+// (Hz, ms, …) when one applies.
 type ParamDesc struct {
 	Name    string
 	Value   float32
 	Default float32
 	Options []string
+	Unit    string
 }
 
 // ModuleDesc describes one block of a preset for display: which effect it
@@ -90,9 +92,25 @@ func describeParams(blk Block) []ParamDesc {
 			Value:   blk.Params[def.Index],
 			Default: defaults[def.Index],
 			Options: def.Options,
+			Unit:    paramUnit(def),
 		})
 	}
 	return out
+}
+
+// paramUnit infers a parameter's display unit from its name and range, so the
+// card reads like the editor's knobs ("Rate: 0.5 Hz", "Time: 400 ms").
+func paramUnit(def ParamDef) string {
+	name := strings.ToLower(def.Name)
+	switch {
+	case strings.Contains(name, "rate") || strings.Contains(name, "speed"):
+		return "Hz"
+	case strings.Contains(name, "time") || strings.Contains(name, "pre delay"):
+		return "ms"
+	case strings.Contains(name, "cut") && def.Max > 1000:
+		return "Hz"
+	}
+	return ""
 }
 
 // changed reports whether a parameter deviates from its resting default.
@@ -101,7 +119,8 @@ func changed(p ParamDesc) bool {
 }
 
 // formatParam renders a parameter value: the option name for a switch/combox,
-// otherwise the number without float noise.
+// otherwise the number without float noise, suffixed with its unit when it has
+// one.
 func formatParam(p ParamDesc) string {
 	if len(p.Options) > 0 {
 		i := int(p.Value)
@@ -109,7 +128,11 @@ func formatParam(p ParamDesc) string {
 			return p.Options[i]
 		}
 	}
-	return strconv.FormatFloat(float64(p.Value), 'f', -1, 32)
+	v := strconv.FormatFloat(float64(p.Value), 'f', -1, 32)
+	if p.Unit != "" {
+		return v + " " + p.Unit
+	}
+	return v
 }
 
 // chainHint renders the eleven fixed blocks in playback order, so the models
@@ -138,6 +161,19 @@ td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;verti
 .params{color:#444;font-size:.85em;font-variant-numeric:tabular-nums}
 .hl{color:#2563eb;font-weight:600}
 .switch{color:#0a7d3c;font-weight:600;font-size:.85em}
+.buttons{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:10px;margin-bottom:12px}
+.btn{border:1px solid #e3e3e8;border-radius:12px;padding:10px 8px;text-align:center}
+.btn .num{display:inline-block;min-width:22px;height:22px;line-height:22px;border-radius:999px;background:#e8e8ed;font-size:.74em;font-weight:700;margin-bottom:6px}
+.btn .mod{font-weight:700;font-size:.9em;overflow-wrap:anywhere}
+.btn .op{font-size:.76em;color:#888}
+.btn.on{background:#34c75918;border-color:#34c75955}
+.btn.on .num{background:#34c759;color:#fff}
+.btn.off .num{background:#8e8e93;color:#fff}
+.btn.empty{opacity:.42}
+.pedals{margin-top:12px;font-size:.9em;display:flex;flex-direction:column;gap:6px}
+.pedal{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.pedal .name{font-weight:700}
+.chip{padding:2px 8px;border-radius:999px;font-size:.85em;background:#e8e8ed}
 ` + cardchain.CSS + `
 </style></head><body>`)
 	fmt.Fprintf(&b, "<h1>%s</h1><h2>%s — setup card</h2>", html.EscapeString(p.PatchName), html.EscapeString(m.Display))
@@ -153,13 +189,9 @@ td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;verti
 		writeBlockCard(&b, d, i+1)
 	}
 
-	if foot := footswitchTable(p); foot != "" {
-		b.WriteString("<h2>Footswitches</h2>")
+	if foot := hardwareBoxes(p); foot != "" {
+		b.WriteString("<h2>Hardware</h2>")
 		b.WriteString(foot)
-	}
-	if exp := expTable(p); exp != "" {
-		b.WriteString("<h2>Expression pedals</h2>")
-		b.WriteString(exp)
 	}
 
 	b.WriteString("</body></html>")
@@ -173,12 +205,12 @@ td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;verti
 // simply off carries no "set me" highlights.
 func writeBlockCard(b *strings.Builder, d ModuleDesc, slot int) {
 	state := "ON"
-	class := ""
+	modClass := "module"
 	if !d.Enabled {
 		state = "OFF"
-		class = " class=\"off\""
+		modClass += " off"
 	}
-	fmt.Fprintf(b, "<table><tr><th class=\"module\"%s><span class=\"slotbadge\">%d</span>%s</th><th>%s", class, slot, html.EscapeString(d.Module), state)
+	fmt.Fprintf(b, "<table><tr><th class=\"%s\"><span class=\"slotbadge\">%d</span>%s</th><th>%s", modClass, slot, html.EscapeString(d.Module), state)
 	if d.Switch != "" {
 		fmt.Fprintf(b, " <span class=\"switch\">%s</span>", html.EscapeString(d.Switch))
 	}
@@ -208,64 +240,72 @@ func writeBlockCard(b *strings.Builder, d ModuleDesc, slot int) {
 	b.WriteString("</td><td></td></tr></table>")
 }
 
-// footswitchTable renders the assigned CTRL footswitches, or "" when none are
-// assigned.
-func footswitchTable(p Preset) string {
-	var rows []string
+// hardwareBoxes renders the CTRL footswitches as a grid of boxes and the EXP
+// pedal assignments as chips, mirroring the HeadRush report's hardware section.
+func hardwareBoxes(p Preset) string {
+	var b strings.Builder
+	b.WriteString("<div class=\"buttons\">")
 	for _, c := range p.Ctrl {
-		if c.BlockMask == 0 {
-			continue
-		}
-		var blocks []string
-		for bit := 0; bit <= 11; bit++ {
-			if c.BlockMask&(1<<uint(bit)) == 0 {
-				continue
-			}
-			if bit == 11 {
-				blocks = append(blocks, "FX LOOP")
+		blocks := blockNames(c.BlockMask)
+		cls := "btn"
+		mod := "—"
+		op := ""
+		if len(blocks) > 0 {
+			mod = strings.Join(blocks, " + ")
+			if c.State == 1 {
+				cls += " on"
+				op = "on"
 			} else {
-				blocks = append(blocks, ModuleForBlock(bit))
+				cls += " off"
+				op = "off"
 			}
+		} else {
+			cls += " empty"
 		}
-		rows = append(rows, fmt.Sprintf("<tr><td class=\"module\">CTRL %d</td><td>%s (%s)</td></tr>", c.Index+1, html.EscapeString(strings.Join(blocks, " + ")), onOffLabel(c.State)))
+		fmt.Fprintf(&b, "<div class=\"%s\"><div class=\"num\">%d</div><div class=\"mod\">%s</div>", cls, c.Index+1, html.EscapeString(mod))
+		if op != "" {
+			fmt.Fprintf(&b, "<div class=\"op\">%s</div>", op)
+		}
+		b.WriteString("</div>")
 	}
-	if len(rows) == 0 {
-		return ""
-	}
-	return "<table>" + strings.Join(rows, "") + "</table>"
-}
+	b.WriteString("</div>")
 
-// onOffLabel renders a footswitch's saved toggle position as a word.
-func onOffLabel(state uint8) string {
-	if state == 1 {
-		return "on"
-	}
-	return "off"
-}
-
-// expPageNames labels the three EXP pages (0 = EXP1 Mode A, 1 = EXP1 Mode B,
-// 2 = EXP2).
-var expPageNames = []string{"EXP1 A", "EXP1 B", "EXP2"}
-
-// expTable renders the expression-pedal assignments, or "" when none target a
-// block.
-func expTable(p Preset) string {
-	var rows []string
+	var pedals []string
 	for _, e := range p.Exp {
 		if e.Block < 0 || e.Block > 10 {
 			continue
 		}
 		target := ModuleForBlock(e.Block)
 		param := expParamName(p, e.Block, e.ParamIndex)
-		rows = append(rows, fmt.Sprintf("<tr><td class=\"module\">%s P%d</td><td>%s → %s (%s–%s)</td></tr>",
+		pedals = append(pedals, fmt.Sprintf("<div class=\"pedal\"><span class=\"name\">%s P%d</span><span class=\"chip\">%s → %s (%s–%s)</span></div>",
 			expPageNames[e.Page], e.Item+1, html.EscapeString(target), html.EscapeString(param),
 			strconv.FormatFloat(float64(e.Min), 'f', -1, 32), strconv.FormatFloat(float64(e.Max), 'f', -1, 32)))
 	}
-	if len(rows) == 0 {
-		return ""
+	if len(pedals) > 0 {
+		b.WriteString("<div class=\"pedals\">" + strings.Join(pedals, "") + "</div>")
 	}
-	return "<table>" + strings.Join(rows, "") + "</table>"
+	return b.String()
 }
+
+// blockNames returns the block names set in a CTRL footswitch mask.
+func blockNames(mask uint16) []string {
+	var names []string
+	for bit := 0; bit <= 11; bit++ {
+		if mask&(1<<uint(bit)) == 0 {
+			continue
+		}
+		if bit == 11 {
+			names = append(names, "FX LOOP")
+		} else {
+			names = append(names, ModuleForBlock(bit))
+		}
+	}
+	return names
+}
+
+// expPageNames labels the three EXP pages (0 = EXP1 Mode A, 1 = EXP1 Mode B,
+// 2 = EXP2).
+var expPageNames = []string{"EXP1 A", "EXP1 B", "EXP2"}
 
 // expParamName resolves a target block's parameter name at a given index.
 func expParamName(p Preset, block, index int) string {

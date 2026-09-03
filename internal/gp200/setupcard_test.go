@@ -61,7 +61,9 @@ func TestSetupCardFootswitchStateAndExpRange(t *testing.T) {
 	p.Exp[3] = ExpAssignment{Page: 1, Item: 0, Block: 1, ParamIndex: 3, Min: 15, Max: 85}
 
 	card := SetupCardHTML(Default(), p)
-	mustContain(t, card, "CTRL 1", "WAH (off)", "CTRL 2", "MOD (on)", "EXP1 B P1", "Position (15–85)")
+	mustContain(t, card, "WAH", "MOD", "EXP1 B P1", "Position (15–85)")
+	// The CTRL boxes carry their saved toggle position: CTRL 1 off, CTRL 2 on.
+	mustContain(t, card, "<div class=\"btn off\">", "<div class=\"btn on\">")
 }
 
 func TestSetupCardShowsSwitchOptionsByName(t *testing.T) {
@@ -72,6 +74,14 @@ func TestSetupCardShowsSwitchOptionsByName(t *testing.T) {
 	if strings.Contains(card, "Sync: 0") {
 		t.Fatalf("switch should render by option name, not raw index:\n%s", card)
 	}
+}
+
+func TestSetupCardShowsUnits(t *testing.T) {
+	p := New()
+	place(&p.Blocks[7], 7, 67108864, true, map[string]float32{"Rate": 0.5, "Depth": 30}) // A-Chorus
+	place(&p.Blocks[8], 8, 184549377, true, map[string]float32{"Time": 400})             // Analog delay
+	card := SetupCardHTML(Default(), p)
+	mustContain(t, card, "Rate: 0.5 Hz", "Time: 400 ms", "Depth: 30")
 }
 
 func mustContain(t *testing.T, text string, wants ...string) {

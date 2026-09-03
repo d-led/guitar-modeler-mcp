@@ -101,6 +101,53 @@ func TestDecodeUserContent(t *testing.T) {
 	// Don't hard-fail if the fixture differs; the core assertions above hold.
 }
 
+// TestRoundTripReferencePresets cross-validates the codec against the four
+// reference .prst fixtures (from presets-valeton-gp200 and PRSTDecoder). A
+// 1224-byte user preset must round-trip byte-for-byte; a 1176-byte factory
+// preset must re-encode to a valid 1224-byte file with a correct checksum.
+func TestRoundTripReferencePresets(t *testing.T) {
+	for _, name := range []string{
+		"factory-50s-plexi.prst", "factory-wild-fruit.prst",
+		"user-fender-twin.prst", "user-dark-twin.prst",
+	} {
+		t.Run(name, func(t *testing.T) {
+			assertRoundTrips(t, filepath.Join("testdata", name))
+		})
+	}
+}
+
+// assertRoundTrips decodes one reference .prst and checks it round-trips: a
+// 1224-byte user preset byte-for-byte, a 1176-byte factory preset into a valid
+// 1224-byte file with a correct checksum.
+func assertRoundTrips(t *testing.T, path string) {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, err := Unmarshal(data)
+	if err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+	out, err := p.Marshal()
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	if len(data) == FileSizeUser {
+		if !bytes.Equal(out, data) {
+			t.Fatalf("user preset round-trip not byte-identical")
+		}
+		return
+	}
+	if len(out) != FileSizeUser {
+		t.Fatalf("factory re-encode = %d bytes, want %d", len(out), FileSizeUser)
+	}
+	if string(out[0:4]) != magic {
+		t.Fatalf("re-encoded magic = %q", out[0:4])
+	}
+	verifyChecksum(t, out)
+}
+
 // TestSyntheticMarshalValid builds a preset from scratch and checks the result
 // is a valid 1224-byte user file with the canonical header and a valid checksum.
 func TestSyntheticMarshalValid(t *testing.T) {
