@@ -192,7 +192,10 @@ func ParamNames(code uint32) []string {
 
 // SetParam writes a value into a block's parameter array, addressed by
 // parameter name (matched case-insensitively against the editor's labels,
-// e.g. "low cut" matches "Low Cut").
+// e.g. "low cut" matches "Low Cut"). The value must sit within the
+// parameter's range (a knob's min/max, or one of a switch/combox's option
+// indices); an unknown name or an out-of-range value is rejected with a
+// descriptive error.
 func SetParam(b *Block, key string, value float32) error {
 	idx, err := paramIndex(b.EffectID, key)
 	if err != nil {
@@ -201,18 +204,45 @@ func SetParam(b *Block, key string, value float32) error {
 	if idx < 0 || idx >= len(b.Params) {
 		return fmt.Errorf("parameter %q index %d out of range", key, idx)
 	}
+	if err := checkParamValue(b.EffectID, idx, value); err != nil {
+		return err
+	}
 	b.Params[idx] = value
 	return nil
 }
 
+// checkParamValue rejects a value outside a parameter's allowed range.
+func checkParamValue(code uint32, idx int, value float32) error {
+	for _, p := range effectParams[code] {
+		if p.Index != idx {
+			continue
+		}
+		if p.Kind == "knob" {
+			if float64(value) < p.Min || float64(value) > p.Max {
+				return fmt.Errorf("parameter %q value %g out of range %g..%g", p.Name, value, p.Min, p.Max)
+			}
+			return nil
+		}
+		if len(p.Options) > 0 {
+			i := int(value)
+			if i < 0 || i >= len(p.Options) {
+				return fmt.Errorf("parameter %q value %g out of range (options: %s)", p.Name, value, strings.Join(p.Options, ", "))
+			}
+			return nil
+		}
+		return nil
+	}
+	return nil
+}
+
 // ApplyNamedParams writes a set of name-keyed overrides onto a block, returning
-// the names that did not match any of the effect's parameters (so callers can
-// surface them instead of silently dropping them).
+// a description of each override that was rejected (unknown name or out-of-range
+// value), so callers can surface them instead of silently dropping them.
 func ApplyNamedParams(b *Block, overrides map[string]float32) []string {
 	var rejected []string
 	for name, value := range overrides {
 		if err := SetParam(b, name, value); err != nil {
-			rejected = append(rejected, name)
+			rejected = append(rejected, err.Error())
 		}
 	}
 	return rejected

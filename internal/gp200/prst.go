@@ -135,13 +135,31 @@ type Preset struct {
 	raw []byte
 }
 
-// New returns a blank preset with every block at its module default, identity
-// routing and the standard per-patch and pedal defaults.
+// defaultBlockEffects is the device's fresh-patch (INIT) effect per physical
+// block, in slot order (0 = PRE ... 10 = VOL). An unplaced block keeps this
+// effect, so an unused NR block is a noise gate, not a stray COMP.
+var defaultBlockEffects = []string{
+	"COMP", "V-Wah", "Green OD", "Tweedy", "Gate 1",
+	"SUP ZEP", "Guitar EQ 1", "Detune", "Pure", "Room", "Volume",
+}
+
+// defaultBlockEnabled marks the physical blocks that are on in a fresh patch:
+// AMP (3), CAB (5) and VOL (10).
+var defaultBlockEnabled = [effectBlockCount]bool{
+	false, false, false, true, false, true, false, false, false, false, true,
+}
+
+// New returns a blank preset with every block at its module default and the
+// standard per-patch, routing and pedal defaults.
 func New() Preset {
 	var p Preset
 	for i := range p.Blocks {
 		p.Blocks[i].Slot = uint8(i)
 		p.Routing[i] = uint8(i)
+		code, _ := EffectCode(defaultBlockEffects[i])
+		p.Blocks[i].EffectID = code
+		p.Blocks[i].Enabled = defaultBlockEnabled[i]
+		p.Blocks[i].Params = DefaultParams(code)
 	}
 	p.Version = 1
 	p.PatchName = "INIT"

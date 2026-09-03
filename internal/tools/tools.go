@@ -1723,7 +1723,10 @@ func gp200WriteOutput(p gp200.Preset, rejected []string, outDir string) (string,
 		fmt.Fprintf(&b, "Note: the GP-200 stores preset names up to %d characters; this preset reads as %q on the unit.\n", gp200.NameLimit, stored)
 	}
 	if len(rejected) > 0 {
-		fmt.Fprintf(&b, "Note: ignored unknown parameter names (run gp200_list_model_params to see the valid ones): %s\n", strings.Join(uniqueStrings(rejected), ", "))
+		fmt.Fprintf(&b, "Note: ignored parameter settings (run gp200_list_model_params to see valid names and ranges):\n")
+		for _, msg := range uniqueStrings(rejected) {
+			fmt.Fprintf(&b, "  - %s\n", msg)
+		}
 	}
 	b.WriteString(gp200ChainSummary(p))
 	return b.String(), nil
@@ -1756,13 +1759,18 @@ func gp200ChainSummary(p gp200.Preset) string {
 	return b.String()
 }
 
-// writeCtrlSummary appends one line per assigned CTRL footswitch.
+// writeCtrlSummary appends one line per assigned CTRL footswitch, with its
+// saved on/off position.
 func writeCtrlSummary(b *strings.Builder, ctrl [8]gp200.CtrlAssignment) {
 	for _, c := range ctrl {
 		if c.BlockMask == 0 {
 			continue
 		}
-		fmt.Fprintf(b, "- CTRL %d toggles %s\n", c.Index+1, strings.Join(ctrlBlockNames(c.BlockMask), " + "))
+		state := "off"
+		if c.State == 1 {
+			state = "on"
+		}
+		fmt.Fprintf(b, "- CTRL %d toggles %s (%s)\n", c.Index+1, strings.Join(ctrlBlockNames(c.BlockMask), " + "), state)
 	}
 }
 

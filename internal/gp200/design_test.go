@@ -1,6 +1,9 @@
 package gp200
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestResolveAmpInspiredBy(t *testing.T) {
 	// A real-hardware description resolves to the modeled amp.
@@ -123,7 +126,35 @@ func TestBuildPresetRejectsUnknownParams(t *testing.T) {
 	if len(rejected) != 2 {
 		t.Fatalf("rejected = %v, want band2 and band4", rejected)
 	}
+	for _, name := range []string{"band2", "band4"} {
+		if !strings.Contains(rejected[0]+rejected[1], name) {
+			t.Fatalf("rejected %v should mention %q", rejected, name)
+		}
+	}
 	if p.Blocks[6].Params[1] != 0 || p.Blocks[6].Params[3] != 0 {
 		t.Fatalf("EQ bands should stay flat, got %v", p.Blocks[6].Params[:5])
+	}
+}
+
+func TestBuildPresetRejectsOutOfRangeParams(t *testing.T) {
+	p, rejected, err := BuildPreset(Spec{
+		Amp: "UK 900",
+		FX: []FXSpec{
+			{Slot: "mod", Type: "A-Chorus", Enabled: true, Params: map[string]float32{"rate": 15, "depth": 30}},
+		},
+	})
+	if err != nil {
+		t.Fatalf("BuildPreset: %v", err)
+	}
+	// "rate" 15 is out of the 0.1..10 Hz range; "depth" 30 is fine.
+	if len(rejected) != 1 || !strings.Contains(strings.ToLower(rejected[0]), "rate") || !strings.Contains(rejected[0], "0.1") {
+		t.Fatalf("rejected = %v, want an out-of-range message for rate", rejected)
+	}
+	// The chorus keeps the default rate (0.5 Hz), and depth 30 is applied.
+	if p.Blocks[7].Params[1] != 0.5 {
+		t.Fatalf("chorus rate = %v, want default 0.5", p.Blocks[7].Params[1])
+	}
+	if p.Blocks[7].Params[0] != 30 {
+		t.Fatalf("chorus depth = %v, want 30", p.Blocks[7].Params[0])
 	}
 }

@@ -1,6 +1,9 @@
 package gp200
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestCatalogShape(t *testing.T) {
 	if got := len(Effects()); got != 305 {
@@ -125,10 +128,21 @@ func TestParamsSwitchOptions(t *testing.T) {
 func TestApplyNamedParams(t *testing.T) {
 	b := Block{EffectID: 50331648} // Green OD: Gain, Tone, Volume
 	rejected := ApplyNamedParams(&b, map[string]float32{"gain": 60, "level": 78})
-	if len(rejected) != 1 || rejected[0] != "level" {
-		t.Fatalf("rejected = %v, want [level]", rejected)
+	if len(rejected) != 1 || !strings.Contains(rejected[0], "level") {
+		t.Fatalf("rejected = %v, want a message about level", rejected)
 	}
 	if b.Params[0] != 60 {
 		t.Fatalf("gain = %v, want 60", b.Params[0])
+	}
+}
+
+func TestSetParamRejectsOutOfRange(t *testing.T) {
+	// A-Chorus Rate is 0.1..10 Hz; 15 Hz would sound like noise.
+	b := Block{EffectID: 67108864}
+	if err := SetParam(&b, "rate", 15); err == nil {
+		t.Fatal("SetParam accepted a rate outside 0.1..10 Hz")
+	}
+	if err := SetParam(&b, "rate", 0.5); err != nil {
+		t.Fatalf("SetParam rejected an in-range rate: %v", err)
 	}
 }
