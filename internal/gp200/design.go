@@ -36,6 +36,27 @@ func slotIndex(module string) (int, bool) {
 	return 0, false
 }
 
+// BlockIndex maps a block name (pre, wah, dst, amp, nr, cab, eq, mod, dly, rvb
+// or vol) to its physical block position 0..10.
+func BlockIndex(module string) (int, bool) {
+	return slotIndex(module)
+}
+
+// ResolveEffect finds the code for a named effect, searching one block's
+// catalog first when a block hint is given (needed for names like "Tube",
+// which is both a DST overdrive and a DLY delay).
+func ResolveEffect(block, name string) (uint32, error) {
+	return resolveEffect(block, name)
+}
+
+// SetBlock loads an effect into a physical block, replacing whatever was there:
+// it sets the effect model, on/off state, and (from the effect's defaults) the
+// parameter overrides. It returns the override names that did not match the
+// effect's parameters.
+func SetBlock(b *Block, slot int, code uint32, enabled bool, overrides map[string]float32) []string {
+	return place(b, slot, code, enabled, overrides)
+}
+
 // resolveEffect finds the code for a named effect. A slot hint narrows the
 // search to that module's catalog first (needed for names like "Tube", which
 // is both a DST overdrive and a DLY delay); without a hint the first match in

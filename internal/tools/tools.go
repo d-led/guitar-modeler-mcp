@@ -2158,6 +2158,150 @@ func gp200FXItemSchema() map[string]any {
 	})
 }
 
+// ---- GP-200 incremental editing ----
+
+// gp200Load reads the .prst an edit tool operates on.
+func gp200Load(args map[string]any) (gp200.Preset, string, error) {
+	path := argString(args, "input_file")
+	if path == "" {
+		return gp200.Preset{}, "", fmt.Errorf("input_file is required")
+	}
+	p, err := gp200.ReadFile(path)
+	if err != nil {
+		return gp200.Preset{}, "", err
+	}
+	return p, path, nil
+}
+
+// gp200Save writes a preset back, overwriting the input file unless an
+// output_file is given.
+func gp200Save(p gp200.Preset, inputPath string, args map[string]any) (string, error) {
+	out := argString(args, "output_file")
+	if out == "" {
+		out = inputPath
+	}
+	if err := gp200.WriteFile(out, p); err != nil {
+		return "", err
+	}
+	return out, nil
+}
+
+func (r *Registrar) gp200SetParam(args map[string]any) (string, error) {
+	p, in, err := gp200Load(args)
+	if err != nil {
+		return "", err
+	}
+	block := argString(args, "block")
+	slot, ok := gp200.BlockIndex(block)
+	if !ok {
+		return "", fmt.Errorf("unknown GP-200 block %q (want pre, wah, dst, amp, nr, cab, eq, mod, dly, rvb or vol)", block)
+	}
+	param := argString(args, "param")
+	value := argFloat(args, "value")
+	if err := gp200.SetParam(&p.Blocks[slot], param, float32(value)); err != nil {
+		return "", err
+	}
+	out, err := gp200Save(p, in, args)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("Set %s %s %s = %g in %s\n%s", gp200.ModuleForBlock(slot), gp200.EffectName(p.Blocks[slot].EffectID), param, value, out, gp200ChainSummary(p)), nil
+}
+
+func (r *Registrar) gp200SetBlock(args map[string]any) (string, error) {
+	p, in, err := gp200Load(args)
+	if err != nil {
+		return "", err
+	}
+	block := argString(args, "block")
+	slot, ok := gp200.BlockIndex(block)
+	if !ok {
+		return "", fmt.Errorf("unknown GP-200 block %q (want pre, wah, dst, amp, nr, cab, eq, mod, dly, rvb or vol)", block)
+	}
+	code, err := gp200.ResolveEffect(block, argString(args, "type"))
+	if err != nil {
+		return "", err
+	}
+	params := map[string]float32{}
+	for k, v := range argFloatMap(args, "params") {
+		params[k] = float32(v)
+	}
+	rejected := gp200.SetBlock(&p.Blocks[slot], slot, code, argBool(args, "enabled", true), params)
+	out, err := gp200Save(p, in, args)
+	if err != nil {
+		return "", err
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "Set %s = %s in %s\n", gp200.ModuleForBlock(slot), gp200.EffectName(code), out)
+	if len(rejected) > 0 {
+		fmt.Fprintf(&b, "Note: ignored parameter settings (run gp200_list_model_params): %s\n", strings.Join(uniqueStrings(rejected), ", "))
+	}
+	b.WriteString(gp200ChainSummary(p))
+	return b.String(), nil
+}
+
+func (r *Registrar) gp200SetFootswitch(args map[string]any) (string, error) {
+	p, in, err := gp200Load(args)
+	if err != nil {
+		return "", err
+	}
+	ctrl := argInt(args, "ctrl", 0)
+	if ctrl < 1 || ctrl > 8 {
+		return "", fmt.Errorf("ctrl must be 1..8, got %d", ctrl)
+	}
+	var mask uint16
+	for _, name := range argStrings(args["blocks"]) {
+		bit, err := gp200BlockBit(name)
+		if err != nil {
+			return "", err
+		}
+		mask |= 1 << uint(bit)
+	}
+	p.Ctrl[ctrl-1] = gp200.CtrlAssignment{Index: ctrl - 1, BlockMask: mask, State: clampUint8(argInt(args, "state", 0), 1)}
+	out, err := gp200Save(p, in, args)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("Updated CTRL %d in %s\n%s", ctrl, out, gp200ChainSummary(p)), nil
+}
+
+func (r *Registrar) gp200SetExp(args map[string]any) (string, error) {
+	p, in, err := gp200Load(args)
+	if err != nil {
+		return "", err
+	}
+	page := argInt(args, "page", 1) - 1
+	item := argInt(args, "item", 1) - 1
+	if page < 0 || page > 2 || item < 0 || item > 2 {
+		return "", fmt.Errorf("page and item must be 1..3")
+	}
+	block := -1
+	paramIndex := 0
+	if name := argString(args, "block"); name != "" {
+		slot, ok := gp200.BlockIndex(name)
+		if !ok {
+			return "", fmt.Errorf("unknown GP-200 block %q", name)
+		}
+		block = slot
+		if pn := argString(args, "param"); pn != "" {
+			idx, err := gp200.ParamIndex(p.Blocks[slot].EffectID, pn)
+			if err != nil {
+				return "", err
+			}
+			paramIndex = idx
+		}
+	}
+	p.Exp[page*3+item] = gp200.ExpAssignment{
+		Page: page, Item: item, Block: block, ParamIndex: paramIndex,
+		Min: float32(argFloat(args, "min")), Max: float32(argFloat(args, "max")),
+	}
+	out, err := gp200Save(p, in, args)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("Updated EXP%d P%d in %s\n", page+1, item+1, out), nil
+}
+
 func (r *Registrar) renderSetupCard(args map[string]any) (string, error) {
 	m, err := mooerModel(args)
 	if err != nil {

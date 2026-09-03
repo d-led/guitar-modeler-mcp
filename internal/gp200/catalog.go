@@ -256,3 +256,9 @@ func paramIndex(code uint32, key string) (int, error) {
 	}
 	return -1, fmt.Errorf("effect %q has no parameter %q", EffectName(code), key)
 }
+
+// ParamIndex returns the parameter index (position in the 15-float32 array) for
+// a named parameter of an effect.
+func ParamIndex(code uint32, name string) (int, error) {
+	return paramIndex(code, name)
+}
