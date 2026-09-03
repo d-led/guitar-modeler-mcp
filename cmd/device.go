@@ -3,6 +3,7 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
+	"github.com/d-led/guitar-modeler-mcp/internal/gp200"
 	"github.com/d-led/guitar-modeler-mcp/internal/mooer"
 	"github.com/d-led/guitar-modeler-mcp/internal/qc"
 	"github.com/d-led/guitar-modeler-mcp/internal/thr"
@@ -41,6 +42,9 @@ func supportedDevices() []deviceInfo {
 	}
 	q := qc.Default()
 	list = append(list, deviceInfo{Name: q.Name, Description: q.Display, FileExchange: q.FileExchange, FileExt: q.FileExt})
+	for _, g := range gp200.Models() {
+		list = append(list, deviceInfo{Name: g.Name, Description: g.Display, FileExchange: g.FileExchange, FileExt: g.FileExt})
+	}
 	return list
 }
 

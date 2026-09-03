@@ -132,6 +132,8 @@ func TestIntegrationInitializeAndToolList(t *testing.T) {
 		"waza_catalog_list_amps", "waza_catalog_list_fx", "waza_setup_card", "waza_write_tsl", "waza_read_tsl",
 		"waza_catalog_list_modes",
 		"thr_catalog_list_amps", "thr_catalog_list_fx", "thr_setup_card",
+		"gp200_catalog_list_amps", "gp200_catalog_list_cabs", "gp200_catalog_list_fx",
+		"gp200_design", "gp200_read_prst",
 		"qc_catalog_list_amps", "qc_catalog_list_cabs", "qc_catalog_list_fx",
 		"qc_translate_amp", "qc_translate_cab", "qc_list_model_params",
 		"qc_decode_preset", "qc_design", "qc_render_setup_card", "qc_usb",
@@ -232,6 +234,49 @@ func TestIntegrationMooerCardOnlyDevice(t *testing.T) {
 	if cards, _ := filepath.Glob(filepath.Join(dir, "*.html")); len(cards) != 1 {
 		t.Fatalf("ge150 should write one setup card, got %v", cards)
 	}
+}
+
+func TestIntegrationGP200DesignAndRead(t *testing.T) {
+	s := newIntegrationServer(t)
+	dir := t.TempDir()
+
+	devices := resultText(t, rpc(t, s, 1, "tools/call", map[string]any{
+		"name":      "device_list",
+		"arguments": map[string]any{},
+	}))
+	mustContain(t, devices, "gp200", ".prst")
+
+	amps := resultText(t, rpc(t, s, 2, "tools/call", map[string]any{
+		"name":      "gp200_catalog_list_amps",
+		"arguments": map[string]any{"query": "JCM800"},
+	}))
+	mustContain(t, amps, "UK 800", "Marshall® JCM800")
+
+	design := resultText(t, rpc(t, s, 3, "tools/call", map[string]any{
+		"name": "gp200_design",
+		"arguments": map[string]any{
+			"name":       "GP200 Test",
+			"amp":        "Marshall JCM800",
+			"cab":        "Marshall 1960AV",
+			"output_dir": dir,
+			"fx": []any{
+				map[string]any{"block": "dst", "type": "Green OD", "enabled": true},
+			},
+			"footswitches": []any{
+				map[string]any{"ctrl": 1, "blocks": []any{"dst", "dly"}},
+			},
+		},
+	}))
+	mustContain(t, design, ".prst", "UK 800", "Green OD", "CTRL 1 toggles DST + DLY")
+
+	prst := singleGlob(t, filepath.Join(dir, "*.prst"))[0]
+	wantEq(t, "preset filename", filepath.Base(prst), "GP200 Test.prst")
+
+	read := resultText(t, rpc(t, s, 4, "tools/call", map[string]any{
+		"name":      "gp200_read_prst",
+		"arguments": map[string]any{"input_file": prst},
+	}))
+	mustContain(t, read, "GP200 Test", "UK 800", "Green OD", "DST", "DLY")
 }
 
 func TestIntegrationWazaTSLAndCard(t *testing.T) {

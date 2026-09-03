@@ -65,7 +65,7 @@ need gosec "go install github.com/securego/gosec/v2/cmd/gosec@latest"
 # come from the user's own arguments — that is the tool's entire purpose, so
 # the findings are expected rather than bugs.
 gosec -quiet -exclude-generated \
-  -exclude-rules="internal/install/install.go:G304;internal/golden/golden.go:G304;internal/mooer/file.go:G304;internal/waza/tsl.go:G304;internal/tools/tools.go:G304,G703;cmd/rigfile.go:G304" \
+  -exclude-rules="internal/install/install.go:G304;internal/golden/golden.go:G304;internal/mooer/file.go:G304;internal/gp200/file.go:G304;internal/waza/tsl.go:G304;internal/tools/tools.go:G304,G703;cmd/rigfile.go:G304" \
   ./...
 
 section "govulncheck"

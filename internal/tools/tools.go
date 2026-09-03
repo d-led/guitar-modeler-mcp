@@ -15,6 +15,7 @@ import (
 	"github.com/d-led/guitar-modeler-mcp/internal/cookbook"
 	"github.com/d-led/guitar-modeler-mcp/internal/design"
 	"github.com/d-led/guitar-modeler-mcp/internal/docs"
+	"github.com/d-led/guitar-modeler-mcp/internal/gp200"
 	"github.com/d-led/guitar-modeler-mcp/internal/htmlreport"
 	"github.com/d-led/guitar-modeler-mcp/internal/mcp"
 	"github.com/d-led/guitar-modeler-mcp/internal/mooer"
@@ -445,6 +446,72 @@ func (r *Registrar) Register(s *mcp.Server) {
 		}, thrKnobProps())),
 		Handler: func(_ context.Context, args map[string]any) (string, error) {
 			return r.thrSetupCard(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "gp200_catalog_list_amps",
+		Description: "List the Valeton GP-200 amp models, with the real amplifier each is based on. The 11 blocks of a GP-200 patch are fixed-function (PRE WAH DST AMP NR CAB EQ MOD DLY RVB VOL), and each model is addressed on the wire by a 32-bit code.",
+		InputSchema: objectSchema(map[string]any{
+			"query": stringSchema("Optional case-insensitive filter over name or inspired_by."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.gp200ListAmps(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "gp200_catalog_list_cabs",
+		Description: "List the Valeton GP-200 cabinet models (and acoustic/instrument simulations), with the real cabinet each is based on.",
+		InputSchema: objectSchema(map[string]any{
+			"query": stringSchema("Optional case-insensitive filter over name or inspired_by."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.gp200ListCabs(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "gp200_catalog_list_fx",
+		Description: "List the Valeton GP-200 effects, grouped by the block they live in (pre, wah, dst, nr, eq, mod, dly, rvb, vol). Pass block to restrict to one block; amp and cab models have their own tools.",
+		InputSchema: objectSchema(map[string]any{
+			"block": stringSchema("Optional block: pre, wah, dst, nr, eq, mod, dly, rvb or vol."),
+			"query": stringSchema("Optional case-insensitive filter over name or inspired_by."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.gp200ListFX(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "gp200_design",
+		Description: "Dial in a tone on the Valeton GP-200: resolve the amp/cab/effects to model codes, then write a .prst preset file. The .prst is the device's native single-preset format, importable by the GP-200 editor software. Effects are placed by block name (pre, wah, dst, amp, nr, cab, eq, mod, dly, rvb, vol). The eleven blocks have a fixed function but their playback order can be re-arranged with `order`, and the eight CTRL footswitches can toggle any set of blocks (or the FX loop) with `footswitches`.",
+		InputSchema: objectSchema(map[string]any{
+			"name":         stringSchema("Preset name (up to 16 characters)."),
+			"amp":          stringSchema("Amp: device model name or a real-hardware description, e.g. \"Marshall JCM800\"."),
+			"amp_params":   floatMapSchema("Amp knob overrides keyed by the editor's parameter names (e.g. {\"gain\": 60})."),
+			"cab":          stringSchema("Optional cab: device model name or description."),
+			"cab_params":   floatMapSchema("Cab knob overrides keyed by parameter name."),
+			"tempo":        numberSchema("Optional tempo in BPM (default 120)."),
+			"volume":       numberSchema("Optional overall preset volume 0..100 (default 50)."),
+			"fx":           arraySchema("Optional effects; each names a block and an effect within it.", gp200FXItemSchema()),
+			"order":        arraySchema("Optional playback order of all 11 blocks (pre, wah, dst, amp, nr, cab, eq, mod, dly, rvb, vol). Omit for the default serial order.", stringSchema("One block name.")),
+			"footswitches": arraySchema("Optional CTRL footswitch assignments: which blocks (or the FX loop) each of the eight CTRL switches toggles.", gp200FootswitchItemSchema()),
+			"output_dir":   stringSchema("Directory to write the .prst file into (default: current directory)."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.gp200Design(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "gp200_read_prst",
+		Description: "Decode a Valeton GP-200 .prst preset file and report its name, metadata and each of the eleven blocks' effect model and parameter values, so a preset can be analyzed or verified.",
+		InputSchema: objectSchema(map[string]any{
+			"input_file": stringSchema("Path to the .prst file."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.gp200ReadPRST(args)
 		},
 	})
 
@@ -1127,6 +1194,28 @@ func argInt(args map[string]any, key string, def int) int {
 	return def
 }
 
+// clampUint8 clamps n to 0..limit and returns it as a uint8.
+func clampUint8(n, limit int) uint8 {
+	if n < 0 {
+		n = 0
+	}
+	if n > limit {
+		n = limit
+	}
+	return uint8(n) // #nosec G115 -- n is clamped to 0..limit (<=255)
+}
+
+// clampUint16 clamps n to 0..0xFFFF and returns it as a uint16.
+func clampUint16(n int) uint16 {
+	if n < 0 {
+		n = 0
+	}
+	if n > 0xFFFF {
+		n = 0xFFFF
+	}
+	return uint16(n) // #nosec G115 -- n is clamped to 0..0xFFFF
+}
+
 // argFloatPtr returns the numeric value as a pointer, or nil when the argument
 // is absent or not a number. Used for optional parameters where nil means
 // "keep the default".
@@ -1318,6 +1407,9 @@ func deviceList() []deviceInfo {
 	for _, t := range thr.Models() {
 		list = append(list, deviceInfo{Name: t.Name, Description: t.Display, FileExchange: t.FileExchange, FileExt: t.FileExt})
 	}
+	for _, g := range gp200.Models() {
+		list = append(list, deviceInfo{Name: g.Name, Description: g.Display, FileExchange: g.FileExchange, FileExt: g.FileExt})
+	}
 	return list
 }
 
@@ -1491,6 +1583,411 @@ func (r *Registrar) writeMooerOutput(m mooer.Model, p mooer.Preset, outDir strin
 	}
 	fmt.Fprintf(&b, "Parameter values are neutral defaults (raw 0-100, 50 = noon); source knob positions are not copied across devices.\n")
 	return b.String(), nil
+}
+
+// ---- GP-200 (Valeton) device tools ----
+
+// gp200CatalogItem is one effect row for the gp200 listing tools.
+type gp200CatalogItem struct {
+	Code       uint32 `json:"code"`
+	Name       string `json:"name"`
+	InspiredBy string `json:"inspired_by,omitempty"`
+	Module     string `json:"module,omitempty"`
+}
+
+func gp200Item(e gp200.Effect) gp200CatalogItem {
+	return gp200CatalogItem{Code: e.Code, Name: e.Name, InspiredBy: gp200.InspiredBy(e.Name), Module: e.Module}
+}
+
+func filterGP200(items []gp200.Effect, query string) []gp200CatalogItem {
+	q := strings.ToLower(strings.TrimSpace(query))
+	out := make([]gp200CatalogItem, 0, len(items))
+	for _, e := range items {
+		if q != "" && !strings.Contains(strings.ToLower(e.Name+" "+gp200.InspiredBy(e.Name)), q) {
+			continue
+		}
+		out = append(out, gp200Item(e))
+	}
+	return out
+}
+
+func (r *Registrar) gp200ListAmps(args map[string]any) (string, error) {
+	return marshal(filterGP200(gp200.Amps(), argString(args, "query")))
+}
+
+func (r *Registrar) gp200ListCabs(args map[string]any) (string, error) {
+	return marshal(filterGP200(gp200.Cabs(), argString(args, "query")))
+}
+
+func (r *Registrar) gp200ListFX(args map[string]any) (string, error) {
+	block := strings.ToLower(strings.TrimSpace(argString(args, "block")))
+	query := argString(args, "query")
+
+	modules := map[string][]gp200CatalogItem{}
+	for mod, effects := range gp200.EffectsByModule() {
+		if block != "" && !strings.EqualFold(mod, block) {
+			continue
+		}
+		modules[mod] = filterGP200(effects, query)
+	}
+	return marshal(modules)
+}
+
+func (r *Registrar) gp200Design(args map[string]any) (string, error) {
+	name := strings.TrimSpace(argString(args, "name"))
+	if name == "" {
+		name = "New Preset"
+	}
+
+	ampParams := map[string]float32{}
+	for k, v := range argFloatMap(args, "amp_params") {
+		ampParams[k] = float32(v)
+	}
+	cabParams := map[string]float32{}
+	for k, v := range argFloatMap(args, "cab_params") {
+		cabParams[k] = float32(v)
+	}
+
+	spec := gp200.Spec{
+		Name:   name,
+		Amp:    argString(args, "amp"),
+		Cab:    argString(args, "cab"),
+		Tempo:  clampUint16(argInt(args, "tempo", 120)),
+		Volume: clampUint8(argInt(args, "volume", 50), 100),
+		FX:     parseGP200FX(args["fx"]),
+	}
+
+	p, err := gp200.BuildPreset(spec)
+	if err != nil {
+		return "", err
+	}
+	// Apply amp/cab parameter overrides after resolution (their parameter
+	// names are known only once the model code is resolved).
+	applyGP200Params(&p.Blocks[3], ampParams)
+	applyGP200Params(&p.Blocks[5], cabParams)
+	if err := applyGP200Order(&p, argStrings(args["order"])); err != nil {
+		return "", err
+	}
+	if err := applyGP200Footswitches(&p, argObjects(args, "footswitches")); err != nil {
+		return "", err
+	}
+
+	outDir := argString(args, "output_dir")
+	if outDir == "" {
+		outDir = "."
+	}
+	base := sanitizeFileBase(p.PatchName)
+	path := filepath.Join(outDir, base+".prst")
+	if err := gp200.WriteFile(path, p); err != nil {
+		return "", err
+	}
+
+	var b strings.Builder
+	fmt.Fprintf(&b, "Wrote Valeton GP-200 preset to %s\n", path)
+	if stored, truncated := gp200.StoredName(p.PatchName); truncated {
+		fmt.Fprintf(&b, "Note: the GP-200 stores preset names up to %d characters; this preset reads as %q on the unit.\n", gp200.NameLimit, stored)
+	}
+	b.WriteString(gp200ChainSummary(p))
+	return b.String(), nil
+}
+
+// gp200ChainSummary renders the eleven fixed blocks as a readable chain, plus
+// the playback order and any CTRL footswitch assignments.
+func gp200ChainSummary(p gp200.Preset) string {
+	var b strings.Builder
+	for slot := range gp200.SlotModules() {
+		blk := p.Blocks[slot]
+		state := "off"
+		if blk.Enabled {
+			state = "on"
+		}
+		name := gp200.EffectName(blk.EffectID)
+		if name == "" {
+			name = "—"
+		}
+		if inspired := gp200.InspiredBy(name); inspired != "" {
+			fmt.Fprintf(&b, "- %s: %s (%s) [%s]\n", gp200.ModuleForBlock(slot), name, inspired, state)
+		} else {
+			fmt.Fprintf(&b, "- %s: %s [%s]\n", gp200.ModuleForBlock(slot), name, state)
+		}
+	}
+	if !identityRouting(p.Routing) {
+		fmt.Fprintf(&b, "Signal order: %s\n", routingNames(p.Routing))
+	}
+	writeCtrlSummary(&b, p.Ctrl)
+	return b.String()
+}
+
+// writeCtrlSummary appends one line per assigned CTRL footswitch.
+func writeCtrlSummary(b *strings.Builder, ctrl [8]gp200.CtrlAssignment) {
+	for _, c := range ctrl {
+		if c.BlockMask == 0 {
+			continue
+		}
+		fmt.Fprintf(b, "- CTRL %d toggles %s\n", c.Index+1, strings.Join(ctrlBlockNames(c.BlockMask), " + "))
+	}
+}
+
+// ctrlBlockNames returns the block names set in a CTRL footswitch mask.
+func ctrlBlockNames(mask uint16) []string {
+	var names []string
+	for bit := 0; bit <= 11; bit++ {
+		if mask&(1<<uint(bit)) != 0 {
+			if bit == 11 {
+				names = append(names, "FX_LOOP")
+			} else {
+				names = append(names, gp200.ModuleForBlock(bit))
+			}
+		}
+	}
+	return names
+}
+
+func identityRouting(r [11]uint8) bool {
+	for i := range r {
+		if int(r[i]) != i {
+			return false
+		}
+	}
+	return true
+}
+
+func routingNames(r [11]uint8) string {
+	names := make([]string, len(r))
+	for i, slot := range r {
+		names[i] = gp200.ModuleForBlock(int(slot))
+	}
+	return strings.Join(names, " -> ")
+}
+
+func applyGP200Params(blk *gp200.Block, params map[string]float32) {
+	for name, value := range params {
+		_ = gp200.SetParam(blk, name, value)
+	}
+}
+
+// gp200BlockBit returns the CTRL mask bit for a block name (0..10), or 11 for
+// the FX loop.
+func gp200BlockBit(name string) (int, error) {
+	switch strings.ToLower(strings.TrimSpace(name)) {
+	case "fx_loop", "fx loop", "loop":
+		return 11, nil
+	}
+	for i, mod := range gp200.SlotModules() {
+		if strings.EqualFold(mod, name) {
+			return i, nil
+		}
+	}
+	return 0, fmt.Errorf("unknown GP-200 block %q (want pre, wah, dst, amp, nr, cab, eq, mod, dly, rvb, vol or fx_loop)", name)
+}
+
+// applyGP200Order reorders the eleven blocks' playback order from a list of
+// block names. The list must be a permutation of the eleven blocks.
+func applyGP200Order(p *gp200.Preset, order []string) error {
+	if len(order) == 0 {
+		return nil
+	}
+	if len(order) != 11 {
+		return fmt.Errorf("order must list all 11 blocks, got %d", len(order))
+	}
+	seen := make(map[int]bool, 11)
+	for i, name := range order {
+		bit, err := gp200BlockBit(name)
+		if err != nil {
+			return err
+		}
+		if bit == 11 {
+			return fmt.Errorf("the FX loop is not one of the 11 chain blocks")
+		}
+		if seen[bit] {
+			return fmt.Errorf("block %q listed twice in order", name)
+		}
+		seen[bit] = true
+		p.Routing[i] = uint8(bit) // #nosec G115 -- block bit is 0..10
+	}
+	return nil
+}
+
+// applyGP200Footswitches assigns the CTRL footswitches from an array of
+// {ctrl: 1..8, blocks: [...]} records. Omitted switches keep their default.
+func applyGP200Footswitches(p *gp200.Preset, raw []map[string]any) error {
+	for _, m := range raw {
+		ctrl := argInt(m, "ctrl", 0)
+		if ctrl < 1 || ctrl > 8 {
+			return fmt.Errorf("footswitch ctrl must be 1..8, got %d", ctrl)
+		}
+		var mask uint16
+		for _, name := range argStrings(m["blocks"]) {
+			bit, err := gp200BlockBit(name)
+			if err != nil {
+				return err
+			}
+			mask |= 1 << uint(bit)
+		}
+		p.Ctrl[ctrl-1].BlockMask = mask
+		p.Ctrl[ctrl-1].State = uint8(argInt(m, "state", 0)) // #nosec G115 -- state is 0/1
+	}
+	return nil
+}
+
+func gp200FootswitchItemSchema() map[string]any {
+	return objectSchema(map[string]any{
+		"ctrl":   numberSchema("CTRL footswitch number, 1..8."),
+		"blocks": arraySchema("Blocks this switch toggles (pre, wah, dst, amp, nr, cab, eq, mod, dly, rvb, vol or fx_loop).", stringSchema("One block name.")),
+		"state":  numberSchema("Optional saved toggle position 0 (off) or 1 (on); default 0."),
+	})
+}
+
+func parseGP200FX(raw any) []gp200.FXSpec {
+	arr, ok := raw.([]any)
+	if !ok {
+		return nil
+	}
+	out := make([]gp200.FXSpec, 0, len(arr))
+	for _, item := range arr {
+		m, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		params := map[string]float32{}
+		for k, v := range argFloatMap(m, "params") {
+			params[k] = float32(v)
+		}
+		spec := gp200.FXSpec{
+			Slot:    strings.ToLower(argString(m, "block")),
+			Type:    argString(m, "type"),
+			Enabled: argBool(m, "enabled", true),
+			Params:  params,
+		}
+		if spec.Slot == "" {
+			spec.Slot = strings.ToLower(argString(m, "slot"))
+		}
+		if spec.Slot != "" && spec.Type != "" {
+			out = append(out, spec)
+		}
+	}
+	return out
+}
+
+// gp200ReadBlock is one decoded block in the gp200_read_prst view.
+type gp200ReadBlock struct {
+	Slot       string    `json:"slot"`
+	Effect     string    `json:"effect"`
+	InspiredBy string    `json:"inspired_by,omitempty"`
+	Enabled    bool      `json:"enabled"`
+	Params     []float32 `json:"params"`
+}
+
+// gp200ReadCtrl is one decoded CTRL footswitch in the gp200_read_prst view.
+type gp200ReadCtrl struct {
+	Ctrl   int      `json:"ctrl"`
+	Blocks []string `json:"blocks"`
+	State  uint8    `json:"state"`
+}
+
+// gp200ReadExp is one decoded expression-pedal assignment in the view.
+type gp200ReadExp struct {
+	Page       int     `json:"page"`
+	Item       int     `json:"item"`
+	Block      string  `json:"block,omitempty"`
+	ParamIndex int     `json:"param_index"`
+	Min        float32 `json:"min"`
+	Max        float32 `json:"max"`
+}
+
+func (r *Registrar) gp200ReadPRST(args map[string]any) (string, error) {
+	path := argString(args, "input_file")
+	if path == "" {
+		return "", fmt.Errorf("input_file is required")
+	}
+	p, err := gp200.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	return marshal(struct {
+		Name    string           `json:"name"`
+		Author  string           `json:"author,omitempty"`
+		Note    string           `json:"note,omitempty"`
+		Tempo   uint16           `json:"tempo"`
+		Volume  uint8            `json:"volume"`
+		Pan     int16            `json:"pan"`
+		Style   uint16           `json:"style"`
+		Slot    uint8            `json:"slot"`
+		FXMode  uint8            `json:"fx_mode"`
+		Routing []string         `json:"routing"`
+		Blocks  []gp200ReadBlock `json:"blocks"`
+		Ctrl    []gp200ReadCtrl  `json:"ctrl"`
+		Exp     []gp200ReadExp   `json:"exp"`
+	}{
+		Name:    p.PatchName,
+		Author:  p.Author,
+		Note:    p.Note,
+		Tempo:   p.Tempo,
+		Volume:  p.Volume,
+		Pan:     p.Pan,
+		Style:   p.Style,
+		Slot:    p.SlotIndex,
+		FXMode:  p.FXMode,
+		Routing: gp200RoutingView(p.Routing),
+		Blocks:  gp200BlockViews(p.Blocks),
+		Ctrl:    gp200CtrlViews(p.Ctrl),
+		Exp:     gp200ExpViews(p.Exp),
+	})
+}
+
+func gp200RoutingView(routing [11]uint8) []string {
+	out := make([]string, len(routing))
+	for i, slot := range routing {
+		out[i] = gp200.ModuleForBlock(int(slot))
+	}
+	return out
+}
+
+func gp200BlockViews(blocks [11]gp200.Block) []gp200ReadBlock {
+	out := make([]gp200ReadBlock, 0, len(gp200.SlotModules()))
+	for slot := range gp200.SlotModules() {
+		blk := blocks[slot]
+		name := gp200.EffectName(blk.EffectID)
+		out = append(out, gp200ReadBlock{
+			Slot:       gp200.ModuleForBlock(slot),
+			Effect:     name,
+			InspiredBy: gp200.InspiredBy(name),
+			Enabled:    blk.Enabled,
+			Params:     blk.Params[:],
+		})
+	}
+	return out
+}
+
+func gp200CtrlViews(ctrl [8]gp200.CtrlAssignment) []gp200ReadCtrl {
+	out := make([]gp200ReadCtrl, 0, len(ctrl))
+	for _, c := range ctrl {
+		out = append(out, gp200ReadCtrl{Ctrl: c.Index + 1, Blocks: ctrlBlockNames(c.BlockMask), State: c.State})
+	}
+	return out
+}
+
+func gp200ExpViews(exp [9]gp200.ExpAssignment) []gp200ReadExp {
+	out := make([]gp200ReadExp, 0, len(exp))
+	for _, e := range exp {
+		block := ""
+		if e.Block >= 0 && e.Block <= 10 {
+			block = gp200.ModuleForBlock(e.Block)
+		} else if e.Block >= 11 {
+			block = "SPECIAL"
+		}
+		out = append(out, gp200ReadExp{Page: e.Page + 1, Item: e.Item + 1, Block: block, ParamIndex: e.ParamIndex, Min: e.Min, Max: e.Max})
+	}
+	return out
+}
+
+func gp200FXItemSchema() map[string]any {
+	return objectSchema(map[string]any{
+		"block":   stringSchema("Target block: pre, wah, dst, amp, nr, cab, eq, mod, dly, rvb or vol."),
+		"type":    stringSchema("Effect name within the block, e.g. \"Green OD\" in block \"dst\"."),
+		"enabled": map[string]any{"type": "boolean", "description": "Whether the block is on."},
+		"params":  floatMapSchema("Knob overrides keyed by the editor's parameter names (e.g. {\"gain\": 60})."),
+	})
 }
 
 func (r *Registrar) renderSetupCard(args map[string]any) (string, error) {

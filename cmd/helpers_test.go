@@ -69,12 +69,12 @@ func TestParseFootswitchFlags(t *testing.T) {
 }
 
 func TestSupportedDevices(t *testing.T) {
-	byName := make(map[string]deviceInfo, 11)
+	byName := make(map[string]deviceInfo, 13)
 	for _, d := range supportedDevices() {
 		byName[d.Name] = d
 	}
-	if len(byName) != 11 {
-		t.Fatalf("supportedDevices returned %d devices, want 11", len(byName))
+	if len(byName) != 13 {
+		t.Fatalf("supportedDevices returned %d devices, want 13", len(byName))
 	}
 
 	tests := []struct {
@@ -90,6 +90,8 @@ func TestSupportedDevices(t *testing.T) {
 		{"wazaair", true, ".tsl", "BOSS Waza Air"},
 		{"thr", false, "", "Yamaha THR-II"},
 		{"quad-cortex", false, "", "Neural DSP Quad Cortex"},
+		{"gp200", true, ".prst", "Valeton GP-200"},
+		{"gp200lt", true, ".prst", "Valeton GP-200 LT"},
 	}
 	for _, tc := range tests {
 		g, ok := byName[tc.name]
