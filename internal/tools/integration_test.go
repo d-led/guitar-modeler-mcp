@@ -133,7 +133,7 @@ func TestIntegrationInitializeAndToolList(t *testing.T) {
 		"waza_catalog_list_modes",
 		"thr_catalog_list_amps", "thr_catalog_list_fx", "thr_setup_card",
 		"gp200_catalog_list_amps", "gp200_catalog_list_cabs", "gp200_catalog_list_fx",
-		"gp200_design", "gp200_read_prst",
+		"gp200_design", "gp200_read_prst", "gp200_list_model_params", "gp200_setup_card",
 		"qc_catalog_list_amps", "qc_catalog_list_cabs", "qc_catalog_list_fx",
 		"qc_translate_amp", "qc_translate_cab", "qc_list_model_params",
 		"qc_decode_preset", "qc_design", "qc_render_setup_card", "qc_usb",
@@ -260,23 +260,32 @@ func TestIntegrationGP200DesignAndRead(t *testing.T) {
 			"cab":        "Marshall 1960AV",
 			"output_dir": dir,
 			"fx": []any{
-				map[string]any{"block": "dst", "type": "Green OD", "enabled": true},
+				map[string]any{"block": "dst", "type": "Green OD", "enabled": true, "params": map[string]any{"gain": 60, "level": 78}},
 			},
 			"footswitches": []any{
 				map[string]any{"ctrl": 1, "blocks": []any{"dst", "dly"}},
 			},
 		},
 	}))
-	mustContain(t, design, ".prst", "UK 800", "Green OD", "CTRL 1 toggles DST + DLY")
+	mustContain(t, design, ".prst", "UK 800", "Green OD", "CTRL 1 toggles DST + DLY", "Setup card:", "level")
 
 	prst := singleGlob(t, filepath.Join(dir, "*.prst"))[0]
 	wantEq(t, "preset filename", filepath.Base(prst), "GP200 Test.prst")
+	card := singleGlob(t, filepath.Join(dir, "*.html"))[0]
+	wantEq(t, "setup card filename", filepath.Base(card), "GP200 Test.gp200.html")
 
-	read := resultText(t, rpc(t, s, 4, "tools/call", map[string]any{
+	// The params tool resolves an effect and lists its exact knob names.
+	params := resultText(t, rpc(t, s, 4, "tools/call", map[string]any{
+		"name":      "gp200_list_model_params",
+		"arguments": map[string]any{"model": "Green OD"},
+	}))
+	mustContain(t, params, "Gain", "Tone", "Volume")
+
+	read := resultText(t, rpc(t, s, 5, "tools/call", map[string]any{
 		"name":      "gp200_read_prst",
 		"arguments": map[string]any{"input_file": prst},
 	}))
-	mustContain(t, read, "GP200 Test", "UK 800", "Green OD", "DST", "DLY")
+	mustContain(t, read, "GP200 Test", "UK 800", "Green OD", "DST", "DLY", "\"Gain\": 60")
 }
 
 func TestIntegrationWazaTSLAndCard(t *testing.T) {

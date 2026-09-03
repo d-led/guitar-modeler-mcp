@@ -506,12 +506,36 @@ func (r *Registrar) Register(s *mcp.Server) {
 
 	s.Register(mcp.Tool{
 		Name:        "gp200_read_prst",
-		Description: "Decode a Valeton GP-200 .prst preset file and report its name, metadata and each of the eleven blocks' effect model and parameter values, so a preset can be analyzed or verified.",
+		Description: "Decode a Valeton GP-200 .prst preset file and report its name, metadata and each of the eleven blocks' effect model and parameter values (keyed by parameter name), so a preset can be analyzed or verified.",
 		InputSchema: objectSchema(map[string]any{
 			"input_file": stringSchema("Path to the .prst file."),
 		}),
 		Handler: func(_ context.Context, args map[string]any) (string, error) {
 			return r.gp200ReadPRST(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "gp200_list_model_params",
+		Description: "List one Valeton GP-200 effect's editable parameters: name, kind (knob/switch/combox), range (min/max/step) or the option names, and each parameter's default. Resolves the effect by name or \"based on\" description; pass `block` to disambiguate names shared between blocks (e.g. \"Tube\" is both a DST overdrive and a DLY delay). Use this before dialing gp200_design so knob names are exact.",
+		InputSchema: objectSchema(map[string]any{
+			"model": stringSchema("Effect model name or \"based on\" description, e.g. \"Green OD\" or \"JCM800\"."),
+			"block": stringSchema("Optional block hint: pre, wah, dst, amp, nr, cab, eq, mod, dly, rvb or vol."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.gp200ListModelParams(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "gp200_setup_card",
+		Description: "Render the printable HTML setup card for an existing Valeton GP-200 .prst preset file.",
+		InputSchema: objectSchema(map[string]any{
+			"input_file": stringSchema("Path to the .prst file."),
+			"output_dir": stringSchema("Directory to write the HTML card into (default: next to the preset)."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.gp200SetupCard(args)
 		},
 	})
 
@@ -1657,22 +1681,26 @@ func (r *Registrar) gp200Design(args map[string]any) (string, error) {
 		FX:     parseGP200FX(args["fx"]),
 	}
 
-	p, err := gp200.BuildPreset(spec)
+	p, rejected, err := gp200.BuildPreset(spec)
 	if err != nil {
 		return "", err
 	}
 	// Apply amp/cab parameter overrides after resolution (their parameter
 	// names are known only once the model code is resolved).
-	applyGP200Params(&p.Blocks[3], ampParams)
-	applyGP200Params(&p.Blocks[5], cabParams)
+	rejected = append(rejected, gp200.ApplyNamedParams(&p.Blocks[3], ampParams)...)
+	rejected = append(rejected, gp200.ApplyNamedParams(&p.Blocks[5], cabParams)...)
 	if err := applyGP200Order(&p, argStrings(args["order"])); err != nil {
 		return "", err
 	}
 	if err := applyGP200Footswitches(&p, argObjects(args, "footswitches")); err != nil {
 		return "", err
 	}
+	return gp200WriteOutput(p, rejected, argString(args, "output_dir"))
+}
 
-	outDir := argString(args, "output_dir")
+// gp200WriteOutput writes the .prst file and the HTML setup card, then returns
+// a summary of what was produced, including any rejected parameter names.
+func gp200WriteOutput(p gp200.Preset, rejected []string, outDir string) (string, error) {
 	if outDir == "" {
 		outDir = "."
 	}
@@ -1682,10 +1710,20 @@ func (r *Registrar) gp200Design(args map[string]any) (string, error) {
 		return "", err
 	}
 
+	m := gp200.Default()
+	cardPath := filepath.Join(outDir, base+"."+m.Name+".html")
+	if err := os.WriteFile(cardPath, []byte(gp200.SetupCardHTML(m, p)), 0o600); err != nil {
+		return "", err
+	}
+
 	var b strings.Builder
 	fmt.Fprintf(&b, "Wrote Valeton GP-200 preset to %s\n", path)
+	fmt.Fprintf(&b, "Setup card: %s\n", cardPath)
 	if stored, truncated := gp200.StoredName(p.PatchName); truncated {
 		fmt.Fprintf(&b, "Note: the GP-200 stores preset names up to %d characters; this preset reads as %q on the unit.\n", gp200.NameLimit, stored)
+	}
+	if len(rejected) > 0 {
+		fmt.Fprintf(&b, "Note: ignored unknown parameter names (run gp200_list_model_params to see the valid ones): %s\n", strings.Join(uniqueStrings(rejected), ", "))
 	}
 	b.WriteString(gp200ChainSummary(p))
 	return b.String(), nil
@@ -1760,10 +1798,18 @@ func routingNames(r [11]uint8) string {
 	return strings.Join(names, " -> ")
 }
 
-func applyGP200Params(blk *gp200.Block, params map[string]float32) {
-	for name, value := range params {
-		_ = gp200.SetParam(blk, name, value)
+// uniqueStrings returns s with duplicates removed, preserving first-seen order.
+func uniqueStrings(s []string) []string {
+	seen := make(map[string]bool, len(s))
+	out := make([]string, 0, len(s))
+	for _, v := range s {
+		if seen[v] {
+			continue
+		}
+		seen[v] = true
+		out = append(out, v)
 	}
+	return out
 }
 
 // gp200BlockBit returns the CTRL mask bit for a block name (0..10), or 11 for
@@ -1871,11 +1917,11 @@ func parseGP200FX(raw any) []gp200.FXSpec {
 
 // gp200ReadBlock is one decoded block in the gp200_read_prst view.
 type gp200ReadBlock struct {
-	Slot       string    `json:"slot"`
-	Effect     string    `json:"effect"`
-	InspiredBy string    `json:"inspired_by,omitempty"`
-	Enabled    bool      `json:"enabled"`
-	Params     []float32 `json:"params"`
+	Slot       string             `json:"slot"`
+	Effect     string             `json:"effect"`
+	InspiredBy string             `json:"inspired_by,omitempty"`
+	Enabled    bool               `json:"enabled"`
+	Params     map[string]float32 `json:"params"`
 }
 
 // gp200ReadCtrl is one decoded CTRL footswitch in the gp200_read_prst view.
@@ -1953,8 +1999,21 @@ func gp200BlockViews(blocks [11]gp200.Block) []gp200ReadBlock {
 			Effect:     name,
 			InspiredBy: gp200.InspiredBy(name),
 			Enabled:    blk.Enabled,
-			Params:     blk.Params[:],
+			Params:     gp200NamedParams(blk),
 		})
+	}
+	return out
+}
+
+// gp200NamedParams maps each of a block's named parameters to its value, so a
+// read-back shows which knobs are set rather than a bare position list.
+func gp200NamedParams(blk gp200.Block) map[string]float32 {
+	names := gp200.ParamNames(blk.EffectID)
+	out := make(map[string]float32, len(names))
+	for i, name := range names {
+		if name != "" {
+			out[name] = blk.Params[i]
+		}
 	}
 	return out
 }
@@ -1979,6 +2038,107 @@ func gp200ExpViews(exp [9]gp200.ExpAssignment) []gp200ReadExp {
 		out = append(out, gp200ReadExp{Page: e.Page + 1, Item: e.Item + 1, Block: block, ParamIndex: e.ParamIndex, Min: e.Min, Max: e.Max})
 	}
 	return out
+}
+
+// gp200ResolveEffect resolves an effect name (or "based on" description) to a
+// code, searching one block's catalog first when a block hint is given.
+func gp200ResolveEffect(block, query string) (gp200.Effect, error) {
+	q := strings.TrimSpace(query)
+	if block != "" {
+		if e, ok := gp200MatchEffect(gp200.ModuleEffects(block), q); ok {
+			return e, nil
+		}
+	}
+	if e, ok := gp200MatchEffect(gp200.Effects(), q); ok {
+		return e, nil
+	}
+	return gp200.Effect{}, fmt.Errorf("no GP-200 effect matches %q", q)
+}
+
+// gp200MatchEffect finds the first effect in items matching q by exact name,
+// then by a normalised substring of its "inspired by" hardware.
+func gp200MatchEffect(items []gp200.Effect, q string) (gp200.Effect, bool) {
+	for _, e := range items {
+		if strings.EqualFold(e.Name, q) {
+			return e, true
+		}
+	}
+	for _, e := range items {
+		if d := gp200.InspiredBy(e.Name); d != "" && gp200ParamContains(d, q) {
+			return e, true
+		}
+	}
+	return gp200.Effect{}, false
+}
+
+// gp200ParamContains is a loose, case-insensitive substring match that folds
+// trademark symbols and whitespace, so "Marshall JCM800" matches
+// "Marshall® JCM800".
+func gp200ParamContains(haystack, needle string) bool {
+	h := gp200Fold(haystack)
+	n := gp200Fold(needle)
+	return strings.Contains(h, n)
+}
+
+func gp200Fold(s string) string {
+	lower := strings.ToLower(s)
+	return strings.Join(strings.Fields(strings.Map(func(r rune) rune {
+		switch r {
+		case '®', '™', '©', '·', '/':
+			return ' '
+		}
+		return r
+	}, lower)), " ")
+}
+
+// gp200ListModelParams lists one effect's editable parameters with their kind,
+// range, default and options.
+func (r *Registrar) gp200ListModelParams(args map[string]any) (string, error) {
+	block := strings.ToLower(strings.TrimSpace(argString(args, "block")))
+	query := argString(args, "model")
+	if query == "" {
+		return "", fmt.Errorf("model is required (an effect name or a \"based on\" description)")
+	}
+	effect, err := gp200ResolveEffect(block, query)
+	if err != nil {
+		return "", err
+	}
+	return marshal(struct {
+		Name       string           `json:"name"`
+		Code       uint32           `json:"code"`
+		Module     string           `json:"module"`
+		InspiredBy string           `json:"inspired_by,omitempty"`
+		Params     []gp200.ParamDef `json:"params"`
+	}{
+		Name:       effect.Name,
+		Code:       effect.Code,
+		Module:     effect.Module,
+		InspiredBy: gp200.InspiredBy(effect.Name),
+		Params:     gp200.Params(effect.Code),
+	})
+}
+
+// gp200SetupCard renders the printable HTML setup card for an existing .prst
+// file.
+func (r *Registrar) gp200SetupCard(args map[string]any) (string, error) {
+	path := argString(args, "input_file")
+	if path == "" {
+		return "", fmt.Errorf("input_file is required")
+	}
+	p, err := gp200.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	outDir := argString(args, "output_dir")
+	if outDir == "" {
+		outDir = filepath.Dir(path)
+	}
+	m := gp200.Default()
+	cardPath := filepath.Join(outDir, sanitizeFileBase(p.PatchName)+"."+m.Name+".html")
+	if err := os.WriteFile(cardPath, []byte(gp200.SetupCardHTML(m, p)), 0o600); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("Wrote setup card to %s", cardPath), nil
 }
 
 func gp200FXItemSchema() map[string]any {

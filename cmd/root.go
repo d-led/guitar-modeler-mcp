@@ -14,9 +14,12 @@ import (
 	"github.com/d-led/guitar-modeler-mcp/internal/rig"
 )
 
-// version is reported by the MCP server and the --version flag. It is a var
-// (not a const) so release builds can stamp it via -ldflags "-X .../cmd.version=".
-var version = "0.1.0"
+// version is the release version, stamped at build time via -ldflags
+// "-X github.com/d-led/guitar-modeler-mcp/cmd.version=<tag>" (goreleaser does
+// this from the git tag). It is empty by default: an unstamped build falls back
+// to the module version the Go toolchain recorded in the binary — see
+// effectiveVersion.
+var version = ""
 
 // app bundles the shared dependencies for all commands.
 type app struct {
@@ -72,7 +75,7 @@ func newRootCmd() *cobra.Command {
 		Use:                        "guitar-modeler-mcp",
 		Short:                      "Design and write guitar-modeler presets",
 		Long:                       "guitar-modeler-mcp exposes an MCP server and CLI for designing guitar presets: translate real-world hardware into device models and write preset files. The first supported device is the HeadRush Gigboard.",
-		Version:                    version,
+		Version:                    versionDetails(),
 		SilenceUsage:               true,
 		SilenceErrors:              true,
 		SuggestionsMinimumDistance: 2,

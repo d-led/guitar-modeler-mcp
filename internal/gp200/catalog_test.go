@@ -95,3 +95,40 @@ func TestSetParam(t *testing.T) {
 		t.Fatal("SetParam accepted an unknown parameter name")
 	}
 }
+
+func TestParamsKnob(t *testing.T) {
+	// Green OD is a three-knob Tube Screamer model.
+	ps := Params(50331648)
+	if len(ps) != 3 {
+		t.Fatalf("Green OD has %d params, want 3", len(ps))
+	}
+	first := ps[0]
+	if first.Name != "Gain" || first.Kind != "knob" || first.Min != 0 || first.Max != 100 {
+		t.Fatalf("Green OD param 0 = %+v", first)
+	}
+}
+
+func TestParamsSwitchOptions(t *testing.T) {
+	// A switch/combox carries option names, not a numeric range.
+	ps := Params(67108864) // A-Chorus
+	for _, p := range ps {
+		if p.Name == "Sync" {
+			if p.Kind != "switch" || len(p.Options) != 2 || p.Options[1] != "ON" {
+				t.Fatalf("A-Chorus Sync = %+v", p)
+			}
+			return
+		}
+	}
+	t.Fatal("A-Chorus has no Sync parameter")
+}
+
+func TestApplyNamedParams(t *testing.T) {
+	b := Block{EffectID: 50331648} // Green OD: Gain, Tone, Volume
+	rejected := ApplyNamedParams(&b, map[string]float32{"gain": 60, "level": 78})
+	if len(rejected) != 1 || rejected[0] != "level" {
+		t.Fatalf("rejected = %v, want [level]", rejected)
+	}
+	if b.Params[0] != 60 {
+		t.Fatalf("gain = %v, want 60", b.Params[0])
+	}
+}

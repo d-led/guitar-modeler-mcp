@@ -10,7 +10,7 @@ import (
 func TestVersionFlagReportsStampedVersion(t *testing.T) {
 	// given a version stamped by release ldflags
 	version = "9.9.9-stamp"
-	t.Cleanup(func() { version = "0.1.0" })
+	t.Cleanup(func() { version = "" })
 
 	var out strings.Builder
 	root := newRootCmd()

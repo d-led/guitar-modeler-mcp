@@ -123,19 +123,21 @@ func stripMarks(s string) string {
 }
 
 // place loads a named effect into a physical block, starting from the
-// effect's defaults and then applying any parameter overrides.
-func place(b *Block, slot int, code uint32, enabled bool, overrides map[string]float32) {
+// effect's defaults and then applying any parameter overrides. It returns the
+// override names that did not match the effect's parameters.
+func place(b *Block, slot int, code uint32, enabled bool, overrides map[string]float32) []string {
 	b.Slot = uint8(slot) // #nosec G115 -- slot is a validated 0..10 block index
 	b.EffectID = code
 	b.Enabled = enabled
 	b.Params = DefaultParams(code)
-	for name, value := range overrides {
-		_ = SetParam(b, name, value)
-	}
+	return ApplyNamedParams(b, overrides)
 }
 
-// BuildPreset resolves a Spec into a concrete Preset.
-func BuildPreset(s Spec) (Preset, error) {
+// BuildPreset resolves a Spec into a concrete Preset. The second result lists
+// every parameter override name that did not match the target effect, so the
+// caller can report them rather than silently drop them.
+func BuildPreset(s Spec) (Preset, []string, error) {
+	var rejected []string
 	p := New()
 	if strings.TrimSpace(s.Name) != "" {
 		p.PatchName = s.Name
@@ -149,14 +151,14 @@ func BuildPreset(s Spec) (Preset, error) {
 
 	ampCode, err := resolveAmp(s.Amp)
 	if err != nil {
-		return p, err
+		return p, rejected, err
 	}
 	place(&p.Blocks[3], 3, ampCode, true, nil)
 
 	if s.Cab != "" {
 		cabCode, err := resolveCab(s.Cab)
 		if err != nil {
-			return p, err
+			return p, rejected, err
 		}
 		place(&p.Blocks[5], 5, cabCode, true, nil)
 	}
@@ -164,13 +166,13 @@ func BuildPreset(s Spec) (Preset, error) {
 	for _, f := range s.FX {
 		slot, ok := slotIndex(f.Slot)
 		if !ok {
-			return p, fmt.Errorf("unknown GP-200 block %q (want pre, wah, dst, amp, nr, cab, eq, mod, dly, rvb or vol)", f.Slot)
+			return p, rejected, fmt.Errorf("unknown GP-200 block %q (want pre, wah, dst, amp, nr, cab, eq, mod, dly, rvb or vol)", f.Slot)
 		}
 		code, err := resolveEffect(f.Slot, f.Type)
 		if err != nil {
-			return p, err
+			return p, rejected, err
 		}
-		place(&p.Blocks[slot], slot, code, f.Enabled, f.Params)
+		rejected = append(rejected, place(&p.Blocks[slot], slot, code, f.Enabled, f.Params)...)
 	}
-	return p, nil
+	return p, rejected, nil
 }

@@ -25,6 +25,21 @@ type Effect struct {
 	Module string `json:"module"`
 }
 
+// ParamDef is one editable parameter of an effect. Index is the position in the
+// block's 15-float32 parameter array; Kind is "knob", "switch" or "combox".
+// Knobs carry a Min/Max/Step range; switches and comboxes carry the option
+// display names in id order.
+type ParamDef struct {
+	Index   int      `json:"index"`
+	Name    string   `json:"name"`
+	Kind    string   `json:"kind"`
+	Min     float64  `json:"min,omitempty"`
+	Max     float64  `json:"max,omitempty"`
+	Step    float64  `json:"step,omitempty"`
+	Default float64  `json:"default"`
+	Options []string `json:"options,omitempty"`
+}
+
 // SlotModules returns the fixed eleven-block signal path, in physical slot
 // order (slot 0 = PRE ... slot 10 = VOL).
 func SlotModules() []string {
@@ -147,14 +162,32 @@ func EffectsByModule() map[string][]Effect {
 // DefaultParams returns the editor defaults for an effect's 15 parameter
 // values, so a newly placed block starts from a sensible sound.
 func DefaultParams(code uint32) [15]float32 {
-	return defaultParams[code]
+	var out [15]float32
+	for _, p := range effectParams[code] {
+		if p.Index >= 0 && p.Index < len(out) {
+			out[p.Index] = float32(p.Default)
+		}
+	}
+	return out
+}
+
+// Params returns the editable parameter definitions for an effect, in index
+// order.
+func Params(code uint32) []ParamDef {
+	return effectParams[code]
 }
 
 // ParamNames returns the display names of an effect's parameters, indexed by
 // parameter position (the index into the 15-float32 array). Unused positions
 // are the empty string.
 func ParamNames(code uint32) []string {
-	return paramNames[code]
+	names := make([]string, 15)
+	for _, p := range effectParams[code] {
+		if p.Index >= 0 && p.Index < len(names) {
+			names[p.Index] = p.Name
+		}
+	}
+	return names
 }
 
 // SetParam writes a value into a block's parameter array, addressed by
@@ -172,10 +205,23 @@ func SetParam(b *Block, key string, value float32) error {
 	return nil
 }
 
+// ApplyNamedParams writes a set of name-keyed overrides onto a block, returning
+// the names that did not match any of the effect's parameters (so callers can
+// surface them instead of silently dropping them).
+func ApplyNamedParams(b *Block, overrides map[string]float32) []string {
+	var rejected []string
+	for name, value := range overrides {
+		if err := SetParam(b, name, value); err != nil {
+			rejected = append(rejected, name)
+		}
+	}
+	return rejected
+}
+
 func paramIndex(code uint32, key string) (int, error) {
-	for idx, name := range paramNames[code] {
-		if name != "" && strings.EqualFold(name, key) {
-			return idx, nil
+	for _, p := range effectParams[code] {
+		if strings.EqualFold(p.Name, key) {
+			return p.Index, nil
 		}
 	}
 	return -1, fmt.Errorf("effect %q has no parameter %q", EffectName(code), key)

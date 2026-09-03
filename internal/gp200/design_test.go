@@ -28,7 +28,7 @@ func TestResolveEffectSlotHint(t *testing.T) {
 }
 
 func TestBuildPreset(t *testing.T) {
-	p, err := BuildPreset(Spec{
+	p, rejected, err := BuildPreset(Spec{
 		Name: "Brown Sound",
 		Amp:  "Marshall JCM800",
 		Cab:  "Marshall 1960AV",
@@ -39,6 +39,9 @@ func TestBuildPreset(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("BuildPreset: %v", err)
+	}
+	if len(rejected) != 0 {
+		t.Fatalf("BuildPreset rejected %v, want none", rejected)
 	}
 	if p.PatchName != "Brown Sound" {
 		t.Fatalf("PatchName = %q", p.PatchName)
@@ -65,7 +68,7 @@ func TestBuildPreset(t *testing.T) {
 }
 
 func TestBuildPresetWriteReadRoundTrip(t *testing.T) {
-	p, err := BuildPreset(Spec{Name: "Round Trip", Amp: "Vox AC30", Cab: "Vox AC30 2x12"})
+	p, _, err := BuildPreset(Spec{Name: "Round Trip", Amp: "Vox AC30", Cab: "Vox AC30 2x12"})
 	if err != nil {
 		t.Fatalf("BuildPreset: %v", err)
 	}
@@ -94,14 +97,33 @@ func TestBuildPresetWriteReadRoundTrip(t *testing.T) {
 }
 
 func TestBuildPresetUnknownAmp(t *testing.T) {
-	if _, err := BuildPreset(Spec{Amp: "Not A Real Amp"}); err == nil {
+	if _, _, err := BuildPreset(Spec{Amp: "Not A Real Amp"}); err == nil {
 		t.Fatal("BuildPreset accepted an unknown amp")
 	}
 }
 
 func TestBuildPresetUnknownBlock(t *testing.T) {
-	_, err := BuildPreset(Spec{Amp: "UK 800", FX: []FXSpec{{Slot: "not-a-block", Type: "COMP"}}})
-	if err == nil {
+	if _, _, err := BuildPreset(Spec{Amp: "UK 800", FX: []FXSpec{{Slot: "not-a-block", Type: "COMP"}}}); err == nil {
 		t.Fatal("BuildPreset accepted an unknown block name")
+	}
+}
+
+func TestBuildPresetRejectsUnknownParams(t *testing.T) {
+	p, rejected, err := BuildPreset(Spec{
+		Amp: "UK 900",
+		FX: []FXSpec{
+			{Slot: "eq", Type: "Guitar EQ 2", Enabled: true, Params: map[string]float32{"band2": 2.5, "band4": -1.5}},
+		},
+	})
+	if err != nil {
+		t.Fatalf("BuildPreset: %v", err)
+	}
+	// The GP-200 EQ bands are named by frequency, not "bandN"; both must be
+	// reported as rejected and the EQ left at its flat default.
+	if len(rejected) != 2 {
+		t.Fatalf("rejected = %v, want band2 and band4", rejected)
+	}
+	if p.Blocks[6].Params[1] != 0 || p.Blocks[6].Params[3] != 0 {
+		t.Fatalf("EQ bands should stay flat, got %v", p.Blocks[6].Params[:5])
 	}
 }

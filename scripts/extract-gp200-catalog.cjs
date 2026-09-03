@@ -31,6 +31,12 @@ const effectNames = fs.readFileSync(path.join(srcDir, 'core', 'effectNames.ts'),
 const effectDescs = fs.readFileSync(path.join(srcDir, 'core', 'effectDescriptions.ts'), 'utf8');
 const effectParams = fs.readFileSync(path.join(srcDir, 'core', 'effectParams.ts'), 'utf8');
 
+// num formats a JS number as a Go numeric literal.
+function num(v) {
+  if (Number.isInteger(v)) return String(v);
+  return v.toFixed(6).replace(/\.?0+$/, '');
+}
+
 // EFFECT_MAP entries: `123456: { name: 'Foo', module: 'AMP' },`
 const effectRe = /^\s*(\d+):\s*\{\s*name:\s*'([^']+)',\s*module:\s*'([^']+)'\s*\}/gm;
 const effects = [];
@@ -55,8 +61,9 @@ while ((m = descDqRe.exec(effectDescs)) !== null) {
 }
 
 // EFFECT_PARAMS entries: one `CODE: [ ... ],` block per effect. Split on the
-// top-level keys, then pull idx/default/name from each parameter line.
-const paramsByCode = new Map(); // code -> { idx: { name, default } }
+// top-level keys, then pull type/name/idx/default/min/max/step/options from
+// each parameter line.
+const paramsByCode = new Map(); // code -> [{ idx, name, kind, min, max, step, def, options }]
 const paramBlockRe = /^\s*(\d+):\s*\[$/gm;
 const blockStarts = [];
 let bm;
@@ -69,16 +76,50 @@ for (let i = 0; i < blockStarts.length; i++) {
   const body = effectParams.slice(start, end);
   const params = [];
   const used = new Set();
-  const lineRe = /type:\s*'(?:knob|switch|combox)'[^}]*?name:\s*'([^']+)'[^}]*?idx:\s*(\d+)[^}]*?default:\s*(-?[\d.]+)/g;
-  let lm;
-  while ((lm = lineRe.exec(body)) !== null) {
-    let idx = Number(lm[2]);
+  for (const line of body.split('\n')) {
+    const typeMatch = line.match(/type:\s*'(knob|switch|combox)'/);
+    if (!typeMatch) continue;
+    const kind = typeMatch[1];
+    const nameMatch = line.match(/name:\s*'([^']+)'/);
+    const idxMatch = line.match(/idx:\s*(\d+)/);
+    const defMatch = line.match(/default:\s*(-?[\d.]+)/);
+    if (!nameMatch || !idxMatch || !defMatch) continue;
+
+    let idx = Number(idxMatch[1]);
     // The community-generated source occasionally reuses an index within one
     // effect (e.g. Slapback lists Sync and Trail both at idx 3). Bump the
     // collision to the next free index so the array stays positional.
     while (used.has(idx)) idx++;
     used.add(idx);
-    params.push({ name: lm[1], idx, def: Number(lm[3]) });
+
+    const p = {
+      idx,
+      name: nameMatch[1],
+      kind,
+      def: Number(defMatch[1]),
+      min: 0,
+      max: 0,
+      step: 0,
+      options: [],
+    };
+    if (kind === 'knob') {
+      const minMatch = line.match(/min:\s*(-?[\d.]+)/);
+      const maxMatch = line.match(/max:\s*(-?[\d.]+)/);
+      const stepMatch = line.match(/step:\s*(-?[\d.]+)/);
+      if (minMatch) p.min = Number(minMatch[1]);
+      if (maxMatch) p.max = Number(maxMatch[1]);
+      if (stepMatch) p.step = Number(stepMatch[1]);
+    } else {
+      // switch/combox: collect option display names in id order.
+      const optRe = /\{\s*name:\s*'([^']+)'\s*,\s*id:\s*(-?\d+)\s*\}/g;
+      let o;
+      const opts = [];
+      while ((o = optRe.exec(line)) !== null) {
+        opts[Number(o[2])] = o[1];
+      }
+      p.options = opts.filter((x) => x !== undefined);
+    }
+    params.push(p);
   }
   paramsByCode.set(blockStarts[i].code, params);
 }
@@ -137,27 +178,31 @@ for (const e of effects) {
 }
 lines.push('}');
 lines.push('');
-lines.push('// defaultParams maps an effect code to its 15 default float32 values,');
-lines.push('// so a newly placed block starts from the editor\'s own defaults.');
-lines.push('var defaultParams = map[uint32][15]float32{');
+lines.push('// effectParams maps an effect code to its editable parameter definitions, in');
+lines.push('// index order. Kind is "knob", "switch" or "combox"; knob entries carry a');
+lines.push('// min/max/step range, switch/combox entries carry the option display names.');
+lines.push('var effectParams = map[uint32][]ParamDef{');
 for (const e of effects) {
-  const arr = new Array(15).fill(0);
   const ps = paramsByCode.get(e.code) || [];
-  for (const p of ps) {
-    if (p.idx >= 0 && p.idx < 15) arr[p.idx] = p.def;
+  if (ps.length === 0) {
+    lines.push(`\t${e.code}: nil,`);
+    continue;
   }
-  const body = arr.map((v) => (Number.isInteger(v) ? v : v.toFixed(6).replace(/\.?0+$/, ''))).join(', ');
-  lines.push(`\t${e.code}: {${body}},`);
-}
-lines.push('}');
-lines.push('');
-lines.push('// paramNames maps an effect code to its parameter display names, in idx');
-lines.push('// order. The index of a name is the float32 array position it edits.');
-lines.push('var paramNames = map[uint32][]string{');
-for (const e of effects) {
-  const ps = paramsByCode.get(e.code) || [];
-  const names = ps.map((p) => `${p.idx}: ${JSON.stringify(p.name)}`).join(', ');
-  lines.push(`\t${e.code}: {${names}},`);
+  const defs = ps.map((p) => {
+    const fields = [`Index: ${p.idx}`, `Name: ${JSON.stringify(p.name)}`, `Kind: ${JSON.stringify(p.kind)}`];
+    if (p.kind === 'knob') {
+      fields.push(`Min: ${num(p.min)}`, `Max: ${num(p.max)}`, `Step: ${num(p.step)}`, `Default: ${num(p.def)}`);
+    } else {
+      const opts = (p.options || []).map((o) => JSON.stringify(o)).join(', ');
+      fields.push(`Default: ${num(p.def)}`, `Options: []string{${opts}}`);
+    }
+    return `{${fields.join(', ')}}`;
+  });
+  lines.push(`\t${e.code}: {`);
+  for (const d of defs) {
+    lines.push(`\t\t${d},`);
+  }
+  lines.push('\t},');
 }
 lines.push('}');
 lines.push('');
