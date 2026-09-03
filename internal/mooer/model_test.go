@@ -251,7 +251,7 @@ func TestBuildPresetAppliesNeutralDefaults(t *testing.T) {
 
 // TestBuildPresetAppliesParams proves amp, cab and per-module raw knob values
 // reach the correct module fields (the gap that previously forced every preset
-// out at neutral 128).
+// out at neutral 50).
 func TestBuildPresetAppliesParams(t *testing.T) {
 	m, _ := ModelByName("ge200")
 	p, err := m.BuildPreset(Spec{
