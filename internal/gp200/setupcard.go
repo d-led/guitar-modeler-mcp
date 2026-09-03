@@ -99,16 +99,24 @@ func describeParams(blk Block) []ParamDesc {
 }
 
 // paramUnit infers a parameter's display unit from its name and range, so the
-// card reads like the editor's knobs ("Rate: 0.5 Hz", "Time: 400 ms").
+// card reads like the editor's knobs. It returns "" for a dimensionless knob,
+// "?" when the parameter carries a physical quantity whose unit is ambiguous
+// (e.g. a 0..100 "Rate" or "Pre Delay" that could be Hz, ms or a percentage),
+// and the unit itself otherwise.
 func paramUnit(def ParamDef) string {
 	name := strings.ToLower(def.Name)
 	switch {
 	case strings.Contains(name, "rate") || strings.Contains(name, "speed"):
-		return "Hz"
-	case strings.Contains(name, "time") || strings.Contains(name, "pre delay"):
-		return "ms"
+		if def.Max <= 20 {
+			return "Hz" // chorus/flanger/phaser rate, 0.1..10 Hz
+		}
+		return "?"
+	case strings.Contains(name, "time"):
+		return "ms" // delay time, 20..4000 ms
+	case strings.Contains(name, "pre delay"):
+		return "?"
 	case strings.Contains(name, "cut") && def.Max > 1000:
-		return "Hz"
+		return "Hz" // cabinet low/high cut
 	}
 	return ""
 }
@@ -119,8 +127,8 @@ func changed(p ParamDesc) bool {
 }
 
 // formatParam renders a parameter value: the option name for a switch/combox,
-// otherwise the number without float noise, suffixed with its unit when it has
-// one.
+// otherwise the number without float noise. The unit is appended separately so
+// it can be styled faintly.
 func formatParam(p ParamDesc) string {
 	if len(p.Options) > 0 {
 		i := int(p.Value)
@@ -128,11 +136,16 @@ func formatParam(p ParamDesc) string {
 			return p.Options[i]
 		}
 	}
-	v := strconv.FormatFloat(float64(p.Value), 'f', -1, 32)
-	if p.Unit != "" {
-		return v + " " + p.Unit
+	return strconv.FormatFloat(float64(p.Value), 'f', -1, 32)
+}
+
+// formatParamUnit renders a parameter's unit as a faint suffix, or "" when the
+// parameter is dimensionless.
+func formatParamUnit(p ParamDesc) string {
+	if p.Unit == "" {
+		return ""
 	}
-	return v
+	return " <span class=\"unit\">" + html.EscapeString(p.Unit) + "</span>"
 }
 
 // chainHint renders the eleven fixed blocks in playback order, so the models
@@ -160,6 +173,7 @@ td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;verti
 .effect{font-weight:600}.off{color:#999}.inspired{color:#666;font-size:.85em}
 .params{color:#444;font-size:.85em;font-variant-numeric:tabular-nums}
 .hl{color:#2563eb;font-weight:600}
+.unit{color:#9b9b9b;font-size:.8em}
 .switch{color:#0a7d3c;font-weight:600;font-size:.85em}
 .buttons{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:10px;margin-bottom:12px}
 .btn{border:1px solid #e3e3e8;border-radius:12px;padding:10px 8px;text-align:center}
@@ -230,7 +244,7 @@ func writeBlockCard(b *strings.Builder, d ModuleDesc, slot int) {
 			b.WriteString(" · ")
 		}
 		name := html.EscapeString(pd.Name)
-		val := html.EscapeString(formatParam(pd))
+		val := html.EscapeString(formatParam(pd)) + formatParamUnit(pd)
 		if changed(pd) {
 			fmt.Fprintf(b, "<span class=\"hl\">%s: %s</span>", name, val)
 		} else {

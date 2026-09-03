@@ -81,7 +81,14 @@ func TestSetupCardShowsUnits(t *testing.T) {
 	place(&p.Blocks[7], 7, 67108864, true, map[string]float32{"Rate": 0.5, "Depth": 30}) // A-Chorus
 	place(&p.Blocks[8], 8, 184549377, true, map[string]float32{"Time": 400})             // Analog delay
 	card := SetupCardHTML(Default(), p)
-	mustContain(t, card, "Rate: 0.5 Hz", "Time: 400 ms", "Depth: 30")
+	mustContain(t, card, "Rate: 0.5", "Time: 400", "Depth: 30", `<span class="unit">Hz</span>`, `<span class="unit">ms</span>`)
+}
+
+func TestSetupCardShowsUnknownUnitQuestion(t *testing.T) {
+	p := New()
+	place(&p.Blocks[9], 9, 201326593, true, nil) // Hall reverb: Pre Delay is 0..100, unit ambiguous
+	card := SetupCardHTML(Default(), p)
+	mustContain(t, card, "Pre Delay", `<span class="unit">?</span>`)
 }
 
 func mustContain(t *testing.T, text string, wants ...string) {
