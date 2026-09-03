@@ -35,9 +35,10 @@ func TestMOCarriesZeroedHeaderAndPadding(t *testing.T) {
 func TestWriteAndReadMOFile(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "tone.mo")
+	m, _ := ModelByName("ge150pro")
 
 	want := fullPreset()
-	if err := WriteMOFile(path, want); err != nil {
+	if err := WriteMOFile(m, path, want); err != nil {
 		t.Fatalf("WriteMOFile: %v", err)
 	}
 
@@ -49,7 +50,7 @@ func TestWriteAndReadMOFile(t *testing.T) {
 		t.Fatalf("file size = %d, want %d", info.Size(), MOFileSize)
 	}
 
-	got, err := ReadMOFile(path)
+	got, err := ReadMOFile(m, path)
 	if err != nil {
 		t.Fatalf("ReadMOFile: %v", err)
 	}

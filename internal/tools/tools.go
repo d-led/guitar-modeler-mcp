@@ -1580,7 +1580,7 @@ func (r *Registrar) writeMooerOutput(m mooer.Model, p mooer.Preset, outDir strin
 
 	if m.FileExchange {
 		path := filepath.Join(outDir, base+m.FileExt)
-		if err := mooer.WriteMOFile(path, p); err != nil {
+		if err := mooer.WriteMOFile(m, path, p); err != nil {
 			return "", err
 		}
 		fmt.Fprintf(&b, "Wrote %s preset to %s\n", m.Display, path)
@@ -2167,7 +2167,7 @@ func (r *Registrar) renderSetupCard(args map[string]any) (string, error) {
 	if path == "" {
 		return "", fmt.Errorf("preset_file is required")
 	}
-	p, err := mooer.ReadMOFile(path)
+	p, err := mooer.ReadMOFile(m, path)
 	if err != nil {
 		return "", err
 	}
@@ -2218,7 +2218,7 @@ func (r *Registrar) mapPreset(args map[string]any) (string, error) {
 	}
 
 	if strings.EqualFold(filepath.Ext(input), ".mo") {
-		p, err := mooer.ReadMOFile(input)
+		p, err := mooer.ReadMOFileAny(input)
 		if err != nil {
 			return "", err
 		}

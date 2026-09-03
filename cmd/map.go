@@ -84,7 +84,7 @@ func mapGigboardToMooer(a *app, path, out, src, dst string) error {
 		return err
 	}
 	outPath := filepath.Join(out, sanitizeName(p.Name)+".mo")
-	if err := mooer.WriteMOFile(outPath, p); err != nil {
+	if err := mooer.WriteMOFile(mooer.Default(), outPath, p); err != nil {
 		return err
 	}
 	fmt.Printf("Mapped %s -> %s: %s\n", src, dst, outPath)
@@ -92,7 +92,7 @@ func mapGigboardToMooer(a *app, path, out, src, dst string) error {
 }
 
 func mapMooerToGigboard(a *app, path, out, src, dst string) error {
-	p, err := mooer.ReadMOFile(path)
+	p, err := mooer.ReadMOFileAny(path)
 	if err != nil {
 		return err
 	}

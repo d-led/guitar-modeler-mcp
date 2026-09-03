@@ -10,7 +10,9 @@ are supported:
   `device_list`, browse models with `mooer_catalog_list_*`, and design with
   `mooer_design`. Only the file-capable models — GE150 Pro Li, GE200, GE100 Pro
   — write a `.mo` file; the classic **GE150 is card-only** (no `.mo`, just the
-  printable HTML **setup card**).
+  printable HTML **setup card**). The GE200 and GE150 Pro Li `.mo` byte layouts
+  differ; the tools detect and write each device's own format automatically, so
+  a preset designed with `device: "ge200"` loads on the GE200.
 
   **Dial in the knobs, don't leave them at noon.** `mooer_design` accepts raw
   parameter values (0–100, 50 = noon) via `amp_params`, `cab_params`, and each

@@ -5,7 +5,9 @@ import "github.com/d-led/guitar-modeler-mcp/internal/device"
 // ge200 is the Mooer GE200. Its model tables come from the official GE200
 // owner's manual (the "based on" column) and are shared by the GE150 — the two
 // devices ship the same 55 amps, 26 cabs and 151 effects. The GE200 edits
-// presets over USB, so it supports file exchange.
+// presets over USB, so it supports file exchange. Its .mo layout differs from
+// the GE150 Pro Li's (see ge200codec.go); the model-aware readers/writers pick
+// the right one automatically.
 
 func ge200() Model {
 	return Model{
