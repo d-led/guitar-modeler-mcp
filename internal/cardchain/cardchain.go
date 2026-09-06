@@ -8,6 +8,8 @@ package cardchain
 
 import (
 	"embed"
+	"fmt"
+	"html"
 	"html/template"
 	"strings"
 )
@@ -105,4 +107,34 @@ func Render(steps []Step) string {
 		panic(err)
 	}
 	return b.String()
+}
+
+// StateLabel returns the human-readable on/off state for a module's enabled
+// flag.
+func StateLabel(enabled bool) string {
+	if enabled {
+		return "ON"
+	}
+	return "OFF"
+}
+
+// StoredNameNote renders the truncated-preset-name warning, or an empty string
+// when the name fits on the device. stored is the name as the device stores it.
+func StoredNameNote(stored string, truncated bool, limit int) template.HTML {
+	if !truncated {
+		return ""
+	}
+	return template.HTML(fmt.Sprintf("Note: the device stores preset names up to %d characters; this preset reads as %q on the unit.", limit, html.EscapeString(stored))) // #nosec G203 -- pre-escaped trusted HTML
+}
+
+// RenderSerial renders a serial chain hint from a slice of module descriptions:
+// each item supplies its module label and effect via ChainSlot, and is numbered
+// 1..N in order.
+func RenderSerial[T interface{ ChainSlot() (string, string) }](desc []T) string {
+	steps := make([]Step, 0, len(desc))
+	for i, d := range desc {
+		module, effect := d.ChainSlot()
+		steps = append(steps, Step{Slot: i + 1, Module: module, Effect: effect})
+	}
+	return Render(steps)
 }

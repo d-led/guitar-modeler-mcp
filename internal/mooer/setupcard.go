@@ -3,7 +3,6 @@ package mooer
 import (
 	"embed"
 	"fmt"
-	"html"
 	"html/template"
 	"strings"
 
@@ -43,6 +42,9 @@ type ModuleDesc struct {
 	Enabled    bool
 	Params     []ParamDesc
 }
+
+// ChainSlot reports the module label and effect for the chain hint.
+func (d ModuleDesc) ChainSlot() (string, string) { return d.Module, d.Effect }
 
 // describeFuncs maps a chain module name to the function that reads its label,
 // enabled flag, effect index and parameters out of a preset.
@@ -173,11 +175,7 @@ func changed(p ParamDesc) bool {
 // chainHint renders the fixed nine-slot chain with each slot's selected model,
 // so the models are attributable to their slot positions at a glance.
 func chainHint(desc []ModuleDesc) string {
-	steps := make([]cardchain.Step, 0, len(desc))
-	for i, d := range desc {
-		steps = append(steps, cardchain.Step{Slot: i + 1, Module: d.Module, Effect: d.Effect})
-	}
-	return cardchain.Render(steps)
+	return cardchain.RenderSerial(desc)
 }
 
 // SetupCardHTML renders a printable setup card for a preset on a device. It is
@@ -238,21 +236,14 @@ type moduleCard struct {
 // fits on the device.
 func storedNoteHTML(name string) template.HTML {
 	stored, truncated := StoredName(name)
-	if !truncated {
-		return ""
-	}
-	return template.HTML(fmt.Sprintf("Note: the device stores preset names up to %d characters; this preset reads as %q on the unit.", NameLimit, html.EscapeString(stored))) // #nosec G203 -- pre-escaped trusted HTML
+	return cardchain.StoredNameNote(stored, truncated, NameLimit)
 }
 
 func cardModules(p Preset, m Model) []moduleCard {
 	desc := Describe(p, m)
 	cards := make([]moduleCard, 0, len(desc))
 	for i, d := range desc {
-		state := "ON"
-		if !d.Enabled {
-			state = "OFF"
-		}
-		cards = append(cards, moduleCard{Slot: i + 1, Module: d.Module, Effect: d.Effect, Inspired: d.InspiredBy, Enabled: d.Enabled, State: state, Params: cardParams(d.Params)})
+		cards = append(cards, moduleCard{Slot: i + 1, Module: d.Module, Effect: d.Effect, Inspired: d.InspiredBy, Enabled: d.Enabled, State: cardchain.StateLabel(d.Enabled), Params: cardParams(d.Params)})
 	}
 	return cards
 }
