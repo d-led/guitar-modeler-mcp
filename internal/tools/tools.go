@@ -294,6 +294,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 		InputSchema: objectSchema(map[string]any{
 			"model":      stringSchema("Mooer model: ge150pro, ge200, ge150 or ge100pro (default ge150pro)."),
 			"name":       stringSchema("Preset name."),
+			"note":       noteSchema(),
 			"amp":        stringSchema("Amp: device model name or a real-hardware description, e.g. \"Marshall JCM800\"."),
 			"amp_params": mooerAmpParamsSchema(),
 			"cab":        stringSchema("Optional cab: device model name or description."),
@@ -312,6 +313,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 		InputSchema: objectSchema(map[string]any{
 			"model":       stringSchema("Mooer model that produced the .mo file (default ge150pro)."),
 			"preset_file": stringSchema("Path to the .mo file."),
+			"note":        noteSchema(),
 			"output_dir":  stringSchema("Directory to write the HTML card into (default: same as the .mo file)."),
 		}),
 		Handler: func(_ context.Context, args map[string]any) (string, error) {
@@ -434,6 +436,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 		Description: "Write a printable HTML setup card for a Yamaha THR tone. The THR has no preset file format, so the card is the only output.",
 		InputSchema: objectSchema(mergeMaps(map[string]any{
 			"name":       stringSchema("Patch name."),
+			"note":       noteSchema(),
 			"model":      stringSchema("THR model: thr (default), thr10, thr10c or thr10x."),
 			"amp":        stringSchema("Amp: CLEAN/CRUNCH/LEAD/HI GAIN/SPECIAL/BASS/ACOUSTIC/FLAT, optionally with CLASSIC/BOUTIQUE/MODERN (e.g. \"CLEAN BOUTIQUE\" or \"Twin Reverb\")."),
 			"cab":        stringSchema("Optional cabinet, e.g. \"Brown 4x12\" or \"American 1x12\" (THR-II only)."),
@@ -488,6 +491,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 		Description: "Dial in a tone on the Valeton GP-200: resolve the amp/cab/effects to model codes, then write a .prst preset file. The .prst is the device's native single-preset format, importable by the GP-200 editor software. Effects are placed by block name (pre, wah, dst, amp, nr, cab, eq, mod, dly, rvb, vol). The eleven blocks have a fixed function but their playback order can be re-arranged with `order`, and the eight CTRL footswitches can toggle any set of blocks (or the FX loop) with `footswitches`.",
 		InputSchema: objectSchema(map[string]any{
 			"name":         stringSchema("Preset name (up to 16 characters)."),
+			"note":         noteSchema(),
 			"amp":          stringSchema("Amp: device model name or a real-hardware description, e.g. \"Marshall JCM800\"."),
 			"amp_params":   floatMapSchema("Amp knob overrides keyed by the editor's parameter names (e.g. {\"gain\": 60})."),
 			"cab":          stringSchema("Optional cab: device model name or description."),
@@ -532,6 +536,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 		Description: "Render the printable HTML setup card for an existing Valeton GP-200 .prst preset file.",
 		InputSchema: objectSchema(map[string]any{
 			"input_file": stringSchema("Path to the .prst file."),
+			"note":       noteSchema(),
 			"output_dir": stringSchema("Directory to write the HTML card into (default: next to the preset)."),
 		}),
 		Handler: func(_ context.Context, args map[string]any) (string, error) {
@@ -623,6 +628,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 		Description: "Build a serial Quad Cortex preset — amp, then cab, then the effects in the order given — and write a self-contained HTML setup card, a .pb reference archive, and a human-readable .json view. The HTML card is the dial-in instructions; the .pb is for saving and reloading the tone in this tool, NOT a file the unit imports; the .json is this tool's own readable view of the same preset (also not a device or upload format). To put the tone on the unit, dial it in from the card or place a preset in a slot with Cortex Control — qc_usb (qcctl) can recall that slot but cannot upload the .pb. Parameter values are on the screen's own line (GAIN 5 on a 0..10 knob, a dB or % value); list parameters take the option index. Knob names are case-insensitive, and common synonyms resolve automatically (GAIN→VOLUME, MIDDLE→MID, DRIVE→OVERDRIVE, LEVEL→OUTPUT, TIME→DELAY TIME, RATE→CHR RATE, DEPTH→VIB DEPTH); if a model rejects a name, run qc_list_model_params to see its exact knob list. The serial is the unit's 9-character serial (empty for cloud).",
 		InputSchema: objectSchema(map[string]any{
 			"name":               stringSchema("Preset name (becomes the file name)."),
+			"note":               noteSchema(),
 			"serial":             stringSchema("The unit's 9-character serial number, or empty for cloud files."),
 			"amp":                stringSchema("Amp model: device name or \"based on\" description, e.g. \"Marshall JCM800\"."),
 			"cab":                stringSchema("Optional cab model name or description."),
@@ -646,6 +652,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 		InputSchema: objectSchema(map[string]any{
 			"path":       stringSchema("Path to the encrypted .pb preset file."),
 			"serial":     stringSchema("The unit's 9-character serial number, or empty for cloud files."),
+			"note":       noteSchema(),
 			"output_dir": stringSchema("Directory to write the card into (default: next to the preset)."),
 		}),
 		Handler: func(_ context.Context, args map[string]any) (string, error) {
@@ -835,6 +842,7 @@ func (r *Registrar) estimateRigLevel(_ context.Context, args map[string]any) (st
 // the optional AIRSTEP BW mode to print on the card.
 func wazaCardProps() map[string]any {
 	props := wazaToneProps()
+	props["note"] = noteSchema()
 	props["airstep_mode"] = numberSchema("Optional AIRSTEP BW mode (1-4) whose footswitch mapping is printed on the card.")
 	return props
 }
@@ -1326,6 +1334,14 @@ func stringSchema(desc string) map[string]any {
 	return map[string]any{"type": "string", "description": desc}
 }
 
+// noteSchema describes the optional note that card tools carry onto the
+// printable setup card: the prose about the tone (why it is voiced this way,
+// how to play it, the rest of the rig and hardware). The text is printed
+// verbatim at the bottom of the card.
+func noteSchema() map[string]any {
+	return stringSchema("Optional note printed at the bottom of the setup card — why this tone is voiced this way, how to play it, and the rest of the rig and hardware.")
+}
+
 func numberSchema(desc string) map[string]any {
 	return map[string]any{"type": "number", "description": desc}
 }
@@ -1537,7 +1553,7 @@ func (r *Registrar) mooerDesign(args map[string]any) (string, error) {
 	if outDir == "" {
 		outDir = "."
 	}
-	return r.writeMooerOutput(m, p, outDir)
+	return r.writeMooerOutput(m, p, outDir, argString(args, "note"))
 }
 
 func parseMooerFX(raw any) []mooer.FXSpec {
@@ -1574,7 +1590,7 @@ func sanitizeFileBase(name string) string {
 
 // writeMooerOutput writes a .mo file (when the model supports file exchange)
 // and always writes a printable HTML setup card, then returns a text summary.
-func (r *Registrar) writeMooerOutput(m mooer.Model, p mooer.Preset, outDir string) (string, error) {
+func (r *Registrar) writeMooerOutput(m mooer.Model, p mooer.Preset, outDir, note string) (string, error) {
 	base := sanitizeFileBase(p.Name)
 	var b strings.Builder
 
@@ -1589,7 +1605,7 @@ func (r *Registrar) writeMooerOutput(m mooer.Model, p mooer.Preset, outDir strin
 	}
 
 	cardPath := filepath.Join(outDir, base+"."+m.Name+".html")
-	if err := os.WriteFile(cardPath, []byte(mooer.SetupCardHTML(m, p)), 0o600); err != nil {
+	if err := os.WriteFile(cardPath, []byte(mooer.SetupCardHTML(m, p, note)), 0o600); err != nil {
 		return "", err
 	}
 	fmt.Fprintf(&b, "Setup card: %s\n", cardPath)
@@ -1695,12 +1711,12 @@ func (r *Registrar) gp200Design(args map[string]any) (string, error) {
 	if err := applyGP200Footswitches(&p, argObjects(args, "footswitches")); err != nil {
 		return "", err
 	}
-	return gp200WriteOutput(p, rejected, argString(args, "output_dir"))
+	return gp200WriteOutput(p, rejected, argString(args, "output_dir"), argString(args, "note"))
 }
 
 // gp200WriteOutput writes the .prst file and the HTML setup card, then returns
 // a summary of what was produced, including any rejected parameter names.
-func gp200WriteOutput(p gp200.Preset, rejected []string, outDir string) (string, error) {
+func gp200WriteOutput(p gp200.Preset, rejected []string, outDir, note string) (string, error) {
 	if outDir == "" {
 		outDir = "."
 	}
@@ -1712,7 +1728,7 @@ func gp200WriteOutput(p gp200.Preset, rejected []string, outDir string) (string,
 
 	m := gp200.Default()
 	cardPath := filepath.Join(outDir, base+"."+m.Name+".html")
-	if err := os.WriteFile(cardPath, []byte(gp200.SetupCardHTML(m, p)), 0o600); err != nil {
+	if err := os.WriteFile(cardPath, []byte(gp200.SetupCardHTML(m, p, note)), 0o600); err != nil {
 		return "", err
 	}
 
@@ -2143,7 +2159,7 @@ func (r *Registrar) gp200SetupCard(args map[string]any) (string, error) {
 	}
 	m := gp200.Default()
 	cardPath := filepath.Join(outDir, sanitizeFileBase(p.PatchName)+"."+m.Name+".html")
-	if err := os.WriteFile(cardPath, []byte(gp200.SetupCardHTML(m, p)), 0o600); err != nil {
+	if err := os.WriteFile(cardPath, []byte(gp200.SetupCardHTML(m, p, argString(args, "note"))), 0o600); err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("Wrote setup card to %s", cardPath), nil
@@ -2176,7 +2192,7 @@ func (r *Registrar) renderSetupCard(args map[string]any) (string, error) {
 		outDir = filepath.Dir(path)
 	}
 	cardPath := filepath.Join(outDir, sanitizeFileBase(p.Name)+"."+m.Name+".html")
-	if err := os.WriteFile(cardPath, []byte(mooer.SetupCardHTML(m, p)), 0o600); err != nil {
+	if err := os.WriteFile(cardPath, []byte(mooer.SetupCardHTML(m, p, argString(args, "note"))), 0o600); err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("Wrote setup card to %s", cardPath), nil
@@ -2246,7 +2262,7 @@ func (r *Registrar) mapPreset(args map[string]any) (string, error) {
 		return "", err
 	}
 	m, _ := mooer.ModelByName("ge150pro")
-	return r.writeMooerOutput(m, p, outDir)
+	return r.writeMooerOutput(m, p, outDir, "")
 }
 
 func (r *Registrar) wazaListAmps() (string, error) {
@@ -2274,6 +2290,7 @@ func (r *Registrar) wazaSetupCard(args map[string]any) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	spec.Note = argString(args, "note")
 	if strings.TrimSpace(spec.Name) == "" {
 		spec.Name = "New Patch"
 	}
@@ -2726,7 +2743,7 @@ func (r *Registrar) qcRenderSetupCard(args map[string]any) (string, error) {
 	}
 	stem := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
 	cardPath := filepath.Join(outDir, stem+".html")
-	if err := os.WriteFile(cardPath, []byte(qc.SetupCardHTML(d.Catalog, preset)), 0o600); err != nil {
+	if err := os.WriteFile(cardPath, []byte(qc.SetupCardHTML(d.Catalog, preset, argString(args, "note"))), 0o600); err != nil {
 		return "", fmt.Errorf("write setup card: %w", err)
 	}
 	view, err := qc.PresetJSON(d.Catalog, preset)
@@ -2807,7 +2824,7 @@ func (r *Registrar) qcDesign(args map[string]any) (string, error) {
 	if outDir == "" {
 		outDir = "."
 	}
-	pbPath, cardPath, jsonPath, err := qc.WritePresetWithCard(argString(args, "serial"), spec, outDir)
+	pbPath, cardPath, jsonPath, err := qc.WritePresetWithCard(argString(args, "serial"), spec, argString(args, "note"), outDir)
 	if err != nil {
 		return "", err
 	}
@@ -2913,6 +2930,7 @@ func (r *Registrar) thrSetupCard(args map[string]any) (string, error) {
 	spec.GateParams.Decay = argInt(args, "gate_decay", thr.Unset)
 	spec.Levels.Guitar = argInt(args, "guitar_vol", thr.Unset)
 	spec.Levels.Audio = argInt(args, "audio_vol", thr.Unset)
+	spec.Note = argString(args, "note")
 
 	resolved, err := d.Resolve(spec)
 	if err != nil {

@@ -1,0 +1,15 @@
+<!doctype html><html><head><meta charset="utf-8"><title>{{.Title}}</title><style>
+{{.CSS}}
+{{.ChainCSS}}
+</style></head><body>
+<h1>{{.H1}}</h1><h2>{{.H2}}</h2>
+{{if .StoredNote}}<p class="inspired">{{.StoredNote}}</p>{{end}}
+{{.Chain}}
+{{range .Modules}}<table><tr><th class="module"{{if not .Enabled}} class="off"{{end}}><span class="slotbadge">{{.Slot}}</span>{{.Module}}</th><th>{{.State}}</th></tr>
+<tr><td class="effect">{{.Effect}}</td><td>{{if .Inspired}}<span class="inspired">based on {{.Inspired}}</span>{{end}}</td></tr>
+{{if .Enabled}}<tr><td class="params">{{range $i, $p := .Params}}{{if $i}} · {{end}}{{if $p.Changed}}<span class="hl">{{$p.Name}}: {{$p.Value}}</span>{{else}}{{$p.Name}}: {{$p.Value}}{{end}}{{end}}</td><td></td></tr>{{end}}
+</table>
+{{end}}
+<p class="inspired">Values are the device's raw parameter values (0&ndash;100 unless noted).</p>
+{{if .Note}}<p class="note-text">{{.Note}}</p>{{end}}
+</body></html>

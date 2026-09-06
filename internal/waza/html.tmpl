@@ -1,0 +1,13 @@
+<h1>{{.H1}}</h1><h2>{{.H2}}</h2>
+{{.Chain}}
+{{range .Modules}}<table><tr><td class="module"><span class="slotbadge">{{.Slot}}</span>{{.Module}}</td><td class="effect">{{.Effect}}</td></tr>
+{{if .Inspired}}<tr><td></td><td><span class="inspired">based on {{.Inspired}}</span></td></tr>{{end}}
+{{range .Knobs}}<tr><td>{{.Name}}</td><td>{{.Value}}</td></tr>{{end}}
+</table>
+{{end}}
+{{range .Settings}}<table><tr><td class="module">{{.Name}}</td><td class="effect">{{.Value}}</td></tr></table>
+{{end}}
+<p class="inspired">Knob values are 0&ndash;100 unless noted (ms). Knobs not listed keep the factory default (the written .tsl preserves them).</p>
+{{if .AirStep}}<h2>AIRSTEP BW — Mode {{.AirStep.Number}}</h2><p class="inspired">{{.AirStep.Indication}} (hold A, B, C or B+C while powering on to select a mode)</p><table><tr><th>Switch</th><th>Press</th><th>Long press</th></tr>{{range .AirStep.Bindings}}<tr><td class="module">{{.Switch}}</td><td>{{.Press}}</td><td>{{.LongPress}}</td></tr>{{end}}</table>{{end}}
+{{if .Note}}<p class="note-text">{{.Note}}</p>{{end}}
+</body></html>

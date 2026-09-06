@@ -1,13 +1,30 @@
 package waza
 
 import (
+	"embed"
 	"fmt"
-	"html"
+	"html/template"
 	"strings"
 
 	"github.com/d-led/guitar-modeler-mcp/internal/cardchain"
 	"github.com/d-led/guitar-modeler-mcp/internal/device"
 )
+
+//go:embed css.tmpl html.tmpl
+var cardFS embed.FS
+
+var (
+	cardCSS  = readCard("css.tmpl")
+	cardTmpl = template.Must(template.New("waza-card").Parse(readCard("html.tmpl")))
+)
+
+func readCard(name string) string {
+	b, err := cardFS.ReadFile(name)
+	if err != nil {
+		panic(err)
+	}
+	return string(b)
+}
 
 // Spec is a tone to dial in on the Waza Air: the selected amp, effects and
 // spatial settings. Empty fields are left off the setup card; a zero numeric
@@ -54,6 +71,10 @@ type Spec struct {
 	NSOn             *bool
 	NSThreshold      int
 	NSRelease        int
+	// Note is optional prose for the setup card: why this tone is voiced this
+	// way, how to play it, and the rest of the rig and hardware. It is printed
+	// at the bottom of the card and never written to a .tsl.
+	Note string
 }
 
 type itemResolver struct {
@@ -167,26 +188,132 @@ func (d Device) SetupCardHTMLWithAirStep(s Spec, m AirStepMode) string {
 
 func (d Device) setupCardHTML(s Spec, mode *AirStepMode) string {
 	var b strings.Builder
-	cardchain.Head(&b, s.Name+" — "+d.Display, `.inspired{color:#666;font-size:.85em}`)
-	fmt.Fprintf(&b, "<h1>%s</h1><h2>%s — setup card</h2>", html.EscapeString(s.Name), html.EscapeString(d.Display))
+	cardchain.Head(&b, s.Name+" — "+d.Display, cardCSS)
+	if err := cardTmpl.Execute(&b, cardPage{
+		H1:       s.Name,
+		H2:       d.Display + " — setup card",
+		Chain:    template.HTML(chainHint(d.Chain, s)), // #nosec G203 -- trusted chain HTML
+		Modules:  d.moduleCards(s),
+		Settings: settingsRows(s),
+		AirStep:  airStepViewFor(mode),
+		Note:     s.Note,
+	}); err != nil {
+		panic(err)
+	}
+	return b.String()
+}
 
-	b.WriteString(chainHint(d.Chain, s))
+// cardPage is the data for the Waza Air setup-card template.
+type cardPage struct {
+	H1, H2   string
+	Chain    template.HTML
+	Modules  []moduleCard
+	Settings []settingRow
+	AirStep  *airStepView
+	Note     string
+}
 
+// knobView is one named control value shown on the card.
+type knobView struct{ Name, Value string }
+
+// moduleCard is one chain module rendered as a small table.
+type moduleCard struct {
+	Module   string
+	Effect   string
+	Inspired string
+	Slot     int
+	Knobs    []knobView
+}
+
+// settingRow is one rig-level setting rendered as a two-cell table.
+type settingRow struct{ Name, Value string }
+
+// airStepBinding is one AIRSTEP BW switch mapping row.
+type airStepBinding struct{ Switch, Press, LongPress string }
+
+// airStepView is the optional AIRSTEP BW section on the card.
+type airStepView struct {
+	Number     int
+	Indication string
+	Bindings   []airStepBinding
+}
+
+// moduleCards builds the chain modules in order, with each module's selection
+// and dialled knobs.
+func (d Device) moduleCards(s Spec) []moduleCard {
+	cards := make([]moduleCard, 0, len(d.Chain))
 	for i, module := range d.Chain {
 		effect, inspired := d.effectAndInspired(module, s)
-		writeModule(&b, module, effect, inspired, i+1, moduleKnobs(module, s))
+		if effect == "" {
+			effect = "OFF"
+		}
+		cards = append(cards, moduleCard{Module: module, Effect: effect, Inspired: inspired, Slot: i + 1, Knobs: viewKnobs(moduleKnobs(module, s))})
 	}
+	return cards
+}
 
-	writeSettings(&b, s)
-
-	b.WriteString("<p class=\"inspired\">Knob values are 0&ndash;100 unless noted (ms). Knobs not listed keep the factory default (the written .tsl preserves them).</p>")
-
-	if mode != nil {
-		writeAirStepMode(&b, d, *mode)
+func viewKnobs(ks []cardKnob) []knobView {
+	out := make([]knobView, 0, len(ks))
+	for _, k := range ks {
+		out = append(out, knobView{Name: k.name, Value: k.value})
 	}
+	return out
+}
 
-	b.WriteString("</body></html>")
-	return b.String()
+// settingsRows lists the non-empty rig-level settings in display order.
+func settingsRows(s Spec) []settingRow {
+	all := []settingRow{
+		{"CABINET RESONANCE", s.CabResonance},
+		{"AMBIENCE", s.Ambience},
+		{"POSITION", s.Position},
+		{"MODE", s.Mode},
+	}
+	if s.NSOn != nil {
+		on := "OFF"
+		if *s.NSOn {
+			on = "ON"
+		}
+		all = append(all, settingRow{"NOISE SUPPRESSOR", on})
+	}
+	if s.NSThreshold != 0 {
+		all = append(all, settingRow{"NS THRESHOLD", fmt.Sprintf("%d", s.NSThreshold)})
+	}
+	if s.NSRelease != 0 {
+		all = append(all, settingRow{"NS RELEASE", fmt.Sprintf("%d", s.NSRelease)})
+	}
+	if s.GuitarPosition != 0 {
+		all = append(all, settingRow{"GUITAR POSITION", fmt.Sprintf("%d", s.GuitarPosition)})
+	}
+	if s.AmbienceLevel != 0 {
+		all = append(all, settingRow{"AMBIENCE LEVEL", fmt.Sprintf("%d", s.AmbienceLevel)})
+	}
+	out := make([]settingRow, 0, len(all))
+	for _, r := range all {
+		if r.Value != "" {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
+// airStepViewFor returns the AIRSTEP BW section, or nil when no mode is given
+// or the mode carries no bindings.
+func airStepViewFor(m *AirStepMode) *airStepView {
+	if m == nil || m.Number == 0 || len(m.Bindings) == 0 {
+		return nil
+	}
+	view := &airStepView{Number: m.Number, Indication: m.Indication}
+	for _, bi := range m.Bindings {
+		press, longPress := bi.Press, bi.LongPress
+		if press == "" {
+			press = "—"
+		}
+		if longPress == "" {
+			longPress = "—"
+		}
+		view.Bindings = append(view.Bindings, airStepBinding{Switch: bi.Switch, Press: press, LongPress: longPress})
+	}
+	return view
 }
 
 // effectAndInspired returns a chain module's selection and the real hardware
@@ -209,62 +336,12 @@ func (d Device) effectAndInspired(module string, s Spec) (string, string) {
 	return "", ""
 }
 
-// writeSettings renders the rig-level settings (cab resonance, ambience,
-// position, mode, noise suppressor) that are not chain modules.
-func writeSettings(b *strings.Builder, s Spec) {
-	writeSetting(b, "CABINET RESONANCE", s.CabResonance)
-	writeSetting(b, "AMBIENCE", s.Ambience)
-	writeSetting(b, "POSITION", s.Position)
-	writeSetting(b, "MODE", s.Mode)
-
-	if s.NSOn != nil {
-		on := "OFF"
-		if *s.NSOn {
-			on = "ON"
-		}
-		writeSetting(b, "NOISE SUPPRESSOR", on)
-	}
-	if s.NSThreshold != 0 {
-		writeSetting(b, "NS THRESHOLD", fmt.Sprintf("%d", s.NSThreshold))
-	}
-	if s.NSRelease != 0 {
-		writeSetting(b, "NS RELEASE", fmt.Sprintf("%d", s.NSRelease))
-	}
-	if s.GuitarPosition != 0 {
-		writeSetting(b, "GUITAR POSITION", fmt.Sprintf("%d", s.GuitarPosition))
-	}
-	if s.AmbienceLevel != 0 {
-		writeSetting(b, "AMBIENCE LEVEL", fmt.Sprintf("%d", s.AmbienceLevel))
-	}
-}
-
 // trimFloat renders a float knob value without a trailing ".0".
 func trimFloat(v float64) string {
 	if v == float64(int(v)) {
 		return fmt.Sprintf("%d", int(v))
 	}
 	return fmt.Sprintf("%g", v)
-}
-
-func writeAirStepMode(b *strings.Builder, d Device, m AirStepMode) {
-	if m.Number == 0 || len(m.Bindings) == 0 {
-		return
-	}
-	fmt.Fprintf(b, "<h2>AIRSTEP BW — Mode %d</h2>", m.Number)
-	fmt.Fprintf(b, "<p class=\"inspired\">%s (hold A, B, C or B+C while powering on to select a mode)</p>", html.EscapeString(m.Indication))
-	b.WriteString("<table><tr><th>Switch</th><th>Press</th><th>Long press</th></tr>")
-	for _, bi := range m.Bindings {
-		press, longPress := bi.Press, bi.LongPress
-		if press == "" {
-			press = "—"
-		}
-		if longPress == "" {
-			longPress = "—"
-		}
-		fmt.Fprintf(b, "<tr><td class=\"module\">%s</td><td>%s</td><td>%s</td></tr>",
-			html.EscapeString(bi.Switch), html.EscapeString(press), html.EscapeString(longPress))
-	}
-	b.WriteString("</table>")
 }
 
 // cardKnob is one editable value shown on the card, grouped under its module.
@@ -375,25 +452,4 @@ func reverbKnobs(s Spec) []cardKnob {
 		intKnob("DIRECT MIX", s.ReverbDirectMix),
 	)
 	return dropEmpty(ks)
-}
-
-func writeModule(b *strings.Builder, module, effect, inspired string, slot int, knobs []cardKnob) {
-	if effect == "" {
-		effect = "OFF"
-	}
-	fmt.Fprintf(b, "<table><tr><td class=\"module\"><span class=\"slotbadge\">%d</span>%s</td><td class=\"effect\">%s</td></tr>", slot, html.EscapeString(module), html.EscapeString(effect))
-	if inspired != "" {
-		fmt.Fprintf(b, "<tr><td></td><td><span class=\"inspired\">based on %s</span></td></tr>", html.EscapeString(inspired))
-	}
-	for _, k := range knobs {
-		fmt.Fprintf(b, "<tr><td>%s</td><td>%s</td></tr>", html.EscapeString(k.name), html.EscapeString(k.value))
-	}
-	b.WriteString("</table>")
-}
-
-func writeSetting(b *strings.Builder, name, value string) {
-	if value == "" {
-		return
-	}
-	fmt.Fprintf(b, "<table><tr><td class=\"module\">%s</td><td class=\"effect\">%s</td></tr></table>", html.EscapeString(name), html.EscapeString(value))
 }

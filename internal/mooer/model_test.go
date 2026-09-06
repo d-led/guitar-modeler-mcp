@@ -154,7 +154,7 @@ func TestSetupCardHTML(t *testing.T) {
 	index, _ := m.AmpIndex("PLX 100")
 	p.Amp = Amp{Enabled: true, Type: index}
 
-	html := SetupCardHTML(m, p)
+	html := SetupCardHTML(m, p, "")
 	for _, want := range []string{"Brown Sound", "Mooer GE200", "setup card", "PLX 100", "Marshall Super Lead Plexi 100", "OFF"} {
 		if !strings.Contains(html, want) {
 			t.Fatalf("setup card missing %q:\n%s", want, html)
@@ -172,12 +172,35 @@ func TestSetupCardHighlightsNonDefaultParams(t *testing.T) {
 	index, _ := m.AmpIndex("PLX 100")
 	p.Amp = Amp{Enabled: true, Type: index, Gain: 80, Bass: noon, Mid: noon, Treble: noon, Presence: noon, Master: noon}
 
-	html := SetupCardHTML(m, p)
+	html := SetupCardHTML(m, p, "")
 	if !strings.Contains(html, `<span class="hl">Gain: 80</span>`) {
 		t.Fatal("expected the dialled Gain to be highlighted")
 	}
 	if strings.Contains(html, `<span class="hl">Bass:`) {
 		t.Fatal("expected the noon Bass to stay unhighlighted")
+	}
+}
+
+// TestSetupCardRendersNoteAtBottom guards the optional per-tone note: it is
+// printed verbatim at the bottom of the card, and an empty note renders nothing.
+func TestSetupCardRendersNoteAtBottom(t *testing.T) {
+	m, _ := ModelByName("ge200")
+	p := New()
+	p.Name = "Noted"
+
+	html := SetupCardHTML(m, p, "- **neck** pickup for the verses\n- bridge for the solo")
+	note := "<p class=\"note-text\">- **neck** pickup for the verses\n- bridge for the solo</p>"
+	if !strings.Contains(html, note) {
+		t.Fatalf("setup card missing the note:\n%s", html)
+	}
+	if strings.Contains(html, "<strong>") {
+		t.Fatal("the note must stay plain text, not be rendered as Markdown")
+	}
+	if strings.LastIndex(html, note) < strings.LastIndex(html, "raw parameter values") {
+		t.Fatal("the note must be printed at the bottom of the card")
+	}
+	if strings.Contains(SetupCardHTML(m, p, ""), `class="note-text"`) {
+		t.Fatal("an empty note should not render a note block")
 	}
 }
 

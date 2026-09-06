@@ -7,8 +7,8 @@
 package cardchain
 
 import (
-	"fmt"
-	"html"
+	"embed"
+	"html/template"
 	"strings"
 )
 
@@ -34,56 +34,63 @@ type Branch struct {
 	Steps []Step
 }
 
-// CSS is the stylesheet for the chain visualisation. Every colour sits behind
-// a custom property whose light-theme value is declared on :root, so the
-// palette has a single, overridable source. Light-only hosts (the printable
-// setup cards) include just CSS. Hosts that can render on a dark canvas (the
-// rig report) append DarkSchemeCSS after CSS to flip the palette.
-const CSS = `:root{--cc-slot-bg:#f4f4f4;--cc-slot-bd:#ddd;--cc-par-bg:#fafafa;--cc-badge:#6b6b73;--cc-arrow:#aaa;--cc-mark:#bbb;--cc-parlabel:#888}
-.chain{display:flex;flex-wrap:wrap;align-items:center;gap:.3rem .5rem;margin:0 0 1.25rem}
-.chain .slot{display:inline-flex;align-items:center;gap:.4rem;background:var(--cc-slot-bg);border:1px solid var(--cc-slot-bd);border-radius:6px;padding:.2rem .55rem;font-size:.85em;min-width:0}
-.chain .slotno{font-weight:700;color:#fff;background:var(--cc-badge);border-radius:50%;min-width:1.45em;height:1.45em;line-height:1.45em;text-align:center;flex:none;display:inline-flex;align-items:center;justify-content:center}
-.chain .name{overflow-wrap:anywhere}
-.chain .arrow{color:var(--cc-arrow);flex:none}
-.chain .off{opacity:.55}
-.chain .par{display:flex;flex-direction:column;gap:.3rem;border:1px solid var(--cc-slot-bd);border-radius:8px;padding:.4rem .5rem;background:var(--cc-par-bg)}
-.chain .branch{display:flex;flex-wrap:wrap;align-items:center;gap:.3rem .5rem}
-.chain .parlabel{font-size:.75em;font-weight:700;color:var(--cc-parlabel);min-width:1.1em;flex:none}
-.chain .mark{color:var(--cc-mark);flex:none;font-size:1.1em;line-height:1}
-.slotbadge{display:inline-flex;align-items:center;justify-content:center;min-width:1.45em;height:1.45em;border-radius:50%;background:var(--cc-badge);color:#fff;font-weight:700;font-size:.8em;margin-right:.45em;vertical-align:middle}`
+//go:embed css.tmpl css-dark.tmpl head.tmpl chain.tmpl
+var templateFiles embed.FS
 
-// DarkSchemeCSS flips the chain palette for hosts that already render on a
-// dark canvas (the rig report's prefers-color-scheme: dark theme). It only
-// overrides the custom properties declared in CSS, so it must appear after CSS
-// in the same <style> block; hosts that never render dark simply omit it.
-const DarkSchemeCSS = `@media (prefers-color-scheme: dark){
-:root{--cc-slot-bg:#2c2c2e;--cc-slot-bd:#3a3a3c;--cc-par-bg:#1c1c1e;--cc-badge:#636366;--cc-arrow:#8e8e93;--cc-mark:#8e8e93;--cc-parlabel:#98989d}
-}`
+// CSS is the light-theme chain visualisation stylesheet. Every colour sits
+// behind a custom property declared on :root, so the palette has a single,
+// overridable source. The printable setup cards include just CSS; hosts that
+// render on a dark canvas (the rig report) append DarkSchemeCSS after it.
+var CSS = embedded("css.tmpl")
 
-// headCSS is the shared setup-card stylesheet preamble, before the chain CSS.
-// Every device backend's setup card uses it so the cards render consistently.
-const headCSS = `body{font-family:system-ui,-apple-system,sans-serif;max-width:720px;margin:2rem auto;padding:0 1rem;color:#1a1a1a}
-h1{margin-bottom:.25rem}h2{font-size:1rem;color:#555;margin-top:0}
-table{width:100%;border-collapse:collapse;margin-bottom:1rem}
-td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;vertical-align:top}
-.module{font-weight:600;white-space:nowrap}
-.effect{font-weight:600}`
+// DarkSchemeCSS flips the chain palette for hosts that render on a dark canvas.
+// It only overrides the custom properties declared in CSS, so it must appear
+// after CSS in the same <style> block.
+var DarkSchemeCSS = embedded("css-dark.tmpl")
+
+// embedded reads one of the embedded template/CSS files, trimming a single
+// trailing newline so the strings embed byte-for-byte like the constants they
+// replace.
+func embedded(name string) string {
+	b, err := templateFiles.ReadFile(name)
+	if err != nil {
+		panic(err)
+	}
+	return strings.TrimSuffix(string(b), "\n")
+}
+
+var (
+	headTmpl  = template.Must(template.New("head").Parse(embedded("head.tmpl")))
+	chainTmpl = template.Must(template.New("chain").Parse(embedded("chain.tmpl")))
+)
+
+// Label returns the step's display label: module and effect joined with ": ",
+// or "empty" for a free slot.
+func (s Step) Label() string {
+	label := s.Module
+	if s.Effect != "" {
+		if label != "" {
+			label += ": "
+		}
+		label += s.Effect
+	}
+	if label == "" {
+		return "empty"
+	}
+	return label
+}
 
 // Head writes the shared <head>, <style> preamble and opening <body> of a
 // setup card: the escaped title, the common card styles, extraCSS (appended
-// inside the style block), the chain CSS, and the opening <body>. Callers
-// write the card body and closing tags themselves.
+// inside the style block), and the chain CSS.
 func Head(b *strings.Builder, title, extraCSS string) {
-	b.WriteString("<!doctype html><html><head><meta charset=\"utf-8\">")
-	b.WriteString("<title>")
-	b.WriteString(html.EscapeString(title))
-	b.WriteString("</title><style>\n")
-	b.WriteString(headCSS)
-	if extraCSS != "" {
-		b.WriteByte('\n')
-		b.WriteString(extraCSS)
+	if err := headTmpl.Execute(b, map[string]any{
+		"Title":    title,
+		"ExtraCSS": template.CSS(extraCSS), // #nosec G203 -- trusted package CSS
+		"CSS":      template.CSS(CSS),      // #nosec G203 -- trusted package CSS
+	}); err != nil {
+		panic(err)
 	}
-	b.WriteString("\n" + CSS + "\n</style></head><body>")
 }
 
 // Render returns the numbered chain visualisation as an HTML fragment: serial
@@ -94,56 +101,8 @@ func Render(steps []Step) string {
 		return ""
 	}
 	var b strings.Builder
-	b.WriteString(`<div class="chain">`)
-	for i, s := range steps {
-		if i > 0 {
-			b.WriteString(`<span class="arrow">→</span>`)
-		}
-		renderNode(&b, s)
+	if err := chainTmpl.Execute(&b, map[string]any{"Steps": steps}); err != nil {
+		panic(err)
 	}
-	b.WriteString(`</div>`)
 	return b.String()
-}
-
-func renderNode(b *strings.Builder, s Step) {
-	if len(s.Branches) > 0 {
-		b.WriteString(`<span class="mark" aria-hidden="true">╫</span>`)
-		b.WriteString(`<span class="par">`)
-		for _, br := range s.Branches {
-			b.WriteString(`<span class="branch">`)
-			if br.Label != "" {
-				fmt.Fprintf(b, `<span class="parlabel">%s</span>`, html.EscapeString(br.Label))
-			}
-			for j, st := range br.Steps {
-				if j > 0 {
-					b.WriteString(`<span class="arrow">→</span>`)
-				}
-				renderPill(b, st)
-			}
-			b.WriteString(`</span>`)
-		}
-		b.WriteString(`</span>`)
-		b.WriteString(`<span class="mark" aria-hidden="true">╫</span>`)
-		return
-	}
-	renderPill(b, s)
-}
-
-func renderPill(b *strings.Builder, s Step) {
-	label := s.Module
-	if s.Effect != "" {
-		if label != "" {
-			label += ": "
-		}
-		label += s.Effect
-	}
-	if label == "" {
-		label = "empty"
-	}
-	class := "slot"
-	if s.Off {
-		class += " off"
-	}
-	fmt.Fprintf(b, `<span class="%s"><span class="slotno">%d</span><span class="name">%s</span></span>`,
-		class, s.Slot, html.EscapeString(label))
 }

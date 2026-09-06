@@ -165,6 +165,36 @@ func TestSetupCardFillsUnsetKnobsAtNoon(t *testing.T) {
 	}
 }
 
+// TestSetupCardRendersNoteAtBottom guards the per-tone note: the THR has no
+// preset file, so the note is the card-only place for the tone's story. The
+// note is printed verbatim at the bottom of the card, not converted to HTML.
+func TestSetupCardRendersNoteAtBottom(t *testing.T) {
+	d := Default()
+	spec := NewSpec()
+	spec.Name = "Noted"
+	spec.Amp = "Twin Reverb"
+	spec.Note = "Play it on the **neck** pickup.\n\n- verses: clean\n- solo: roll the guitar volume to 8"
+	s, err := d.Resolve(spec)
+	if err != nil {
+		t.Fatalf("Resolve: %v", err)
+	}
+	html := d.SetupCardHTML(s)
+	note := "<p class=\"note-text\">" + spec.Note + "</p>"
+	if !strings.Contains(html, note) {
+		t.Fatalf("setup card missing the note:\n%s", html)
+	}
+	if strings.Contains(html, "<strong>") {
+		t.Fatal("the note must stay plain text, not be rendered as Markdown")
+	}
+	if strings.LastIndex(html, note) < strings.LastIndex(html, "Knob values are 0") {
+		t.Fatal("the note must be printed at the bottom of the card")
+	}
+	s.Note = ""
+	if strings.Contains(d.SetupCardHTML(s), `class="note-text"`) {
+		t.Fatal("an empty note should not render a note block")
+	}
+}
+
 func TestLegacyModelsPartial(t *testing.T) {
 	for _, name := range []string{"thr10", "thr10c", "thr10x"} {
 		m, ok := ModelByName(name)

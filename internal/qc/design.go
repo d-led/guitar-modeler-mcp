@@ -198,8 +198,9 @@ func encodeValue(spec ParamSpec, value any) (float64, error) {
 // WritePresetWithCard renders and encrypts a preset for the given serial and
 // writes it to <outputDir>/<name>.pb together with a printable HTML setup card
 // <outputDir>/<name>.html and a human-readable JSON view
-// <outputDir>/<name>.json. It returns all three paths.
-func WritePresetWithCard(serial string, spec DesignSpec, outputDir string) (pbPath, cardPath, jsonPath string, err error) {
+// <outputDir>/<name>.json. Note is optional prose rendered (as Markdown) on the
+// setup card only. It returns all three paths.
+func WritePresetWithCard(serial string, spec DesignSpec, note, outputDir string) (pbPath, cardPath, jsonPath string, err error) {
 	cat, err := defaultCatalog()
 	if err != nil {
 		return "", "", "", err
@@ -218,7 +219,7 @@ func WritePresetWithCard(serial string, spec DesignSpec, outputDir string) (pbPa
 		return "", "", "", fmt.Errorf("write preset: %w", err)
 	}
 	cardPath = filepath.Join(outputDir, stem+".html")
-	if err := os.WriteFile(cardPath, []byte(SetupCardHTML(cat, preset)), 0o600); err != nil {
+	if err := os.WriteFile(cardPath, []byte(SetupCardHTML(cat, preset, note)), 0o600); err != nil {
 		return "", "", "", fmt.Errorf("write setup card: %w", err)
 	}
 	view, err := PresetJSON(cat, preset)

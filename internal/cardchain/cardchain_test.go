@@ -88,3 +88,18 @@ func TestPaletteIsDarkSchemeOptIn(t *testing.T) {
 		t.Error("dark palette must not keep the light slot background")
 	}
 }
+
+// TestHeadEscapesTitleAndIncludesStyles guards the shared setup-card head: the
+// title is escaped, extra device CSS is injected, the chain CSS follows it, and
+// the note-text rule (for the plain note rendered at the bottom of cards) is
+// present.
+func TestHeadEscapesTitleAndIncludesStyles(t *testing.T) {
+	var b strings.Builder
+	Head(&b, "A<B & C", ".off{color:#999}")
+	html := b.String()
+	for _, want := range []string{"A&lt;B &amp; C", ".off{color:#999}", ".note-text{white-space:pre-wrap", ".chain{display:flex"} {
+		if !strings.Contains(html, want) {
+			t.Errorf("head missing %q: %s", want, html)
+		}
+	}
+}

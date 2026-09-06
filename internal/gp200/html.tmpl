@@ -1,0 +1,17 @@
+<!doctype html><html><head><meta charset="utf-8"><title>{{.Title}}</title><style>
+{{.CSS}}
+{{.ChainCSS}}
+</style></head><body>
+<h1>{{.H1}}</h1><h2>{{.H2}}</h2>
+{{if .StoredNote}}<p class="inspired">{{.StoredNote}}</p>{{end}}
+{{.Chain}}
+{{range .Modules}}<table><tr><th class="module{{if not .Enabled}} off{{end}}"><span class="slotbadge">{{.Slot}}</span>{{.Module}}</th><th>{{.State}}{{if .Switch}} <span class="switch">{{.Switch}}</span>{{end}}</th></tr>
+<tr><td class="effect">{{.Effect}}</td><td>{{if .Inspired}}<span class="inspired">based on {{.Inspired}}</span>{{end}}</td></tr>
+{{if .ShowParams}}<tr><td class="params">{{range $i, $p := .Params}}{{if $i}} · {{end}}{{if $p.Changed}}<span class="hl">{{$p.Name}}: {{$p.Value}}</span>{{else}}{{$p.Name}}: {{$p.Value}}{{end}}{{end}}</td><td></td></tr>{{end}}
+</table>
+{{end}}
+<h2>Hardware</h2>
+<div class="buttons">{{range .Buttons}}<div class="{{.Class}}"><div class="num">{{.Number}}</div><div class="mod">{{.Mod}}</div>{{if .Op}}<div class="op">{{.Op}}</div>{{end}}</div>{{end}}</div>
+{{if .Pedals}}<div class="pedals">{{range .Pedals}}<div class="pedal"><span class="name">{{.Page}} P{{.Item}}</span><span class="chip">{{.Target}} → {{.Param}} ({{.Range}})</span></div>{{end}}</div>{{end}}
+{{if .Note}}<p class="note-text">{{.Note}}</p>{{end}}
+</body></html>

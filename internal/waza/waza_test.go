@@ -93,3 +93,33 @@ func TestSetupCardHTML(t *testing.T) {
 		}
 	}
 }
+
+// TestSetupCardRendersNoteAtBottom guards the per-tone note: the Waza Air has
+// no way to store prose, so the card is the only place the tone's story lives.
+// The note is printed verbatim at the bottom of the card, not converted to HTML.
+func TestSetupCardRendersNoteAtBottom(t *testing.T) {
+	d := Default()
+	s, err := d.Resolve(Spec{
+		Name: "Noted",
+		Amp:  "BROWN",
+		Note: "- **bridge** pickup\n- delay 420 ms for the tail",
+	})
+	if err != nil {
+		t.Fatalf("Resolve: %v", err)
+	}
+	html := d.SetupCardHTML(s)
+	note := "<p class=\"note-text\">" + s.Note + "</p>"
+	if !strings.Contains(html, note) {
+		t.Fatalf("setup card missing the note:\n%s", html)
+	}
+	if strings.Contains(html, "<strong>") {
+		t.Fatal("the note must stay plain text, not be rendered as Markdown")
+	}
+	if strings.LastIndex(html, note) < strings.LastIndex(html, "Knob values are 0") {
+		t.Fatal("the note must be printed at the bottom of the card")
+	}
+	s.Note = ""
+	if strings.Contains(d.SetupCardHTML(s), `class="note-text"`) {
+		t.Fatal("an empty note should not render a note block")
+	}
+}

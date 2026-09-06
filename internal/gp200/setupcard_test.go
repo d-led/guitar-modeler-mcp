@@ -33,7 +33,7 @@ func TestSetupCardListsSwitchableOffBlockParams(t *testing.T) {
 	place(&p.Blocks[1], 1, 0x05000001, false, nil)
 	p.Ctrl[0] = CtrlAssignment{Index: 0, BlockMask: 1 << 1}
 
-	card := SetupCardHTML(Default(), p)
+	card := SetupCardHTML(Default(), p, "")
 
 	// The off WAH block still lists its parameters and its footswitch, so the
 	// user can dial it in before switching it on.
@@ -44,7 +44,7 @@ func TestSetupCardOmitsPlainOffBlockParams(t *testing.T) {
 	p := New()
 	p.PatchName = "Plain Off"
 	// The NR block is off and not assigned to any footswitch: nothing to dial.
-	card := SetupCardHTML(Default(), p)
+	card := SetupCardHTML(Default(), p, "")
 
 	mustContain(t, card, "Gate 1")
 	if strings.Contains(card, "Threshold:") {
@@ -60,7 +60,7 @@ func TestSetupCardFootswitchStateAndExpRange(t *testing.T) {
 	// EXP1 Mode B Para 1 sweeps the WAH Position from 15 to 85.
 	p.Exp[3] = ExpAssignment{Page: 1, Item: 0, Block: 1, ParamIndex: 3, Min: 15, Max: 85}
 
-	card := SetupCardHTML(Default(), p)
+	card := SetupCardHTML(Default(), p, "")
 	mustContain(t, card, "WAH", "MOD", "EXP1 B P1", "Position (15–85)")
 	// The CTRL boxes carry their saved toggle position: CTRL 1 off, CTRL 2 on.
 	mustContain(t, card, "<div class=\"btn off\">", "<div class=\"btn on\">")
@@ -69,7 +69,7 @@ func TestSetupCardFootswitchStateAndExpRange(t *testing.T) {
 func TestSetupCardShowsSwitchOptionsByName(t *testing.T) {
 	p := New()
 	place(&p.Blocks[8], 8, 184549377, true, nil) // Analog delay has Sync/Trail switches
-	card := SetupCardHTML(Default(), p)
+	card := SetupCardHTML(Default(), p, "")
 	mustContain(t, card, "Sync: OFF", "Trail: OFF")
 	if strings.Contains(card, "Sync: 0") {
 		t.Fatalf("switch should render by option name, not raw index:\n%s", card)
@@ -80,14 +80,14 @@ func TestSetupCardShowsUnits(t *testing.T) {
 	p := New()
 	place(&p.Blocks[7], 7, 67108864, true, map[string]float32{"Rate": 0.5, "Depth": 30}) // A-Chorus
 	place(&p.Blocks[8], 8, 184549377, true, map[string]float32{"Time": 400})             // Analog delay
-	card := SetupCardHTML(Default(), p)
+	card := SetupCardHTML(Default(), p, "")
 	mustContain(t, card, "Rate: 0.5", "Time: 400", "Depth: 30", `<span class="unit">Hz</span>`, `<span class="unit">ms</span>`)
 }
 
 func TestSetupCardShowsUnknownUnitQuestion(t *testing.T) {
 	p := New()
 	place(&p.Blocks[9], 9, 201326593, true, nil) // Hall reverb: Pre Delay is 0..100, unit ambiguous
-	card := SetupCardHTML(Default(), p)
+	card := SetupCardHTML(Default(), p, "")
 	mustContain(t, card, "Pre Delay", `<span class="unit">?</span>`)
 }
 
@@ -97,5 +97,28 @@ func mustContain(t *testing.T, text string, wants ...string) {
 		if !strings.Contains(text, want) {
 			t.Fatalf("output missing %q:\n%s", want, text)
 		}
+	}
+}
+
+// TestSetupCardRendersNoteAtBottom guards the optional per-tone note: it is
+// printed verbatim at the bottom of the card, raw HTML in a note never reaches
+// the card, and an empty note renders nothing.
+func TestSetupCardRendersNoteAtBottom(t *testing.T) {
+	p := New()
+	p.PatchName = "Noted"
+	card := SetupCardHTML(Default(), p, "Why this tone:\n\n- **bridge** for the solo\n- <script>alert(1)</script>")
+	note := "<p class=\"note-text\">Why this tone:\n\n- **bridge** for the solo\n- &lt;script&gt;alert(1)&lt;/script&gt;</p>"
+	mustContain(t, card, note)
+	if strings.Contains(card, "<script") {
+		t.Fatalf("raw HTML in a note must not reach the card:\n%s", card)
+	}
+	if strings.Contains(card, "<strong>") {
+		t.Fatal("the note must stay plain text, not be rendered as Markdown")
+	}
+	if strings.LastIndex(card, note) < strings.LastIndex(card, "Hardware") {
+		t.Fatal("the note must be printed at the bottom of the card")
+	}
+	if strings.Contains(SetupCardHTML(Default(), p, ""), `class="note-text"`) {
+		t.Fatal("an empty note should not render a note block")
 	}
 }

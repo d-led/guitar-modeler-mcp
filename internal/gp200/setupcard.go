@@ -1,13 +1,31 @@
 package gp200
 
 import (
+	"embed"
 	"fmt"
 	"html"
+	"html/template"
 	"strconv"
 	"strings"
 
 	"github.com/d-led/guitar-modeler-mcp/internal/cardchain"
 )
+
+//go:embed css.tmpl html.tmpl
+var cardFS embed.FS
+
+var (
+	cardCSS  = readCard("css.tmpl")
+	cardTmpl = template.Must(template.New("gp200-card").Parse(readCard("html.tmpl")))
+)
+
+func readCard(name string) string {
+	b, err := cardFS.ReadFile(name)
+	if err != nil {
+		panic(err)
+	}
+	return string(b)
+}
 
 // ParamDesc is one editable parameter of a block: its display name, the value
 // the preset sets, the resting default, the option display names when the
@@ -159,106 +177,114 @@ func chainHint(desc []ModuleDesc) string {
 }
 
 // SetupCardHTML renders a printable setup card for a preset. It is the
-// companion report for the .prst file the design tool writes.
-func SetupCardHTML(m Model, p Preset) string {
+// companion report for the .prst file the design tool writes. Note is optional
+// prose for the card (why this tone, how to play it, the rest of the rig and
+// hardware); it is printed at the bottom of the card and never written to the
+// .prst file.
+func SetupCardHTML(m Model, p Preset, note string) string {
 	var b strings.Builder
-	b.WriteString("<!doctype html><html><head><meta charset=\"utf-8\">")
-	fmt.Fprintf(&b, "<title>%s — %s</title>", html.EscapeString(p.PatchName), html.EscapeString(m.Display))
-	b.WriteString(`<style>
-body{font-family:system-ui,-apple-system,sans-serif;max-width:760px;margin:2rem auto;padding:0 1rem;color:#1a1a1a}
-h1{margin-bottom:.25rem}h2{font-size:1rem;color:#555;margin-top:0}
-table{width:100%;border-collapse:collapse;margin-bottom:1.25rem}
-td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;vertical-align:top}
-.module{font-weight:600;white-space:nowrap}
-.effect{font-weight:600}.off{color:#999}.inspired{color:#666;font-size:.85em}
-.params{color:#444;font-size:.85em;font-variant-numeric:tabular-nums}
-.hl{color:#2563eb;font-weight:600}
-.unit{color:#9b9b9b;font-size:.8em}
-.switch{color:#0a7d3c;font-weight:600;font-size:.85em}
-.buttons{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:10px;margin-bottom:12px}
-.btn{border:1px solid #e3e3e8;border-radius:12px;padding:10px 8px;text-align:center}
-.btn .num{display:inline-block;min-width:22px;height:22px;line-height:22px;border-radius:999px;background:#e8e8ed;font-size:.74em;font-weight:700;margin-bottom:6px}
-.btn .mod{font-weight:700;font-size:.9em;overflow-wrap:anywhere}
-.btn .op{font-size:.76em;color:#888}
-.btn.on{background:#34c75918;border-color:#34c75955}
-.btn.on .num{background:#34c759;color:#fff}
-.btn.off .num{background:#8e8e93;color:#fff}
-.btn.empty{opacity:.42}
-.pedals{margin-top:12px;font-size:.9em;display:flex;flex-direction:column;gap:6px}
-.pedal{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.pedal .name{font-weight:700}
-.chip{padding:2px 8px;border-radius:999px;font-size:.85em;background:#e8e8ed}
-` + cardchain.CSS + `
-</style></head><body>`)
-	fmt.Fprintf(&b, "<h1>%s</h1><h2>%s — setup card</h2>", html.EscapeString(p.PatchName), html.EscapeString(m.Display))
-
-	if stored, truncated := StoredName(p.PatchName); truncated {
-		fmt.Fprintf(&b, "<p class=\"inspired\">Note: the device stores preset names up to %d characters; this preset reads as %q on the unit.</p>", NameLimit, html.EscapeString(stored))
+	if err := cardTmpl.Execute(&b, cardPage{
+		Title:      p.PatchName + " — " + m.Display,
+		H1:         p.PatchName,
+		H2:         m.Display + " — setup card",
+		CSS:        template.CSS(cardCSS),       // #nosec G203 -- trusted package CSS
+		ChainCSS:   template.CSS(cardchain.CSS), // #nosec G203 -- trusted package CSS
+		StoredNote: storedNoteHTML(p.PatchName),
+		Chain:      template.HTML(chainHint(Describe(p))), // #nosec G203 -- trusted chain HTML
+		Modules:    cardModules(p),
+		Buttons:    footButtons(p),
+		Pedals:     footPedals(p),
+		Note:       note,
+	}); err != nil {
+		panic(err)
 	}
-
-	desc := Describe(p)
-	b.WriteString(chainHint(desc))
-
-	for i, d := range desc {
-		writeBlockCard(&b, d, i+1)
-	}
-
-	if foot := hardwareBoxes(p); foot != "" {
-		b.WriteString("<h2>Hardware</h2>")
-		b.WriteString(foot)
-	}
-
-	b.WriteString("</body></html>")
 	return b.String()
 }
 
-// writeBlockCard renders one block as a table: the slot badge, module, on/off
-// state, any CTRL footswitch that toggles it, its effect model and the hardware
-// it emulates. Parameter values are listed only when there is something to dial
-// in — the block is on, or a footswitch can switch it on — so a block that is
-// simply off carries no "set me" highlights.
-func writeBlockCard(b *strings.Builder, d ModuleDesc, slot int) {
-	state := "ON"
-	modClass := "module"
-	if !d.Enabled {
-		state = "OFF"
-		modClass += " off"
-	}
-	fmt.Fprintf(b, "<table><tr><th class=\"%s\"><span class=\"slotbadge\">%d</span>%s</th><th>%s", modClass, slot, html.EscapeString(d.Module), state)
-	if d.Switch != "" {
-		fmt.Fprintf(b, " <span class=\"switch\">%s</span>", html.EscapeString(d.Switch))
-	}
-	b.WriteString("</th></tr>")
-	fmt.Fprintf(b, "<tr><td class=\"effect\">%s</td><td>", html.EscapeString(d.Effect))
-	if d.InspiredBy != "" {
-		fmt.Fprintf(b, "<span class=\"inspired\">based on %s</span>", html.EscapeString(d.InspiredBy))
-	}
-	b.WriteString("</td></tr>")
-	if !d.Enabled && d.Switch == "" {
-		b.WriteString("</table>")
-		return
-	}
-	b.WriteString("<tr><td class=\"params\">")
-	for j, pd := range d.Params {
-		if j > 0 {
-			b.WriteString(" · ")
-		}
-		name := html.EscapeString(pd.Name)
-		val := html.EscapeString(formatParam(pd)) + formatParamUnit(pd)
-		if changed(pd) {
-			fmt.Fprintf(b, "<span class=\"hl\">%s: %s</span>", name, val)
-		} else {
-			fmt.Fprintf(b, "%s: %s", name, val)
-		}
-	}
-	b.WriteString("</td><td></td></tr></table>")
+// cardPage is the data for the GP-200 setup-card template.
+type cardPage struct {
+	Title      string
+	H1, H2     string
+	CSS        template.CSS
+	ChainCSS   template.CSS
+	StoredNote template.HTML
+	Chain      template.HTML
+	Modules    []moduleCard
+	Buttons    []footBtn
+	Pedals     []pedalRow
+	Note       string
 }
 
-// hardwareBoxes renders the CTRL footswitches as a grid of boxes and the EXP
-// pedal assignments as chips, mirroring the HeadRush report's hardware section.
-func hardwareBoxes(p Preset) string {
-	var b strings.Builder
-	b.WriteString("<div class=\"buttons\">")
+// cardParam is one named parameter value shown on the card.
+type cardParam struct {
+	Name    string
+	Value   template.HTML
+	Changed bool
+}
+
+// moduleCard is one block rendered as a table.
+type moduleCard struct {
+	Slot       int
+	Module     string
+	Effect     string
+	Inspired   string
+	Enabled    bool
+	State      string
+	Switch     string
+	ShowParams bool
+	Params     []cardParam
+}
+
+// footBtn is one CTRL footswitch box in the hardware grid.
+type footBtn struct {
+	Class  string
+	Number int
+	Mod    string
+	Op     string
+}
+
+// pedalRow is one expression-pedal assignment chip.
+type pedalRow struct {
+	Page   string
+	Item   int
+	Target string
+	Param  string
+	Range  string
+}
+
+// storedNoteHTML renders the truncated-name warning, or empty when the name
+// fits on the device.
+func storedNoteHTML(name string) template.HTML {
+	stored, truncated := StoredName(name)
+	if !truncated {
+		return ""
+	}
+	return template.HTML(fmt.Sprintf("Note: the device stores preset names up to %d characters; this preset reads as %q on the unit.", NameLimit, html.EscapeString(stored))) // #nosec G203 -- pre-escaped trusted HTML
+}
+
+func cardModules(p Preset) []moduleCard {
+	desc := Describe(p)
+	cards := make([]moduleCard, 0, len(desc))
+	for i, d := range desc {
+		state := "ON"
+		if !d.Enabled {
+			state = "OFF"
+		}
+		cards = append(cards, moduleCard{Slot: i + 1, Module: d.Module, Effect: d.Effect, Inspired: d.InspiredBy, Enabled: d.Enabled, State: state, Switch: d.Switch, ShowParams: d.Enabled || d.Switch != "", Params: cardParams(d.Params)})
+	}
+	return cards
+}
+
+func cardParams(ps []ParamDesc) []cardParam {
+	out := make([]cardParam, 0, len(ps))
+	for _, pd := range ps {
+		out = append(out, cardParam{Name: pd.Name, Value: template.HTML(html.EscapeString(formatParam(pd)) + formatParamUnit(pd)), Changed: changed(pd)}) // #nosec G203 -- pre-escaped trusted HTML
+	}
+	return out
+}
+
+func footButtons(p Preset) []footBtn {
+	btns := make([]footBtn, 0, len(p.Ctrl))
 	for _, c := range p.Ctrl {
 		blocks := blockNames(c.BlockMask)
 		cls := "btn"
@@ -276,29 +302,26 @@ func hardwareBoxes(p Preset) string {
 		} else {
 			cls += " empty"
 		}
-		fmt.Fprintf(&b, "<div class=\"%s\"><div class=\"num\">%d</div><div class=\"mod\">%s</div>", cls, c.Index+1, html.EscapeString(mod))
-		if op != "" {
-			fmt.Fprintf(&b, "<div class=\"op\">%s</div>", op)
-		}
-		b.WriteString("</div>")
+		btns = append(btns, footBtn{Class: cls, Number: c.Index + 1, Mod: mod, Op: op})
 	}
-	b.WriteString("</div>")
+	return btns
+}
 
-	var pedals []string
+func footPedals(p Preset) []pedalRow {
+	var rows []pedalRow
 	for _, e := range p.Exp {
 		if e.Block < 0 || e.Block > 10 {
 			continue
 		}
-		target := ModuleForBlock(e.Block)
-		param := expParamName(p, e.Block, e.ParamIndex)
-		pedals = append(pedals, fmt.Sprintf("<div class=\"pedal\"><span class=\"name\">%s P%d</span><span class=\"chip\">%s → %s (%s–%s)</span></div>",
-			expPageNames[e.Page], e.Item+1, html.EscapeString(target), html.EscapeString(param),
-			strconv.FormatFloat(float64(e.Min), 'f', -1, 32), strconv.FormatFloat(float64(e.Max), 'f', -1, 32)))
+		rows = append(rows, pedalRow{
+			Page:   expPageNames[e.Page],
+			Item:   e.Item + 1,
+			Target: ModuleForBlock(e.Block),
+			Param:  expParamName(p, e.Block, e.ParamIndex),
+			Range:  strconv.FormatFloat(float64(e.Min), 'f', -1, 32) + "–" + strconv.FormatFloat(float64(e.Max), 'f', -1, 32),
+		})
 	}
-	if len(pedals) > 0 {
-		b.WriteString("<div class=\"pedals\">" + strings.Join(pedals, "") + "</div>")
-	}
-	return b.String()
+	return rows
 }
 
 // blockNames returns the block names set in a CTRL footswitch mask.

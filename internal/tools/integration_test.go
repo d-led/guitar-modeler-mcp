@@ -198,6 +198,7 @@ func TestIntegrationMooerCatalogDesignAndCard(t *testing.T) {
 			"name":       "Mooer Test",
 			"amp":        "Marshall JCM800",
 			"cab":        "1960 412",
+			"note":       "Mooer **JCM800** rhythm",
 			"output_dir": dir,
 			"fx": []any{
 				map[string]any{"module": "od", "type": "808", "enabled": true},
@@ -209,6 +210,11 @@ func TestIntegrationMooerCatalogDesignAndCard(t *testing.T) {
 	_ = singleGlob(t, filepath.Join(dir, "*.mo"))
 	cards := singleGlob(t, filepath.Join(dir, "*.html"))
 	wantEq(t, "setup card filename", filepath.Base(cards[0]), "Mooer Test.ge200.html")
+	body, err := os.ReadFile(cards[0])
+	if err != nil {
+		t.Fatalf("read setup card: %v", err)
+	}
+	mustContain(t, string(body), `<p class="note-text">Mooer **JCM800** rhythm</p>`)
 }
 
 func TestIntegrationMooerCardOnlyDevice(t *testing.T) {
@@ -256,6 +262,7 @@ func TestIntegrationGP200DesignAndRead(t *testing.T) {
 		"name": "gp200_design",
 		"arguments": map[string]any{
 			"name":       "GP200 Test",
+			"note":       "dial the **bridge** pickup",
 			"amp":        "Marshall JCM800",
 			"cab":        "Marshall 1960AV",
 			"output_dir": dir,
@@ -273,6 +280,11 @@ func TestIntegrationGP200DesignAndRead(t *testing.T) {
 	wantEq(t, "preset filename", filepath.Base(prst), "GP200 Test.prst")
 	card := singleGlob(t, filepath.Join(dir, "*.html"))[0]
 	wantEq(t, "setup card filename", filepath.Base(card), "GP200 Test.gp200.html")
+	cardBody, err := os.ReadFile(card)
+	if err != nil {
+		t.Fatalf("read setup card: %v", err)
+	}
+	mustContain(t, string(cardBody), `<p class="note-text">dial the **bridge** pickup</p>`)
 
 	// The params tool resolves an effect and lists its exact knob names.
 	params := resultText(t, rpc(t, s, 4, "tools/call", map[string]any{
@@ -342,10 +354,16 @@ func TestIntegrationWazaTSLAndCard(t *testing.T) {
 			"name":       "Brown Practice",
 			"amp":        "BROWN",
 			"booster":    "T-SCREAM",
+			"note":       "- **bridge** pickup\n- delay 420 ms",
 			"output_dir": dir,
 		},
 	}))
 	mustContain(t, card, "setup card", ".wazaair.html")
+	wazaCard, err := os.ReadFile(singleGlob(t, filepath.Join(dir, "*.html"))[0])
+	if err != nil {
+		t.Fatalf("read waza card: %v", err)
+	}
+	mustContain(t, string(wazaCard), `<p class="note-text">- **bridge** pickup`)
 
 	// The AIRSTEP BW modes are listed and can be printed on the card.
 	modes := resultText(t, rpc(t, s, 5, "tools/call", map[string]any{
@@ -453,6 +471,7 @@ func TestIntegrationThrSetupCard(t *testing.T) {
 			"reverb_level":  40,
 			"reverb_decay":  55,
 			"compressor":    true,
+			"note":          "Play the **bridge** pickup",
 			"output_dir":    dir,
 		},
 	}))
@@ -462,7 +481,7 @@ func TestIntegrationThrSetupCard(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read setup card: %v", err)
 	}
-	mustContain(t, string(body), "Gain: 42", "Master: 68", "Time (ms): 380", "Level: 40", "Decay: 55")
+	mustContain(t, string(body), "Gain: 42", "Master: 68", "Time (ms): 380", "Level: 40", "Decay: 55", `<p class="note-text">Play the **bridge** pickup</p>`)
 
 	// The effects catalog now includes cabinets, echo and reverb types.
 	fx := resultText(t, rpc(t, s, 4, "tools/call", map[string]any{
@@ -765,8 +784,7 @@ func TestIntegrationQuadCortexDesignAndDecode(t *testing.T) {
 	design := resultText(t, rpc(t, s, 3, "tools/call", map[string]any{
 		"name": "qc_design",
 		"arguments": map[string]any{
-			"name":       "QC Integration Tone",
-			"serial":     "QA00XXXXX",
+			"name": "QC Integration Tone", "note": "Dial the **bridge** pickup", "serial": "QA00XXXXX",
 			"amp":        "JCM800",
 			"amp_params": map[string]any{"GAIN": 5},
 			"cab":        "Mesa Rectifier",
@@ -784,7 +802,7 @@ func TestIntegrationQuadCortexDesignAndDecode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("qc_design setup card missing: %v", err)
 	}
-	mustContain(t, string(cardBody), "QC Integration Tone")
+	mustContain(t, string(cardBody), "QC Integration Tone", `<p class="note-text">Dial the **bridge** pickup</p>`)
 
 	decoded := resultText(t, rpc(t, s, 4, "tools/call", map[string]any{
 		"name":      "qc_decode_preset",

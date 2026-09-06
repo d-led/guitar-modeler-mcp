@@ -1,12 +1,30 @@
 package mooer
 
 import (
+	"embed"
 	"fmt"
 	"html"
+	"html/template"
 	"strings"
 
 	"github.com/d-led/guitar-modeler-mcp/internal/cardchain"
 )
+
+//go:embed css.tmpl html.tmpl
+var cardFS embed.FS
+
+var (
+	cardCSS  = readCard("css.tmpl")
+	cardTmpl = template.Must(template.New("mooer-card").Parse(readCard("html.tmpl")))
+)
+
+func readCard(name string) string {
+	b, err := cardFS.ReadFile(name)
+	if err != nil {
+		panic(err)
+	}
+	return string(b)
+}
 
 // ParamDesc is one editable parameter of a module, with its raw device value
 // and its resting/default value (nil when the default is unknown).
@@ -164,63 +182,85 @@ func chainHint(desc []ModuleDesc) string {
 
 // SetupCardHTML renders a printable setup card for a preset on a device. It is
 // the human-readable output for devices without preset file transfer, and the
-// companion report for devices that can also write a .mo file.
-func SetupCardHTML(m Model, p Preset) string {
+// companion report for devices that can also write a .mo file. Note is optional
+// prose for the card (why this tone, how to play it, the rest of the rig and
+// hardware); it is printed at the bottom of the card and never written to the
+// .mo file.
+func SetupCardHTML(m Model, p Preset, note string) string {
 	var b strings.Builder
-	b.WriteString("<!doctype html><html><head><meta charset=\"utf-8\">")
-	fmt.Fprintf(&b, "<title>%s — %s</title>", html.EscapeString(p.Name), html.EscapeString(m.Display))
-	b.WriteString(`<style>
-body{font-family:system-ui,-apple-system,sans-serif;max-width:760px;margin:2rem auto;padding:0 1rem;color:#1a1a1a}
-h1{margin-bottom:.25rem}h2{font-size:1rem;color:#555;margin-top:0}
-table{width:100%;border-collapse:collapse;margin-bottom:1.25rem}
-td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;vertical-align:top}
-.module{font-weight:600;white-space:nowrap}
-.effect{font-weight:600}.off{color:#999}.inspired{color:#666;font-size:.85em}
-.params{color:#444;font-size:.85em}
-.hl{color:#2563eb;font-weight:600}
-` + cardchain.CSS + `
-</style></head><body>`)
-	fmt.Fprintf(&b, "<h1>%s</h1><h2>%s — setup card</h2>", html.EscapeString(p.Name), html.EscapeString(m.Display))
-
-	if stored, truncated := StoredName(p.Name); truncated {
-		fmt.Fprintf(&b, "<p class=\"inspired\">Note: the device stores preset names up to %d characters; this preset reads as %q on the unit.</p>", NameLimit, html.EscapeString(stored))
+	if err := cardTmpl.Execute(&b, cardPage{
+		Title:      p.Name + " — " + m.Display,
+		H1:         p.Name,
+		H2:         m.Display + " — setup card",
+		CSS:        template.CSS(cardCSS),       // #nosec G203 -- trusted package CSS
+		ChainCSS:   template.CSS(cardchain.CSS), // #nosec G203 -- trusted package CSS
+		StoredNote: storedNoteHTML(p.Name),
+		Chain:      template.HTML(chainHint(Describe(p, m))), // #nosec G203 -- trusted chain HTML
+		Modules:    cardModules(p, m),
+		Note:       note,
+	}); err != nil {
+		panic(err)
 	}
+	return b.String()
+}
 
-	b.WriteString(chainHint(Describe(p, m)))
+// cardPage is the data for the Mooer setup-card template.
+type cardPage struct {
+	Title      string
+	H1, H2     string
+	CSS        template.CSS
+	ChainCSS   template.CSS
+	StoredNote template.HTML
+	Chain      template.HTML
+	Modules    []moduleCard
+	Note       string
+}
 
-	for i, d := range Describe(p, m) {
+// cardParam is one named parameter value shown on the card.
+type cardParam struct {
+	Name    string
+	Value   string
+	Changed bool
+}
+
+// moduleCard is one chain module rendered as a table.
+type moduleCard struct {
+	Slot     int
+	Module   string
+	Effect   string
+	Inspired string
+	Enabled  bool
+	State    string
+	Params   []cardParam
+}
+
+// storedNoteHTML renders the truncated-name warning, or empty when the name
+// fits on the device.
+func storedNoteHTML(name string) template.HTML {
+	stored, truncated := StoredName(name)
+	if !truncated {
+		return ""
+	}
+	return template.HTML(fmt.Sprintf("Note: the device stores preset names up to %d characters; this preset reads as %q on the unit.", NameLimit, html.EscapeString(stored))) // #nosec G203 -- pre-escaped trusted HTML
+}
+
+func cardModules(p Preset, m Model) []moduleCard {
+	desc := Describe(p, m)
+	cards := make([]moduleCard, 0, len(desc))
+	for i, d := range desc {
 		state := "ON"
-		class := ""
 		if !d.Enabled {
 			state = "OFF"
-			class = " class=\"off\""
 		}
-		fmt.Fprintf(&b, "<table><tr><th class=\"module\"%s><span class=\"slotbadge\">%d</span>%s</th><th>%s</th></tr>", class, i+1, html.EscapeString(d.Module), state)
-		fmt.Fprintf(&b, "<tr><td class=\"effect\">%s</td><td>", html.EscapeString(d.Effect))
-		if d.InspiredBy != "" {
-			fmt.Fprintf(&b, "<span class=\"inspired\">based on %s</span>", html.EscapeString(d.InspiredBy))
-		}
-		fmt.Fprintf(&b, "</td></tr>")
-		if d.Enabled {
-			b.WriteString("<tr><td class=\"params\">")
-			for i, p := range d.Params {
-				if i > 0 {
-					b.WriteString(" · ")
-				}
-				name := html.EscapeString(p.Name)
-				val := html.EscapeString(fmt.Sprintf("%v", p.Value))
-				if changed(p) {
-					fmt.Fprintf(&b, "<span class=\"hl\">%s: %s</span>", name, val)
-				} else {
-					fmt.Fprintf(&b, "%s: %s", name, val)
-				}
-			}
-			b.WriteString("</td><td></td></tr>")
-		}
-		b.WriteString("</table>")
+		cards = append(cards, moduleCard{Slot: i + 1, Module: d.Module, Effect: d.Effect, Inspired: d.InspiredBy, Enabled: d.Enabled, State: state, Params: cardParams(d.Params)})
 	}
+	return cards
+}
 
-	b.WriteString("<p class=\"inspired\">Values are the device's raw parameter values (0&ndash;100 unless noted).</p>")
-	b.WriteString("</body></html>")
-	return b.String()
+func cardParams(ps []ParamDesc) []cardParam {
+	out := make([]cardParam, 0, len(ps))
+	for _, p := range ps {
+		out = append(out, cardParam{Name: p.Name, Value: fmt.Sprintf("%v", p.Value), Changed: changed(p)})
+	}
+	return out
 }

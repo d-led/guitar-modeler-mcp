@@ -1,14 +1,31 @@
 package qc
 
 import (
+	"embed"
 	"fmt"
-	"html"
+	"html/template"
 	"math"
 	"strconv"
 	"strings"
 
 	"github.com/d-led/guitar-modeler-mcp/internal/cardchain"
 )
+
+//go:embed css.tmpl html.tmpl
+var cardFS embed.FS
+
+var (
+	cardCSS  = readCard("css.tmpl")
+	cardTmpl = template.Must(template.New("qc-card").Parse(readCard("html.tmpl")))
+)
+
+func readCard(name string) string {
+	b, err := cardFS.ReadFile(name)
+	if err != nil {
+		panic(err)
+	}
+	return string(b)
+}
 
 // Caveat is the honest framing of the Quad Cortex outputs, surfaced to agents
 // in the tool descriptions and printed on every setup card: the HTML card is
@@ -26,41 +43,78 @@ const Caveat = "The HTML card is the setup instructions; reproduce the tone " +
 // preset: the signal chain (in order), each block's name and the hardware it
 // is based on, and every knob with its value — the values the preset sets
 // explicitly, and the catalog defaults for the rest, so the whole tone can be
-// reproduced by hand from the card alone.
-func SetupCardHTML(cat *Catalog, preset *BinaryPreset) string {
+// reproduced by hand from the card alone. Note is optional prose for the card
+// (why this tone, how to play it, the rest of the rig and hardware); it is
+// printed at the bottom of the card and never written to the .pb archive.
+func SetupCardHTML(cat *Catalog, preset *BinaryPreset, note string) string {
 	var b strings.Builder
-	b.WriteString("<!doctype html><html><head><meta charset=\"utf-8\">")
-	fmt.Fprintf(&b, "<title>%s — Quad Cortex</title>", html.EscapeString(preset.Name))
-	b.WriteString(`<style>
-body{font-family:system-ui,-apple-system,sans-serif;max-width:760px;margin:2rem auto;padding:0 1rem;color:#1a1a1a}
-h1{margin-bottom:.25rem}h2{font-size:1rem;color:#555;margin-top:0}
-h3{font-size:.95rem;margin:1.25rem 0 .5rem;text-transform:uppercase;letter-spacing:.03em;color:#444}
-table{width:100%;border-collapse:collapse;margin-bottom:.5rem}
-td,th{border-bottom:1px solid #e2e2e2;padding:.45rem .5rem;text-align:left;vertical-align:top}
-.block{font-weight:600}.inspired{color:#666;font-size:.85em}
-.params{color:#444;font-size:.85em;font-variant-numeric:tabular-nums}
-` + cardchain.CSS + `
-.note{color:#8a5a00;background:#fff7e6;border:1px solid #f0d9a8;padding:.6rem .8rem;border-radius:6px;font-size:.85em}
-</style></head><body>`)
-	fmt.Fprintf(&b, "<h1>%s</h1><h2>Neural DSP Quad Cortex — setup card</h2>", html.EscapeString(preset.Name))
-
-	if preset.AuthorName != "" {
-		fmt.Fprintf(&b, "<p class=\"inspired\">by %s</p>", html.EscapeString(preset.AuthorName))
+	if err := cardTmpl.Execute(&b, cardPage{
+		Title:     preset.Name + " — Quad Cortex",
+		H1:        preset.Name,
+		H2:        "Neural DSP Quad Cortex — setup card",
+		Author:    preset.AuthorName,
+		VolumePan: fmt.Sprintf("volume %.3g · pan %.3g", preset.Volume, preset.Pan),
+		CSS:       template.CSS(cardCSS),       // #nosec G203 -- trusted package CSS
+		ChainCSS:  template.CSS(cardchain.CSS), // #nosec G203 -- trusted package CSS
+		Rows:      rowsFor(cat, preset),
+		Caveat:    Caveat,
+		Note:      note,
+	}); err != nil {
+		panic(err)
 	}
-	fmt.Fprintf(&b, "<p class=\"inspired\">volume %.3g · pan %.3g</p>", preset.Volume, preset.Pan)
-
-	for _, c := range preset.Chains {
-		row := c.GetRow() + 1 // screen rows are 1..4
-		fmt.Fprintf(&b, "<h3>Row %d</h3>", row)
-		b.WriteString(rowChain(cat, c))
-		for i, model := range c.Models {
-			writeBlock(&b, cat, model, i+1)
-		}
-	}
-
-	b.WriteString("<p class=\"note\">" + html.EscapeString(Caveat) + "</p>")
-	b.WriteString("</body></html>")
 	return b.String()
+}
+
+// cardPage is the data for the Quad Cortex setup-card template.
+type cardPage struct {
+	Title     string
+	H1, H2    string
+	Author    string
+	VolumePan string
+	CSS       template.CSS
+	ChainCSS  template.CSS
+	Rows      []chainRow
+	Caveat    string
+	Note      string
+}
+
+// chainRow is one grid row: its screen number, chain hint and blocks.
+type chainRow struct {
+	Row    int
+	Chain  template.HTML
+	Blocks []blockCard
+}
+
+// blockCard is one grid block rendered as a table.
+type blockCard struct {
+	Slot   int
+	Name   string
+	Based  string
+	Params []string
+}
+
+// rowsFor builds the grid rows with their block cards.
+func rowsFor(cat *Catalog, preset *BinaryPreset) []chainRow {
+	rows := make([]chainRow, 0, len(preset.Chains))
+	for _, c := range preset.Chains {
+		rows = append(rows, chainRow{Row: int(c.GetRow()) + 1, Chain: template.HTML(rowChain(cat, c)), Blocks: blocksFor(cat, c)}) // #nosec G203 -- trusted chain HTML
+	}
+	return rows
+}
+
+func blocksFor(cat *Catalog, c *Chain) []blockCard {
+	out := make([]blockCard, 0, len(c.Models))
+	for i, model := range c.Models {
+		name := modelName(cat, model)
+		based := ""
+		var params []string
+		if m, ok := cat.Model(int(model.GetHash())); ok {
+			based = m.BasedOn
+			params = blockParams(m, model)
+		}
+		out = append(out, blockCard{Slot: i + 1, Name: name, Based: based, Params: params})
+	}
+	return out
 }
 
 // rowChain renders one grid row as a slot-numbered chain: each model sits in
@@ -78,28 +132,6 @@ func modelName(cat *Catalog, model *Model) string {
 		return m.Name
 	}
 	return fmt.Sprintf("model %d", model.GetHash())
-}
-
-// writeBlock renders one grid block as a table: a circled slot number that
-// matches the chain hint above, its model name, the hardware it is based on,
-// and every knob with a value.
-func writeBlock(b *strings.Builder, cat *Catalog, model *Model, slot int) {
-	name := modelName(cat, model)
-	based := ""
-	var params []string
-	if m, ok := cat.Model(int(model.GetHash())); ok {
-		based = m.BasedOn
-		params = blockParams(m, model)
-	}
-
-	fmt.Fprintf(b, "<table><tr><td class=\"block\"><span class=\"slotbadge\">%d</span>%s</td><td></td></tr>", slot, html.EscapeString(name))
-	if based != "" {
-		fmt.Fprintf(b, "<tr><td></td><td class=\"inspired\">based on %s</td></tr>", html.EscapeString(based))
-	}
-	if len(params) > 0 {
-		fmt.Fprintf(b, "<tr><td class=\"params\" colspan=\"2\">%s</td></tr>", html.EscapeString(strings.Join(params, " · ")))
-	}
-	b.WriteString("</table>")
 }
 
 // paramKV is one knob with its formatted value and whether the preset set it

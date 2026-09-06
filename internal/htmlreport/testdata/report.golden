@@ -51,6 +51,8 @@
   .param .v { font-weight: 600; }
   .param.changed .v { color: #2563eb; }
   @media (prefers-color-scheme: dark) { .param.changed .v { color: #60a5fa; } }
+  .note-text { white-space: pre-wrap; margin-top: 20px; color: #555; }
+  @media (prefers-color-scheme: dark) { .note-text { color: #aaa; } }
   .disclaimer { max-width: 860px; margin: 24px auto 0; padding-top: 16px; border-top: 1px solid #e3e3e8; font-size: .78em; color: #888; }
   @media (prefers-color-scheme: dark) { .disclaimer { border-color: #2c2c2e; } }
   :root{--cc-slot-bg:#f4f4f4;--cc-slot-bd:#ddd;--cc-par-bg:#fafafa;--cc-badge:#6b6b73;--cc-arrow:#aaa;--cc-mark:#bbb;--cc-parlabel:#888}
@@ -73,7 +75,7 @@
 <body>
 <div class="wrap">
   <h1>REPORT RIG</h1>
-  <div class="sub">Note: <strong>Test Note</strong> · Generated FIXED</div>
+  <div class="sub">Generated FIXED</div>
   <div class="meta">
     <div><div class="label">Tempo</div><div>0 BPM</div></div>
   </div>
@@ -137,6 +139,7 @@
     </div>
   </div>
   
+  <p class="note-text">Test Note</p>
 </div>
 <footer class="disclaimer">
   All trademarks, logos and brand names are the property of their respective owners.

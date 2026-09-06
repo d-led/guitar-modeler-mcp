@@ -371,6 +371,8 @@ const reportHTML = `<!doctype html>
   .param .v { font-weight: 600; }
   .param.changed .v { color: #2563eb; }
   @media (prefers-color-scheme: dark) { .param.changed .v { color: #60a5fa; } }
+  .note-text { white-space: pre-wrap; margin-top: 20px; color: #555; }
+  @media (prefers-color-scheme: dark) { .note-text { color: #aaa; } }
   .disclaimer { max-width: 860px; margin: 24px auto 0; padding-top: 16px; border-top: 1px solid #e3e3e8; font-size: .78em; color: #888; }
   @media (prefers-color-scheme: dark) { .disclaimer { border-color: #2c2c2e; } }
   {{.ChainCSS}}
@@ -380,7 +382,7 @@ const reportHTML = `<!doctype html>
 <body>
 <div class="wrap">
   <h1>{{.Name}}</h1>
-  <div class="sub">{{if .Note}}Note: <strong>{{.Note}}</strong> · {{end}}Generated {{.Generated}}</div>
+  <div class="sub">Generated {{.Generated}}</div>
   <div class="meta">
     {{if .Tempo}}<div><div class="label">Tempo</div><div>{{.Tempo}} BPM</div></div>{{end}}
   </div>
@@ -413,6 +415,7 @@ const reportHTML = `<!doctype html>
     </div>
   </div>
   {{end}}
+  {{if .Note}}<p class="note-text">{{.Note}}</p>{{end}}
 </div>
 <footer class="disclaimer">
   All trademarks, logos and brand names are the property of their respective owners.

@@ -1,0 +1,15 @@
+<!doctype html><html><head><meta charset="utf-8"><title>{{.Title}}</title><style>
+{{.CSS}}
+{{.ChainCSS}}
+</style></head><body>
+<h1>{{.H1}}</h1><h2>{{.H2}}</h2>
+{{if .Author}}<p class="inspired">by {{.Author}}</p>{{end}}
+<p class="inspired">{{.VolumePan}}</p>
+{{range .Rows}}<h3>Row {{.Row}}</h3>{{.Chain}}{{range .Blocks}}<table><tr><td class="block"><span class="slotbadge">{{.Slot}}</span>{{.Name}}</td><td></td></tr>
+{{if .Based}}<tr><td></td><td class="inspired">based on {{.Based}}</td></tr>{{end}}
+{{if .Params}}<tr><td class="params" colspan="2">{{range $i, $p := .Params}}{{if $i}} · {{end}}{{$p}}{{end}}</td></tr>{{end}}
+</table>
+{{end}}{{end}}
+<p class="note">{{.Caveat}}</p>
+{{if .Note}}<p class="note-text">{{.Note}}</p>{{end}}
+</body></html>

@@ -1,0 +1,12 @@
+<h1>{{.H1}}</h1><h2>{{.H2}}</h2>
+{{.Chain}}
+{{range .Cards}}<table><tr><td class="module{{if not .Enabled}} off{{end}}">{{if .Slot}}<span class="slotbadge">{{.Slot}}</span>{{end}}{{.Module}}</td><td class="effect">{{.Effect}}</td></tr>
+{{if .Inspired}}<tr><td></td><td><span class="inspired">based on {{.Inspired}}</span></td></tr>{{end}}
+{{if .Knobs}}<tr><td class="params">{{range $i, $k := .Knobs}}{{if $i}} · {{end}}{{$k.Name}}: {{$k.Value}}{{end}}</td><td></td></tr>{{end}}
+</table>
+{{if .Note}}<p class="inspired">{{.Note}}</p>{{end}}
+{{end}}
+{{if .DeviceNote}}<p class="inspired">{{.DeviceNote}}</p>{{end}}
+<p class="inspired">Knob values are 0&ndash;100 unless noted (ms). Knobs marked (noon) are at 12 o'clock; set them to noon to reproduce the tone.</p>
+{{if .Note}}<p class="note-text">{{.Note}}</p>{{end}}
+</body></html>

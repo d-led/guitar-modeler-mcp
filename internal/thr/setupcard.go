@@ -1,12 +1,28 @@
 package thr
 
 import (
-	"fmt"
-	"html"
+	"embed"
+	"html/template"
 	"strings"
 
 	"github.com/d-led/guitar-modeler-mcp/internal/cardchain"
 )
+
+//go:embed css.tmpl html.tmpl
+var cardFS embed.FS
+
+var (
+	cardCSS  = readCard("css.tmpl")
+	cardTmpl = template.Must(template.New("thr-card").Parse(readCard("html.tmpl")))
+)
+
+func readCard(name string) string {
+	b, err := cardFS.ReadFile(name)
+	if err != nil {
+		panic(err)
+	}
+	return string(b)
+}
 
 // Spec is a tone to dial in on a THR: the amp-selector position, the cabinet,
 // the EFFECT, ECHO and REVERB choices, the two app-only toggles, and the knob
@@ -28,6 +44,10 @@ type Spec struct {
 	CompParams   CompressorParams
 	GateParams   GateParams
 	Levels       Levels
+	// Note is optional prose for the setup card: why this tone is voiced this
+	// way, how to play it, and the rest of the rig and hardware. It is printed
+	// at the bottom of the card and never sent to a device.
+	Note string
 }
 
 // NewSpec returns a Spec with every knob Unset, so the setup card shows only
@@ -48,58 +68,100 @@ func NewSpec() Spec {
 // SetupCardHTML renders a printable setup card for a resolved Spec.
 func (d Device) SetupCardHTML(s Spec) string {
 	var b strings.Builder
-	cardchain.Head(&b, s.Name+" — "+d.Display, `.off{color:#999}.inspired{color:#666;font-size:.85em}
-.params{color:#444;font-size:.85em;font-variant-numeric:tabular-nums}`)
-	fmt.Fprintf(&b, "<h1>%s</h1><h2>%s — setup card</h2>", html.EscapeString(s.Name), html.EscapeString(d.Display))
-
-	b.WriteString(chainHint(d.Chain, s))
-
-	for i, module := range d.Chain {
-		d.writeChainModule(&b, module, s, i+1)
+	cardchain.Head(&b, s.Name+" — "+d.Display, cardCSS)
+	if err := cardTmpl.Execute(&b, cardPage{
+		H1:         s.Name,
+		H2:         d.Display + " — setup card",
+		Chain:      template.HTML(chainHint(d.Chain, s)), // #nosec G203 -- trusted chain HTML
+		Cards:      d.cards(s),
+		DeviceNote: d.Note,
+		Note:       s.Note,
+	}); err != nil {
+		panic(err)
 	}
-
-	if knobs := levelKnobs(s.Levels); len(knobs) > 0 {
-		writeModuleCard(&b, "LEVELS", "", "", true, knobs, 0)
-	}
-
-	if d.Note != "" {
-		writeNote(&b, d.Note)
-	}
-	b.WriteString("<p class=\"inspired\">Knob values are 0&ndash;100 unless noted (ms). Knobs marked (noon) are at 12 o'clock; set them to noon to reproduce the tone.</p>")
-	b.WriteString("</body></html>")
 	return b.String()
 }
 
-// writeChainModule renders one module of the fixed signal chain as a card.
-func (d Device) writeChainModule(b *strings.Builder, module string, s Spec, slot int) {
-	switch module {
-	case "COMPRESSOR":
-		writeModuleCard(b, module, onOff(s.Compressor), "", s.Compressor, compressorKnobs(s.CompParams), slot)
-	case "NOISE GATE":
-		writeModuleCard(b, module, onOff(s.NoiseGate), "", s.NoiseGate, gateKnobs(s.GateParams), slot)
-	case "AMP":
-		d.writeAmpCard(b, module, s, slot)
-	case "CAB":
-		writeModuleCard(b, module, s.Cab, "", true, nil, slot)
-	case "MOD":
-		writeModuleCard(b, module, s.Mod, "", true, modKnobs(s.ModParams), slot)
-	case "ECHO":
-		writeModuleCard(b, module, s.Echo, "", true, echoKnobs(s.EchoParams), slot)
-	case "REVERB":
-		writeModuleCard(b, module, s.Reverb, "", true, reverbKnobs(s.ReverbParams), slot)
-	}
+// cardPage is the data for the THR setup-card template.
+type cardPage struct {
+	H1, H2     string
+	Chain      template.HTML
+	Cards      []moduleCard
+	DeviceNote string
+	Note       string
 }
 
-func (d Device) writeAmpCard(b *strings.Builder, module string, s Spec, slot int) {
+// cardKnob is one named control value shown on the card.
+type cardKnob struct {
+	Name  string
+	Value int
+}
+
+// moduleCard is one module (or the LEVELS summary) rendered as a small table.
+type moduleCard struct {
+	Module   string
+	Effect   string
+	Inspired string
+	Enabled  bool
+	Slot     int
+	Knobs    []cardKnob
+	Note     string
+}
+
+// cards builds the module cards in chain order, followed by the LEVELS summary
+// when any level knob is set.
+func (d Device) cards(s Spec) []moduleCard {
+	cards := make([]moduleCard, 0, len(d.Chain)+1)
+	for i, module := range d.Chain {
+		cards = append(cards, d.moduleCard(module, s, i+1))
+	}
+	if knobs := viewKnobs(levelKnobs(s.Levels)); len(knobs) > 0 {
+		cards = append(cards, moduleCard{Module: "LEVELS", Effect: "OFF", Enabled: true, Knobs: knobs})
+	}
+	return cards
+}
+
+func (d Device) moduleCard(module string, s Spec, slot int) moduleCard {
+	switch module {
+	case "COMPRESSOR":
+		return moduleCard{Module: module, Effect: onOff(s.Compressor), Enabled: s.Compressor, Slot: slot, Knobs: viewKnobs(compressorKnobs(s.CompParams))}
+	case "NOISE GATE":
+		return moduleCard{Module: module, Effect: onOff(s.NoiseGate), Enabled: s.NoiseGate, Slot: slot, Knobs: viewKnobs(gateKnobs(s.GateParams))}
+	case "AMP":
+		return d.ampCard(module, s, slot)
+	case "CAB":
+		return moduleCard{Module: module, Effect: effectOrOff(s.Cab), Enabled: true, Slot: slot}
+	case "MOD":
+		return moduleCard{Module: module, Effect: effectOrOff(s.Mod), Enabled: true, Slot: slot, Knobs: viewKnobs(modKnobs(s.ModParams))}
+	case "ECHO":
+		return moduleCard{Module: module, Effect: effectOrOff(s.Echo), Enabled: true, Slot: slot, Knobs: viewKnobs(echoKnobs(s.EchoParams))}
+	case "REVERB":
+		return moduleCard{Module: module, Effect: effectOrOff(s.Reverb), Enabled: true, Slot: slot, Knobs: viewKnobs(reverbKnobs(s.ReverbParams))}
+	}
+	return moduleCard{}
+}
+
+func (d Device) ampCard(module string, s Spec, slot int) moduleCard {
 	cell, ok := d.ampCell(s.Amp)
 	if !ok {
-		writeModuleCard(b, module, "OFF", "", false, nil, slot)
-		return
+		return moduleCard{Module: module, Effect: "OFF", Enabled: false, Slot: slot}
 	}
-	writeModuleCard(b, module, cell.Name, cell.InspiredBy, true, ampKnobs(s.AmpParams), slot)
-	if cell.Description != "" {
-		writeNote(b, cell.Description)
+	return moduleCard{Module: module, Effect: cell.Name, Inspired: cell.InspiredBy, Enabled: true, Slot: slot, Knobs: viewKnobs(ampKnobs(s.AmpParams)), Note: cell.Description}
+}
+
+func effectOrOff(v string) string {
+	if v == "" {
+		return "OFF"
 	}
+	return v
+}
+
+func viewKnobs(ks []knob) []cardKnob {
+	out := make([]cardKnob, 0, len(ks))
+	for _, k := range ks {
+		out = append(out, cardKnob{Name: k.name, Value: k.value})
+	}
+	return out
 }
 
 func onOff(on bool) string {
@@ -136,37 +198,4 @@ func thrEffect(module string, s Spec) string {
 		return s.Reverb
 	}
 	return ""
-}
-
-// writeModuleCard writes one module as a small table: the module label, its
-// selection or on/off state, the real hardware it emulates (when known), and
-// the knob values that were specified. Unset knobs are omitted.
-func writeModuleCard(b *strings.Builder, module, effect, inspired string, enabled bool, knobs []knob, slot int) {
-	if effect == "" {
-		effect = "OFF"
-	}
-	class := ""
-	if !enabled {
-		class = " class=\"off\""
-	}
-	badge := ""
-	if slot > 0 {
-		badge = fmt.Sprintf("<span class=\"slotbadge\">%d</span>", slot)
-	}
-	fmt.Fprintf(b, "<table><tr><td class=\"module\"%s>%s%s</td><td class=\"effect\">%s</td></tr>", class, badge, html.EscapeString(module), html.EscapeString(effect))
-	if inspired != "" {
-		fmt.Fprintf(b, "<tr><td></td><td><span class=\"inspired\">based on %s</span></td></tr>", html.EscapeString(inspired))
-	}
-	if len(knobs) > 0 {
-		parts := make([]string, 0, len(knobs))
-		for _, k := range knobs {
-			parts = append(parts, fmt.Sprintf("%s: %d", k.name, k.value))
-		}
-		fmt.Fprintf(b, "<tr><td class=\"params\">%s</td><td></td></tr>", html.EscapeString(strings.Join(parts, " · ")))
-	}
-	b.WriteString("</table>")
-}
-
-func writeNote(b *strings.Builder, note string) {
-	fmt.Fprintf(b, "<p class=\"inspired\">%s</p>", html.EscapeString(note))
 }

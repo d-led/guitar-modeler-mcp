@@ -20,7 +20,7 @@ func TestSetupCardHTMLRendersChain(t *testing.T) {
 		t.Fatalf("BuildPreset: %v", err)
 	}
 
-	card := SetupCardHTML(cat, preset)
+	card := SetupCardHTML(cat, preset, "")
 	for _, want := range []string{
 		"Card Tone",
 		"tester",
@@ -50,7 +50,7 @@ func TestSetupCardHTMLShowsRealValues(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BuildPreset: %v", err)
 	}
-	card := SetupCardHTML(cat, preset)
+	card := SetupCardHTML(cat, preset, "")
 	// GAIN 5 on a 0..10 knob reads "5" in its own units; OUTPUT 0 reads "0 dB".
 	if !strings.Contains(card, "GAIN: 5") {
 		t.Error("setup card should show GAIN: 5 in screen units")
@@ -72,7 +72,7 @@ func TestSetupCardIsSelfContained(t *testing.T) {
 		t.Fatalf("BuildPreset: %v", err)
 	}
 
-	card := SetupCardHTML(cat, preset)
+	card := SetupCardHTML(cat, preset, "")
 	// The signal chain is shown as a slot-numbered hint.
 	for _, want := range []string{"slotno\">1", "Marshall JCM800", "slotno\">2", "Tape Delay (M)", "class=\"chain\""} {
 		if !strings.Contains(card, want) {
@@ -95,6 +95,30 @@ func TestSetupCardIsSelfContained(t *testing.T) {
 	// required — but the knob name must be there).
 	if !strings.Contains(card, "MIX:") || !strings.Contains(card, "FEEDBACK:") {
 		t.Error("setup card should list the delay's knobs with defaults")
+	}
+}
+
+// TestSetupCardRendersNoteAtBottom guards the optional per-tone note: it is
+// printed verbatim at the bottom of the card, and an empty note renders nothing.
+func TestSetupCardRendersNoteAtBottom(t *testing.T) {
+	cat := mustCatalog(t)
+	preset, err := BuildPreset(cat, DesignSpec{Name: "Noted", Blocks: []BlockSpec{{Model: "JCM800"}}})
+	if err != nil {
+		t.Fatalf("BuildPreset: %v", err)
+	}
+	card := SetupCardHTML(cat, preset, "Dial the **bridge** pickup:\n\n- gain 5\n- neck single-coil")
+	note := "<p class=\"note-text\">Dial the **bridge** pickup:\n\n- gain 5\n- neck single-coil</p>"
+	if !strings.Contains(card, note) {
+		t.Errorf("setup card missing the note:\n%s", card)
+	}
+	if strings.Contains(card, "<strong>") {
+		t.Error("the note must stay plain text, not be rendered as Markdown")
+	}
+	if strings.LastIndex(card, note) < strings.LastIndex(card, "not a file the Quad Cortex imports") {
+		t.Error("the note must be printed at the bottom of the card")
+	}
+	if strings.Contains(SetupCardHTML(cat, preset, ""), `class="note-text"`) {
+		t.Error("an empty note should not render a note block")
 	}
 }
 
