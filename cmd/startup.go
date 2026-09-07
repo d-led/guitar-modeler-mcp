@@ -6,6 +6,7 @@ import (
 	"runtime"
 	"runtime/debug"
 	"strings"
+	"time"
 )
 
 // buildTime is stamped by release builds via -ldflags, e.g.
@@ -13,7 +14,8 @@ import (
 //	-ldflags "-X github.com/d-led/guitar-modeler-mcp/cmd.buildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 //
 // It stays empty in development builds, which fall back to the commit time the
-// Go toolchain embedded at build time (vcs.time).
+// Go toolchain embedded at build time (vcs.time). Both are UTC timestamps;
+// they are displayed in the local timezone (see localTime).
 var buildTime = ""
 
 // logStartup writes one diagnostic line to stderr describing this binary, so an
@@ -53,9 +55,9 @@ func versionDetails() string {
 	parts := []string{effectiveVersion()}
 	switch {
 	case buildTime != "":
-		parts = append(parts, "built "+buildTime)
+		parts = append(parts, "built "+localTime(buildTime))
 	case vcs.time != "":
-		parts = append(parts, "commit "+vcs.time)
+		parts = append(parts, "commit "+localTime(vcs.time))
 	}
 	parts = append(parts, runtime.Version(), runtime.GOOS+"/"+runtime.GOARCH)
 	if vcs.revision != "" {
@@ -65,6 +67,29 @@ func versionDetails() string {
 		parts = append(parts, "binary "+exe)
 	}
 	return strings.Join(parts, ", ")
+}
+
+// localTime converts a UTC RFC3339 timestamp into the local timezone, keeping
+// the same instant (the offset changes; fractional seconds are preserved when
+// present). A string that is not a recognised timestamp is returned unchanged,
+// so a hand-stamped build time of another shape still prints as-is.
+func localTime(s string) string {
+	t, ok := parseTime(s)
+	if !ok {
+		return s
+	}
+	return t.Local().Format(time.RFC3339Nano)
+}
+
+// parseTime parses a timestamp with either full RFC3339 (with or without
+// fractional seconds) precision.
+func parseTime(s string) (time.Time, bool) {
+	for _, layout := range []string{time.RFC3339Nano, time.RFC3339} {
+		if t, err := time.Parse(layout, s); err == nil {
+			return t, true
+		}
+	}
+	return time.Time{}, false
 }
 
 // vcsInfo is the version-control metadata the Go toolchain embedded at build
