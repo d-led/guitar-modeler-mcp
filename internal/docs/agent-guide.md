@@ -365,6 +365,13 @@ take the first**: list the family with `catalog_list_variants` (e.g.
 whose description/`color`/`gain` fits the part — the first match is rarely the
 best one.
 
+**Compressors don't default to unity.** `Gray Comp`'s `Level` defaults to 100%
+(unity), but `DynIII Comp` and `Side Comp` default `Gain` to **+2.4 dB** — a
+compressor added at its defaults reads louder when it is on. When a compressor
+is on a footswitch, set its output `Level`/`Gain` so toggling it doesn't change
+loudness (compare active vs bypassed); trim the compressor's own knob, never
+`RigVolume`.
+
 ## Signal chain & parallel routing
 
 The Gigboard's 11 chain slots are not always one straight line — the chain can
