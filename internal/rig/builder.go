@@ -110,7 +110,7 @@ func (b *Builder) Build(spec Spec) (*RigFile, error) {
 
 	// Refuse implausible rigs (accidentally very loud or muted) before any
 	// file is written, with remediation hints.
-	if err := validatePlausible(patch); err != nil {
+	if err := validatePlausible(b.cat, patch); err != nil {
 		return nil, err
 	}
 

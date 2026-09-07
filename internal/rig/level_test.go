@@ -200,3 +200,92 @@ func TestBuildRefusesMutedRig(t *testing.T) {
 		t.Fatalf("expected a 'muted' plausibility error, got: %v", err)
 	}
 }
+
+func TestEstimateLevelCountsEQBoost(t *testing.T) {
+	b := newTestBuilder(t)
+	file, err := b.Build(Spec{
+		Name: "Level",
+		Blocks: []Block{
+			{Type: "Amp", Params: map[string]any{"Type": "65 Black SR"}},
+			{Type: "Cab", Params: map[string]any{"CabType": "1x12 Black Panel Lux"}},
+			{Type: "Bass EQ", Enabled: true, Params: map[string]any{"Level": 6.0}},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	est, err := EstimateLevel(file, 0)
+	if err != nil {
+		t.Fatalf("EstimateLevel: %v", err)
+	}
+	// amp -12 dB + EQ +6 dB = -6 dB.
+	if est.EstimatedLevelDB != -6 {
+		t.Fatalf("estimated = %v, want -6 (amp -12 + EQ +6)", est.EstimatedLevelDB)
+	}
+	if !hasStage(est, "Bass EQ Level") {
+		t.Fatalf("expected a Bass EQ Level stage, got %v", est.Stages)
+	}
+}
+
+func TestEstimateLevelCountsCompressorAndDriveLevel(t *testing.T) {
+	b := newTestBuilder(t)
+	file, err := b.Build(Spec{
+		Name: "Level",
+		Blocks: []Block{
+			{Type: "Green JRC-OD", Enabled: true, Params: map[string]any{"Level": 50.0}},
+			{Type: "Amp", Params: map[string]any{"Type": "65 Black SR"}},
+			{Type: "Cab", Params: map[string]any{"CabType": "1x12 Black Panel Lux"}},
+			{Type: "Gray Comp", Enabled: true, Params: map[string]any{"Level": 100.0}},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	est, err := EstimateLevel(file, 0)
+	if err != nil {
+		t.Fatalf("EstimateLevel: %v", err)
+	}
+	// amp (gain -6.02 + master -6.02 = -12.04) + drive Level 50% (-6.02) +
+	// compressor Level 100% (0) ≈ -18.1 dB.
+	if est.EstimatedLevelDB != -18.1 {
+		t.Fatalf("estimated = %v, want -18.1 (amp -12.04 + drive -6.02 + comp 0)", est.EstimatedLevelDB)
+	}
+	if !hasStage(est, "Green JRC-OD Level") || !hasStage(est, "Gray Comp Level") {
+		t.Fatalf("expected drive and compressor stages, got %v", est.Stages)
+	}
+}
+
+func TestEstimateLevelIgnoresBypassedFX(t *testing.T) {
+	b := newTestBuilder(t)
+	file, err := b.Build(Spec{
+		Name: "Level",
+		Blocks: []Block{
+			{Type: "Amp", Params: map[string]any{"Type": "65 Black SR"}},
+			{Type: "Cab", Params: map[string]any{"CabType": "1x12 Black Panel Lux"}},
+			// A bypassed EQ must contribute nothing.
+			{Type: "Bass EQ", Enabled: false, Params: map[string]any{"Level": 6.0}},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	est, err := EstimateLevel(file, 0)
+	if err != nil {
+		t.Fatalf("EstimateLevel: %v", err)
+	}
+	if est.EstimatedLevelDB != -12 {
+		t.Fatalf("estimated = %v, want -12 (bypassed EQ ignored)", est.EstimatedLevelDB)
+	}
+	if hasStage(est, "Bass EQ Level") {
+		t.Fatalf("bypassed EQ should not add a stage, got %v", est.Stages)
+	}
+}
+
+func hasStage(est LevelEstimate, substr string) bool {
+	for _, s := range est.Stages {
+		if strings.Contains(s.Stage, substr) {
+			return true
+		}
+	}
+	return false
+}

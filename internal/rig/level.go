@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"math"
 	"strings"
+
+	"github.com/d-led/guitar-modeler-mcp/internal/catalog"
+	"github.com/d-led/guitar-modeler-mcp/internal/modspec"
 )
 
 // LevelStage is one gain stage contributing to a rig's output level.
@@ -28,18 +31,18 @@ type LevelEstimate struct {
 }
 
 // EstimateLevel sums the level-relevant stages of a rig (input gain, amp
-// preamp gain and master, cab out gain, volume pedals, the parallel-path mixer
-// and the output RigVolume) into a net output level in dB. Amp gain/master and
-// volume-pedal positions are linear percentage knobs, converted with
-// 20·log10(v/100) — an estimate, not a measurement. The recommended RigVolume
-// is the output level to set to reach targetDB (clamped to the device's
-// observed -10..+20 dB).
+// preamp gain and master, cab out gain, drive/compressor/EQ knobs, volume
+// pedals, the parallel-path mixer and the output RigVolume) into a net output
+// level in dB. Amp gain/master and volume-pedal positions are linear percentage
+// knobs, converted with 20·log10(v/100) — an estimate, not a measurement. The
+// recommended RigVolume is the output level to set to reach targetDB (clamped
+// to the device's observed -10..+20 dB).
 func EstimateLevel(file *RigFile, targetDB float64) (LevelEstimate, error) {
 	content, err := file.Decode()
 	if err != nil {
 		return LevelEstimate{}, err
 	}
-	est := estimateLevel(content.Data.Patch)
+	est := estimateLevel(catalog.New(), content.Data.Patch)
 	est.TargetDB = targetDB
 	est.RecommendedRigVolume = round1(clamp(est.OutputRigVolume+(targetDB-est.EstimatedLevelDB), -10, 20))
 	return est, nil
@@ -48,7 +51,7 @@ func EstimateLevel(file *RigFile, targetDB float64) (LevelEstimate, error) {
 // estimateLevel sums the level-relevant stages of a built patch into a net
 // output level. It is shared by EstimateLevel and the build-time plausibility
 // check so both agree on the numbers.
-func estimateLevel(patch Patch) LevelEstimate {
+func estimateLevel(cat *catalog.Catalog, patch Patch) LevelEstimate {
 	est := LevelEstimate{
 		Routing: nodeString(patch.Children["Chain"], "Routing"),
 	}
@@ -83,6 +86,10 @@ func estimateLevel(patch Patch) LevelEstimate {
 		return "volume pedal (" + name + ")", percentToDB(v), fmt.Sprintf("position %s", percent(v))
 	})
 
+	for _, s := range fxLevelStagesForPatch(cat, patch) {
+		add(s.Stage, s.DB, s.Note)
+	}
+
 	if est.Routing != "" && est.Routing != "S" {
 		chain := patch.Children["Chain"]
 		p1 := nodeNumber(chain, "Para1Level")
@@ -97,7 +104,7 @@ func estimateLevel(patch Patch) LevelEstimate {
 
 	if sawAmp {
 		est.Notes = append(est.Notes,
-			"the amp stage sums preamp gain (the louder of GainA/GainB) plus Master, so a clean amp reads quieter than a driven one; drive-pedal Level is still not in this sum, so a rig with a boost or overdrive plays louder than the estimate suggests.")
+			"the estimate sums each block's output-level and EQ-gain knobs (drive Level, compressor makeup, EQ bands) plus the amp's preamp gain and Master; it still omits wet/dry Mix and a drive's saturation, so a pushed amp or heavy drive plays louder than the sum suggests.")
 	}
 
 	est.EstimatedLevelDB = round1(total)
@@ -119,6 +126,91 @@ func addTypeStages(patch Patch, base string, add func(string, float64, string), 
 	return found
 }
 
+// levelSpecialModules are the patch sections that are already accounted for by
+// the dedicated stages (or that carry no level), so the generic effect loop
+// skips them.
+var levelSpecialModules = map[string]bool{
+	"CHAIN": true, "RIG": true, "INPUT": true, "OUTPUT": true, "MIX": true,
+	"AMP": true, "CAB": true, "IR": true, "IR (1024)": true, "VOLUME": true,
+}
+
+// fxLevelStagesForPatch sums the level contribution of every effect module in
+// the patch: a drive's output Level, a compressor's makeup gain and an EQ's
+// band boosts. Bypassed blocks contribute nothing.
+func fxLevelStagesForPatch(cat *catalog.Catalog, patch Patch) []LevelStage {
+	var stages []LevelStage
+	for _, name := range patch.ChildOrder {
+		if levelSpecialModules[baseType(name)] {
+			continue
+		}
+		node := patch.Children[name]
+		if node == nil || !nodeBool(node, "On") {
+			continue
+		}
+		stages = append(stages, fxLevelStages(cat, name, node)...)
+	}
+	return stages
+}
+
+// fxLevelStages returns one level stage per level-relevant knob of an effect
+// module, driven by the module's category and parameter spec: EQ bands and
+// trims are dB values added as-is; a drive or compressor output Level is a
+// percent knob converted with percentToDB. Time-based and modulation effects
+// contribute nothing — their Mix blends wet into dry rather than raising the
+// overall level.
+func fxLevelStages(cat *catalog.Catalog, name string, node *Node) []LevelStage {
+	fx, ok := cat.FXByName(baseType(name))
+	if !ok {
+		return nil
+	}
+	spec, ok := modspec.Get(fx.Name)
+	if !ok {
+		return nil
+	}
+
+	var stages []LevelStage
+	add := func(key string, dbv float64, note string) {
+		stages = append(stages, LevelStage{Stage: fx.Name + " " + key, DB: dbv, Note: note})
+	}
+
+	switch fx.Category {
+	case "eq":
+		// Every dB knob on an EQ is a band or trim gain.
+		for key, p := range spec {
+			if p.Kind == "range" && strings.TrimSpace(p.Unit) == "dB" {
+				v := nodeNumber(node, key)
+				add(key, v, dB(v))
+			}
+		}
+	case "dynamics":
+		// A compressor carries an output Level (percent) or a makeup Gain (dB);
+		// gate/threshold/ratio/attack/release are detector controls, not level.
+		for key, p := range spec {
+			if p.Kind != "range" {
+				continue
+			}
+			unit := strings.TrimSpace(p.Unit)
+			switch {
+			case unit == "dB" && key == "Gain":
+				v := nodeNumber(node, key)
+				add(key, v, dB(v))
+			case unit == "%" && (key == "Level" || key == "Volume" || key == "Output"):
+				v := nodeNumber(node, key)
+				add(key, percentToDB(v), percent(v))
+			}
+		}
+	case "distortion":
+		// Output Level/Volume/Output are level; Gain/Drive are the drive amount.
+		for key, p := range spec {
+			if p.Kind == "range" && strings.TrimSpace(p.Unit) == "%" && (key == "Level" || key == "Volume" || key == "Output") {
+				v := nodeNumber(node, key)
+				add(key, percentToDB(v), percent(v))
+			}
+		}
+	}
+	return stages
+}
+
 // Plausibility thresholds: a rig whose estimated net level exceeds these is
 // refused at build time rather than written, to prevent accidentally very loud
 // (or silently muted) presets. +20 dB matches the loudest factory presets.
@@ -129,8 +221,8 @@ const (
 
 // validatePlausible refuses to build a rig that is implausibly loud or silent,
 // explaining the problem and how to remediate it.
-func validatePlausible(patch Patch) error {
-	est := estimateLevel(patch)
+func validatePlausible(cat *catalog.Catalog, patch Patch) error {
+	est := estimateLevel(cat, patch)
 
 	var problems []string
 	if est.EstimatedLevelDB > maxPlausibleLevel {

@@ -252,15 +252,16 @@ Keep it tight and don't spiral:
 
    **The estimate is a relative hint, not a measurement.** It sums the *known*
    stages — input gain, amp preamp gain (the louder of `GainA`/`GainB`) plus
-   amp **Master** (power-amp volume), cab out gain, the parallel mixer and
-   **RigVolume** — and deliberately leaves out drive-pedal `Level`, so a rig
-   with a boost or overdrive plays louder than the estimate suggests. Because
-   the amp stage now includes preamp gain, a clean amp (low `GainA`) reads
-   quieter than a driven one — that is the single most common reason a rig
-   comes out too quiet. To make a rig louder **without overdrive**, raise the
-   amp **Master** (loudness), not `Gain` (drive), and leave RigVolume near
-   unity as a final trim — see the "Level first" step under *Optimizing a
-   rig* below.
+   amp **Master** (power-amp volume), cab out gain, each **drive's output
+   `Level`**, each **compressor's makeup gain**, each **EQ's band/trim boosts**,
+   the parallel mixer and **RigVolume** — and deliberately leaves out wet/dry
+   `Mix` and a drive's saturation, so a pushed amp or heavy drive plays louder
+   than the sum suggests. Because the amp stage now includes preamp gain, a
+   clean amp (low `GainA`) reads quieter than a driven one — that is the single
+   most common reason a rig comes out too quiet. To make a rig louder
+   **without overdrive**, raise the amp **Master** (loudness), not `Gain`
+   (drive), and leave RigVolume near unity as a final trim — see the "Level
+   first" step under *Optimizing a rig* below.
 
 ## Effect categories
 
@@ -562,7 +563,7 @@ Once you have decoded a rig, improve it in this order:
 
 1. **Level first.** `estimate_rig_level` with a target (default 0 dB) tells you
    how far off the rig is — treat it as a *relative* hint (it still leaves out
-   drive-pedal `Level`). Balance in this order:
+   wet/dry `Mix` and a drive's saturation). Balance in this order:
    - **Amp `Master` is the loudness control, `Gain` is the drive control.**
      Raise `Master` to get louder *without* overdriving; raise `Gain` only to
      add drive. This is the most common fix — an under-driven clean amp
