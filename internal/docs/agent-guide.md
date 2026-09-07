@@ -52,9 +52,11 @@ are supported:
   `manual`, `resonance`, `sustain`, `attack`, `threshold`, `release`,
   `feedback`, and the chorus `low_rate`/`high_rate` bands (the short `rate`/
   `depth`/`effect_level` names target the chorus's low band). **`*_direct_mix`
-  is the DRY (unprocessed) signal level — 100 = unity, so leave it unset unless
-  you explicitly want to attenuate the dry guitar; setting it to a low
-  "effect level" value makes the whole patch very quiet.** Browse models
+  is the DRY (unprocessed) signal level — its unity point is 50 (noon), not
+  100. For a level-matched digital delay, set the delay's `level` (EFFECT
+  LEVEL) to 100 and its `direct_mix` (DIRECT MIX) to 50, so the repeats sit at
+  the same volume as the dry signal; below 50 attenuates the dry, above 50
+  boosts it.** Browse models
   with `waza_catalog_list_*`, design with `waza_write_tsl` (writes a backup
   from the built-in template patch with the chosen tone applied) and
   `waza_setup_card` (a printable card), and read a backup's decoded patches
