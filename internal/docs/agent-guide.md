@@ -67,11 +67,13 @@ are supported:
   (drive 59, **bottom +23**, tone 50, level 75) to lift the lows and level.
   **The engaged boost is where a bass tone's loudness and low end come from** —
   a FLAT bass patch with a bypassed booster reads thin and quiet; match the
-  `DL bass` loudness/bass, don't ship anything thinner or quieter. The Waza
-  Air has a single BOOSTER slot, so a drive/fuzz accent (e.g. RAT) and the
-  CLEAN BOOST low-end lift can't coexist: if the booster holds a bypassed
-  accent, move the low-end lift to the amp (`bass` ≈ 70) and raise the amp
-  level.
+  `DL bass` loudness/bass. The user's `DL bass` keeps the **CLEAN BOOST always
+  ON** (never bypassed). A **RAT (or another drive) is the brief distortion
+  accent**, not a bass boost: assign it but leave it bypassed
+  (`booster_on: false`) so a footswitch brings it in for the distorted bit. The
+  Waza Air has a single BOOSTER slot, so a RAT accent and the CLEAN BOOST
+  low-end lift can't coexist — when the booster holds a bypassed RAT, put the
+  low-end lift on the amp (`bass` ≈ 73) and raise the amp level.
 
   **Every effect block has an on/off flag.** `booster_on`/`mod_on`/`fx_on`/
   `delay_on`/`reverb_on` set whether a block is engaged or bypassed; they
@@ -180,10 +182,12 @@ cross-device conversion through `map_preset`.
   `design_rig` returns the assigned footswitches and notes. The read tools
   (`waza_read_tsl`, `rig_decode`, `gp200_read_prst`) are for the user's own
   inspection, not a required second step.
-- **Write into the workspace by default.** The writing tools default
-  `output_dir` to the current directory (the workspace). Do not pass an
-  external path (iCloud, home, `/tmp`, …) unless the user explicitly gives
-  one — generated presets, setup cards and reports belong in the workspace.
+- **Write generated/test preset files to the neighbouring `headrush-test`
+  folder, not the source repo.** The writing tools default `output_dir` to the
+  current directory; pass an explicit `output_dir` (a sibling `headrush-test`
+  folder, or whatever directory the user gives) for generated/test presets and
+  cards. Never write them into the source repo or an external path (iCloud,
+  home, `/tmp`, …) unless the user explicitly says so.
 - **Never read source code** (this project's, the MCP's, or the desktop app's).
   The catalog tools are the complete interface to the device's models and
   their parameters; digging into `.go`/`.ts` files is a dead end.
