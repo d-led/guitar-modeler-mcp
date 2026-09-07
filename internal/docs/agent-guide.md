@@ -84,11 +84,11 @@ are supported:
   `qc_list_model_params` (use the **screen units** it reports — GAIN 5 on a
   0..10 knob, dB and % values as shown).
 
-  `qc_design` places a **serial chain** — amp, then cab, then the effects in
-  the order you give — and writes a **self-contained HTML setup card** (every
-  block and every knob, with values, so a person can dial the tone in by hand)
-  plus a `.pb` reference archive. There are exactly three roles, and you must
-  state them to the user:
+  `qc_design` places **serial chains — one per lane (row)** — amp, then cab,
+  then the effects in the order you give — and writes a **self-contained HTML
+  setup card** (every block and every knob, with values, so a person can dial
+  the tone in by hand) plus a `.pb` reference archive. There are exactly three
+  roles, and you must state them to the user:
 
   - **HTML card = the setup instructions.** This is what reproduces the tone.
   - **.pb = a reference archive** for saving and reloading the tone in this
@@ -113,11 +113,17 @@ are supported:
     exclusive lock on the USB interface and blocks `qcctl` while it runs.
     Wi-Fi on the device may stay on.
 
-  The wire is free-form (4 lanes that split and merge), but `qc_design` covers
-  the common single-lane case; for parallel/dual-amp rigs, describe the
-  routing to the user. There is no private key anywhere: the `.pb` archive
-  uses the device's public `KEY_MATERIAL` + serial, and `qc_usb` uses the
-  unit's own protocol over USB-HID.
+  The wire is free-form (4 lanes that split and merge). `qc_design` authors
+  **one serial chain per lane (row)** — amp, cab, then the effects in order.
+  Pass the top-level `amp`/`cab`/`fx` for lane 1 and a `lanes` array (each
+  with its own `amp`/`cab`/`fx`/`*_params`) for a dual-amp or stacked-parallel
+  rig; each lane renders on its own numbered row in the card and JSON view.
+  The splitter/mixer **control points** for true wet/dry split-merge routing
+  (lane levels and panning) are not authored — each lane is a full chain wired
+  Input 1 → Multi-Out, so note that when the tone depends on cross-lane mixing.
+  There is no private key anywhere: the `.pb` archive uses the device's public
+  `KEY_MATERIAL` + serial, and `qc_usb` uses the unit's own protocol over
+  USB-HID.
 
   **Expression pedals are not authored by `qc_design`.** A wah, pitch or filter
   block that is rocked by a foot pedal must be wired to EXP1/EXP2 on the unit
@@ -214,7 +220,11 @@ Keep it tight and don't spiral:
 4. `catalog_list_fx_categories` then `catalog_list_fx_by_category` — browse
    effects by category (see below) and their `capabilities`. To find an effect
    by what it does (e.g. `query: "pitch shift"` or `query: "reverb"`), use
-   `catalog_list_fx` with a query instead of listing everything.
+   `catalog_list_fx` with a query instead of listing everything. Each effect
+   also carries a `family` — the group of model variants it belongs to — and
+   `catalog_list_variants` lists the *other* models in that family (e.g.
+   `type: "Chorus"` → Multi Chorus, Dim Chorus, Detune), so you can compare
+   versions instead of always taking the first match.
 5. `catalog_list_module_params` — read a module's editable parameters, ranges
    and enum options before setting them. Pass a `types` list to describe several
    modules in one call.
@@ -346,6 +356,14 @@ delay, a crisp dotted-eighth) use `Dyn Delay` — it is the clean digital delay;
 set its ducking off for fixed repeats. `AIR Delay` is an *atmospheric* wash,
 not a clean digital delay, and is the wrong choice when the part needs crisp
 repeats. Match the `color` to the part just like you match drive `gain`.
+
+Every effect also carries a `family` — the group of model variants that are
+interchangeable for the same job (`chorus`, `compressor`, `wah`, `phaser`,
+`octave`, …). When several models share a family, **compare them, don't just
+take the first**: list the family with `catalog_list_variants` (e.g.
+`type: "Chorus"` → `Multi Chorus`, `Dim Chorus`, `Detune`) and pick the variant
+whose description/`color`/`gain` fits the part — the first match is rarely the
+best one.
 
 ## Signal chain & parallel routing
 

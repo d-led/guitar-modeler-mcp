@@ -31,35 +31,51 @@ type BlockSpec struct {
 	EncodedParams map[string]float64
 }
 
-// DesignSpec is a serial signal chain to render as a preset: the blocks are
-// laid out left-to-right on row 0, into Input 1 and out of the Multi-Out.
+// LaneSpec is one grid lane (row): a full serial chain of blocks, in signal
+// order. A multi-lane preset puts each lane on its own row, wired Input 1 →
+// Multi-Out, which is how a dual-amp or stacked-parallel rig reads on the grid.
+type LaneSpec struct {
+	Blocks []BlockSpec
+}
+
+// DesignSpec is a signal chain to render as a preset. A single-lane preset is
+// described by Blocks alone; additional lanes each carry their own Blocks.
 type DesignSpec struct {
 	Name   string
 	Author string
 	// Volume is the preset output level; the device's factory presets store 1.0.
 	Volume float64
-	// Blocks are the amp/cab/effect chain, in order (drives first, then amp,
-	// then cab, then time and ambience effects — the caller decides).
+	// Blocks is lane 1 (row 0): the amp/cab/effect chain, in order (drives
+	// first, then amp, then cab, then time and ambience effects — the caller
+	// decides). Kept for the common single-lane case.
 	Blocks []BlockSpec
+	// Lanes are further lanes (rows 1..N), each a full serial chain. When
+	// Blocks is empty the first Lane takes row 0.
+	Lanes []LaneSpec
 }
 
-// BuildPreset renders a DesignSpec into a BinaryPreset with one serial chain
-// on row 0. It resolves each block against the catalog and validates every
-// parameter value, so an invalid preset is refused rather than written.
+// BuildPreset renders a DesignSpec into a BinaryPreset: one serial chain per
+// lane, each on its own row into Input 1 and out of the Multi-Out. It resolves
+// each block against the catalog and validates every parameter value, so an
+// invalid preset is refused rather than written.
 func BuildPreset(cat *Catalog, spec DesignSpec) (*BinaryPreset, error) {
 	if strings.TrimSpace(spec.Name) == "" {
 		return nil, fmt.Errorf("a preset name is required")
 	}
+
+	lanes := make([][]BlockSpec, 0, 1+len(spec.Lanes))
+	if len(spec.Blocks) > 0 || len(spec.Lanes) == 0 {
+		lanes = append(lanes, spec.Blocks)
+	}
+	for _, l := range spec.Lanes {
+		lanes = append(lanes, l.Blocks)
+	}
+
 	preset := &BinaryPreset{
 		Name:   spec.Name,
 		Date:   time.Now().UTC().Format("2006-01-02T15:04:05Z"),
 		Volume: float32(spec.Volume),
 		Pan:    0.5, // centre
-		Chains: []*Chain{{
-			XInPortid:  &Chain_InPortid{InPortid: InputInput1},
-			XOutPortid: &Chain_OutPortid{OutPortid: OutputMultiple},
-			XRow:       &Chain_Row{Row: 0},
-		}},
 	}
 	if preset.Volume == 0 {
 		preset.Volume = 1.0 // unity, matching factory presets
@@ -68,24 +84,30 @@ func BuildPreset(cat *Catalog, spec DesignSpec) (*BinaryPreset, error) {
 		preset.AuthorName = spec.Author
 	}
 
-	chain := preset.Chains[0]
-	for col, block := range spec.Blocks {
-		m, err := cat.resolveBlock(block.Model)
-		if err != nil {
-			return nil, err
+	for row, blocks := range lanes {
+		chain := &Chain{
+			XInPortid:  &Chain_InPortid{InPortid: InputInput1},
+			XOutPortid: &Chain_OutPortid{OutPortid: OutputMultiple},
+			XRow:       &Chain_Row{Row: uint32(row)},
 		}
-		model := &Model{
-			XHash:   &Model_Hash{Hash: uint32(m.ID)}, // #nosec G115 -- catalog model IDs fit in uint32
-			XColumn: &Model_Column{Column: uint32(col)},
+		for col, block := range blocks {
+			m, err := cat.resolveBlock(block.Model)
+			if err != nil {
+				return nil, err
+			}
+			model := &Model{
+				XHash:   &Model_Hash{Hash: uint32(m.ID)}, // #nosec G115 -- catalog model IDs fit in uint32
+				XColumn: &Model_Column{Column: uint32(col)},
+			}
+			if err := applyParams(m, block, model); err != nil {
+				return nil, fmt.Errorf("%s: %w", m.Name, err)
+			}
+			chain.Models = append(chain.Models, model)
 		}
-		if err := applyParams(m, block, model); err != nil {
-			return nil, fmt.Errorf("%s: %w", m.Name, err)
-		}
-		chain.Models = append(chain.Models, model)
+		// A lane output control is what factory presets carry at the end of a row.
+		chain.OutputControl = []*Model{{XHash: &Model_Hash{Hash: laneOutputHash}}}
+		preset.Chains = append(preset.Chains, chain)
 	}
-
-	// A lane output control is what factory presets carry at the end of a row.
-	chain.OutputControl = []*Model{{XHash: &Model_Hash{Hash: laneOutputHash}}}
 	return preset, nil
 }
 

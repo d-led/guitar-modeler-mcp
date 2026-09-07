@@ -947,7 +947,8 @@
       "description": "Clean, transparent boost (Xotic RC Booster style).",
       "modeled_after": "Xotic RC Booster",
       "confirmed": false,
-      "gain": "boost"
+      "gain": "boost",
+      "family": "drive"
     },
     {
       "name": "Green JRC-OD",
@@ -955,42 +956,48 @@
       "description": "Green overdrive (Ibanez TS808 Tube Screamer style).",
       "modeled_after": "Ibanez TS-808 Tube Screamer",
       "confirmed": true,
-      "gain": "overdrive"
+      "gain": "overdrive",
+      "family": "drive"
     },
     {
       "name": "D250 Drive",
       "category": "distortion",
       "description": "Amp-in-a-box drive (DOD 250 style).",
       "confirmed": false,
-      "gain": "overdrive"
+      "gain": "overdrive",
+      "family": "drive"
     },
     {
       "name": "Glorious Drive",
       "category": "distortion",
       "description": "Transparent low-to-medium gain drive.",
       "confirmed": false,
-      "gain": "overdrive"
+      "gain": "overdrive",
+      "family": "drive"
     },
     {
       "name": "S1 Drive",
       "category": "distortion",
       "description": "Medium gain, amp-like overdrive.",
       "confirmed": false,
-      "gain": "overdrive"
+      "gain": "overdrive",
+      "family": "drive"
     },
     {
       "name": "B2 Drive",
       "category": "distortion",
       "description": "Bright, cutting overdrive.",
       "confirmed": false,
-      "gain": "overdrive"
+      "gain": "overdrive",
+      "family": "drive"
     },
     {
       "name": "K Drive",
       "category": "distortion",
       "description": "High gain distortion with a tight low end.",
       "confirmed": false,
-      "gain": "distortion"
+      "gain": "distortion",
+      "family": "drive"
     },
     {
       "name": "DC Distort",
@@ -998,42 +1005,48 @@
       "description": "Classic distortion (BOSS DS-1 style).",
       "modeled_after": "Avid custom",
       "confirmed": false,
-      "gain": "distortion"
+      "gain": "distortion",
+      "family": "drive"
     },
     {
       "name": "D1 Dist",
       "category": "distortion",
       "description": "Hard-clipping distortion.",
       "confirmed": false,
-      "gain": "distortion"
+      "gain": "distortion",
+      "family": "drive"
     },
     {
       "name": "MX Dist",
       "category": "distortion",
       "description": "Aggressive modern distortion.",
       "confirmed": false,
-      "gain": "distortion"
+      "gain": "distortion",
+      "family": "drive"
     },
     {
       "name": "Anxiety OD",
       "category": "distortion",
       "description": "Overdrive voiced for modern metal rhythm.",
       "confirmed": false,
-      "gain": "distortion"
+      "gain": "distortion",
+      "family": "drive"
     },
     {
       "name": "Anxiety OD V2",
       "category": "distortion",
       "description": "Refined version of Anxiety OD.",
       "confirmed": false,
-      "gain": "distortion"
+      "gain": "distortion",
+      "family": "drive"
     },
     {
       "name": "B Dist 7000",
       "category": "distortion",
       "description": "Bass distortion.",
       "confirmed": false,
-      "gain": "bass"
+      "gain": "bass",
+      "family": "drive"
     },
     {
       "name": "Black OP",
@@ -1041,7 +1054,8 @@
       "description": "Dark, gated fuzz-style distortion.",
       "modeled_after": "Pro Co. Rat",
       "confirmed": false,
-      "gain": "distortion"
+      "gain": "distortion",
+      "family": "drive"
     },
     {
       "name": "Tri Fuzz",
@@ -1049,21 +1063,24 @@
       "description": "Three-transistor fuzz.",
       "modeled_after": "Electro-Harmonix Big Muff Pi",
       "confirmed": false,
-      "gain": "fuzz"
+      "gain": "fuzz",
+      "family": "drive"
     },
     {
       "name": "Round Fuzz",
       "category": "distortion",
       "description": "Smooth, round fuzz (EHX Big Muff style).",
       "confirmed": false,
-      "gain": "fuzz"
+      "gain": "fuzz",
+      "family": "drive"
     },
     {
       "name": "Oct Fuzz",
       "category": "distortion",
       "description": "Octave-up fuzz.",
       "confirmed": false,
-      "gain": "fuzz"
+      "gain": "fuzz",
+      "family": "drive"
     },
     {
       "name": "8-Bit Crush",
@@ -1071,302 +1088,351 @@
       "description": "Lo-fi bitcrusher with drive.",
       "modeled_after": "Headrush custom",
       "confirmed": false,
-      "gain": "bitcrusher"
+      "gain": "bitcrusher",
+      "family": "drive"
     },
     {
       "name": "DynIII Comp",
       "category": "dynamics",
       "description": "Studio-style compressor.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "compressor"
     },
     {
       "name": "Gray Comp",
       "category": "dynamics",
       "description": "Ross-style optical compressor.",
       "modeled_after": "Ross Compressor",
-      "confirmed": false
+      "confirmed": false,
+      "family": "compressor"
     },
     {
       "name": "Side Comp",
       "category": "dynamics",
       "description": "Compressor with sidechain options.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "compressor"
     },
     {
       "name": "Gate",
       "category": "dynamics",
       "description": "Noise gate.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "noise gate"
     },
     {
       "name": "Noise Filter",
       "category": "dynamics",
       "description": "Adaptive noise reduction.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "noise gate"
     },
     {
       "name": "Hold",
       "category": "dynamics",
       "description": "Freeze/hold effect.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "hold"
     },
     {
       "name": "Auto Swell",
       "category": "dynamics",
       "description": "Volume swell triggered by picking.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "swell"
     },
     {
       "name": "Acoustic Pre",
       "category": "eq",
       "description": "Acoustic guitar preamp/EQ.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "eq"
     },
     {
       "name": "Graphic EQ",
       "category": "eq",
       "description": "Graphic equalizer.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "eq"
     },
     {
       "name": "Para EQ",
       "category": "eq",
       "description": "Parametric equalizer.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "eq"
     },
     {
       "name": "Ten Freq EQ",
       "category": "eq",
       "description": "Ten-band graphic equalizer.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "eq"
     },
     {
       "name": "Bass EQ",
       "category": "eq",
       "description": "Bass-specific equalizer.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "eq"
     },
     {
       "name": "Black Wah",
       "category": "expression",
       "description": "Classic wah.",
       "modeled_after": "Thomas Organ CB-95 Cry Baby",
-      "confirmed": false
+      "confirmed": false,
+      "family": "wah"
     },
     {
       "name": "More Wah",
       "category": "expression",
       "description": "Wah with extended sweep.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "wah"
     },
     {
       "name": "Shine Wah",
       "category": "expression",
       "description": "Bright, vocal wah.",
       "modeled_after": "Vox V846 Wah",
-      "confirmed": false
+      "confirmed": false,
+      "family": "wah"
     },
     {
       "name": "White Bass Wah",
       "category": "expression",
       "description": "Bass-voiced wah.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "wah"
     },
     {
       "name": "Env Filter",
       "category": "modulation",
       "description": "Envelope follower auto-wah.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "filter"
     },
     {
       "name": "Tron Filter",
       "category": "modulation",
       "description": "Mu-tron style envelope filter.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "filter"
     },
     {
       "name": "AIR Filter",
       "category": "modulation",
       "description": "Sweeping filter with movement.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "filter"
     },
     {
       "name": "Volume",
       "category": "expression",
       "description": "Volume pedal module.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "volume"
     },
     {
       "name": "Panner",
       "category": "expression",
       "description": "Stereo auto-panner.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "panner"
     },
     {
       "name": "Feedback",
       "category": "expression",
       "description": "Controlled feedback generator.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "feedback"
     },
     {
       "name": "Time Warp",
       "category": "expression",
       "description": "Expression-controlled time modulation.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "time warp"
     },
     {
       "name": "Wham",
       "category": "expression",
       "description": "Expression-controlled pitch (DigiTech Whammy style).",
-      "confirmed": false
+      "confirmed": false,
+      "family": "whammy"
     },
     {
       "name": "Chord Wham",
       "category": "expression",
       "description": "Expression-controlled chord pitch shifting.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "whammy"
     },
     {
       "name": "Chorus",
       "category": "modulation",
       "description": "Classic analog chorus.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "chorus"
     },
     {
       "name": "Multi Chorus",
       "category": "modulation",
       "description": "Rich multi-voice chorus.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "chorus"
     },
     {
       "name": "Dim Chorus",
       "category": "modulation",
       "description": "Subtle, dimension-style chorus.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "chorus"
     },
     {
       "name": "Flanger",
       "category": "modulation",
       "description": "Classic flanger.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "flanger"
     },
     {
       "name": "AIR Flanger",
       "category": "modulation",
       "description": "Wide, airy flanger.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "flanger"
     },
     {
       "name": "Vibrato",
       "category": "modulation",
       "description": "Pitch vibrato.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "vibrato"
     },
     {
       "name": "AIR Vibrato",
       "category": "modulation",
       "description": "Airy, soft vibrato.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "vibrato"
     },
     {
       "name": "Tremolo",
       "category": "modulation",
       "description": "Amplitude tremolo.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "tremolo"
     },
     {
       "name": "Rotary",
       "category": "modulation",
       "description": "Rotary speaker simulation.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "rotary"
     },
     {
       "name": "Stone Phaser",
       "category": "modulation",
       "description": "Phase shifter (EHX Small Stone style).",
-      "confirmed": false
+      "confirmed": false,
+      "family": "phaser"
     },
     {
       "name": "Orange Phaser",
       "category": "modulation",
       "description": "Warm phase shifter (MXR Phase 90 style).",
       "modeled_after": "MXR Phase 90",
-      "confirmed": false
+      "confirmed": false,
+      "family": "phaser"
     },
     {
       "name": "Vibe Phaser",
       "category": "modulation",
       "description": "Uni-vibe style phaser.",
       "modeled_after": "Univox Uni-Vibe",
-      "confirmed": false
+      "confirmed": false,
+      "family": "phaser"
     },
     {
       "name": "Tron Phaser",
       "category": "modulation",
       "description": "Envelope-triggered phaser.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "phaser"
     },
     {
       "name": "Ring Mod",
       "category": "modulation",
       "description": "Ring modulator.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "ring mod"
     },
     {
       "name": "Stereo Doubler",
       "category": "modulation",
       "description": "Stereo width doubler.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "doubler"
     },
     {
       "name": "Detune",
       "category": "modulation",
       "description": "Subtle detune chorus for width.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "chorus"
     },
     {
       "name": "Smart Harm",
       "category": "modulation",
       "description": "Intelligent harmonizer.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "harmonizer"
     },
     {
       "name": "Harm",
       "category": "expression",
       "description": "Diatonic harmonizer.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "harmonizer"
     },
     {
       "name": "Octaves",
       "category": "modulation",
       "description": "Octave up/down pitch shifter.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "octave"
     },
     {
       "name": "Octaves Up",
       "category": "modulation",
       "description": "Octave-up pitch shifter.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "octave"
     },
     {
       "name": "Drop Tune",
       "category": "modulation",
       "description": "Drop-tuning pitch shifter.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "pitch"
     },
     {
       "name": "AIR Delay",
       "category": "delay",
       "description": "Wide, atmospheric delay.",
       "confirmed": false,
-      "color": "atmospheric"
+      "color": "atmospheric",
+      "family": "delay"
     },
     {
       "name": "Dyn Delay",
       "category": "delay",
       "description": "Digital delay whose repeats duck under your playing; turn the ducking off for fixed, clean repeats.",
       "confirmed": false,
-      "color": "clean"
+      "color": "clean",
+      "family": "delay"
     },
     {
       "name": "BBD Delay",
@@ -1374,63 +1440,72 @@
       "description": "Analog bucket-brigade delay.",
       "modeled_after": "Elektro Harmonix Deluxe Memory Man",
       "confirmed": false,
-      "color": "analog"
+      "color": "analog",
+      "family": "delay"
     },
     {
       "name": "Tape Echo",
       "category": "delay",
       "description": "Tape echo with wow, flutter and hiss.",
       "confirmed": false,
-      "color": "tape"
+      "color": "tape",
+      "family": "delay"
     },
     {
       "name": "Pitch Delay",
       "category": "delay",
       "description": "Delay with pitch-shifted repeats.",
       "confirmed": false,
-      "color": "pitch"
+      "color": "pitch",
+      "family": "delay"
     },
     {
       "name": "Reso Delay",
       "category": "delay",
       "description": "Resonant filtered delay.",
       "confirmed": false,
-      "color": "resonant"
+      "color": "resonant",
+      "family": "delay"
     },
     {
       "name": "Reverse Delay",
       "category": "delay",
       "description": "Backwards delay.",
       "confirmed": false,
-      "color": "reverse"
+      "color": "reverse",
+      "family": "delay"
     },
     {
       "name": "AIR Reverb",
       "category": "reverb",
       "description": "Expansive hall-style reverb.",
       "confirmed": false,
-      "color": "hall"
+      "color": "hall",
+      "family": "reverb"
     },
     {
       "name": "Ambi Verb",
       "category": "reverb",
       "description": "Ambient reverb with long tails.",
       "confirmed": false,
-      "color": "ambient"
+      "color": "ambient",
+      "family": "reverb"
     },
     {
       "name": "Eleven Reverb",
       "category": "reverb",
       "description": "Natural room and hall reverb.",
       "confirmed": false,
-      "color": "room"
+      "color": "room",
+      "family": "reverb"
     },
     {
       "name": "Party Verb",
       "category": "reverb",
       "description": "Lush, modulated reverb.",
       "confirmed": false,
-      "color": "modulated"
+      "color": "modulated",
+      "family": "reverb"
     },
     {
       "name": "Spring Reverb",
@@ -1438,38 +1513,44 @@
       "description": "Spring tank reverb.",
       "modeled_after": "Fender Blackface Amp Reverb",
       "confirmed": false,
-      "color": "spring"
+      "color": "spring",
+      "family": "reverb"
     },
     {
       "name": "Shimmer",
       "category": "reverb",
       "description": "Pitch-shifted shimmer reverb.",
       "confirmed": false,
-      "color": "shimmer"
+      "color": "shimmer",
+      "family": "reverb"
     },
     {
       "name": "Acoust Sim",
       "category": "utility",
       "description": "Electric-to-acoustic simulator.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "utility"
     },
     {
       "name": "FX-Loop",
       "category": "utility",
       "description": "Insert point for external pedals.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "utility"
     },
     {
       "name": "IR",
       "category": "utility",
       "description": "Impulse response loader.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "utility"
     },
     {
       "name": "IR (1024)",
       "category": "utility",
       "description": "High-resolution impulse response loader.",
-      "confirmed": false
+      "confirmed": false,
+      "family": "utility"
     }
   ]
 }

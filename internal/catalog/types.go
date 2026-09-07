@@ -73,6 +73,11 @@ type FX struct {
 	// an agent can match the effect's flavour to the part. Empty for effects
 	// without a time-based character.
 	Color string `json:"color,omitempty"`
+	// Family groups the model variants that are interchangeable for the same
+	// job ("chorus", "compressor", "wah", "delay", …), so an agent can see and
+	// compare the alternatives to a given pick instead of always reaching for
+	// the first model in a category.
+	Family string `json:"family,omitempty"`
 }
 
 // Category is one effect category, e.g. "delay" or "reverb". Categories mirror

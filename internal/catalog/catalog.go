@@ -106,6 +106,39 @@ func (c *Catalog) FXByCategory(category string) []FX {
 	return out
 }
 
+// FXByFamily returns the effects in the given family (variant group), matching
+// case-insensitively. An unknown family returns nil.
+func (c *Catalog) FXByFamily(family string) []FX {
+	q := strings.ToLower(strings.TrimSpace(family))
+	if q == "" {
+		return nil
+	}
+	out := make([]FX, 0)
+	for _, f := range fx {
+		if strings.ToLower(f.Family) == q {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
+// VariantsOf returns the other models in the same family as the named effect —
+// the alternatives an agent can swap in — excluding the effect itself. A name
+// with no known family (or an unknown name) yields nil.
+func (c *Catalog) VariantsOf(name string) []FX {
+	f, ok := c.FXByName(name)
+	if !ok || f.Family == "" {
+		return nil
+	}
+	out := make([]FX, 0)
+	for _, g := range fx {
+		if g.Family == f.Family && !strings.EqualFold(g.Name, f.Name) {
+			out = append(out, g)
+		}
+	}
+	return out
+}
+
 // normalizeCategory resolves a free-form category string to the canonical name.
 func normalizeCategory(category string) (string, bool) {
 	q := strings.ToLower(strings.TrimSpace(category))

@@ -123,7 +123,7 @@ func TestIntegrationInitializeAndToolList(t *testing.T) {
 		"get_guide", "get_fx_placement", "search_catalog",
 		"catalog_list_amps", "catalog_list_cabs", "catalog_list_mics", "catalog_list_fx",
 		"catalog_list_fx_categories", "catalog_list_fx_by_category",
-		"catalog_list_block_presets", "catalog_list_module_params",
+		"catalog_list_block_presets", "catalog_list_module_params", "catalog_list_variants",
 		"translate_amp", "translate_cab", "translate_mic",
 		"design_rig", "render_report", "rig_decode", "estimate_rig_level",
 		"create_setlist",

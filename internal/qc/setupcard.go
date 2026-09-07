@@ -36,8 +36,11 @@ const Caveat = "The HTML card is the setup instructions; reproduce the tone " +
 	"from it. The .pb is this tool's reference archive for saving and " +
 	"reloading the tone — it is not a file the Quad Cortex imports, and " +
 	"qcctl cannot upload it: qc_usb only recalls/dumps preset slots, " +
-	"switches scenes and reads the firmware version. qc_design builds a " +
-	"single-lane serial chain; split/parallel routing is not modelled yet."
+	"switches scenes and reads the firmware version. qc_design authors one " +
+	"serial chain per lane (row); pass `lanes` for a dual-amp or " +
+	"stacked-parallel rig. The splitter/mixer control points for wet/dry " +
+	"split-merge routing (lane levels and panning) are not modelled — each " +
+	"lane is a full chain wired Input 1 → Multi-Out."
 
 // SetupCardHTML renders a self-contained, printable setup card for a decoded
 // preset: the signal chain (in order), each block's name and the hardware it

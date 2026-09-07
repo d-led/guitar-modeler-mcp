@@ -71,3 +71,14 @@ func FXListingsByCategory(cat *catalog.Catalog, category string) []FXListing {
 	}
 	return out
 }
+
+// FXListingsByFamily returns the effects in one family (variant group),
+// annotated with capabilities. An empty result means the family was not
+// recognised.
+func FXListingsByFamily(cat *catalog.Catalog, family string) []FXListing {
+	out := make([]FXListing, 0)
+	for _, f := range cat.FXByFamily(family) {
+		out = append(out, FXListing{FX: f, Capabilities: Capabilities(cat, f.Name)})
+	}
+	return out
+}

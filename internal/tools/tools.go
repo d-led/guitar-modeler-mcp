@@ -120,6 +120,12 @@ func (r *Registrar) Register(s *mcp.Server) {
 		Handler:     r.catalogListFXByCategory,
 	})
 	s.Register(mcp.Tool{
+		Name:        "catalog_list_variants",
+		Description: "List the other models in the same family as an effect (e.g. type=\"Chorus\" returns Multi Chorus, Dim Chorus and Detune), so you can compare and swap among versions instead of always taking the first match.",
+		InputSchema: objectSchema(map[string]any{"type": stringSchema("Effect module display name, e.g. \"Chorus\", \"DynIII Comp\" or \"Tape Echo\".")}),
+		Handler:     r.catalogListVariants,
+	})
+	s.Register(mcp.Tool{
 		Name:        "catalog_list_block_presets",
 		Description: "List the named factory presets for an effect module (e.g. type=\"Tape Echo\").",
 		InputSchema: objectSchema(map[string]any{"type": stringSchema("The effect module display name.")}),
@@ -625,7 +631,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 
 	s.Register(mcp.Tool{
 		Name:        "qc_design",
-		Description: "Build a serial Quad Cortex preset — amp, then cab, then the effects in the order given — and write a self-contained HTML setup card, a .pb reference archive, and a human-readable .json view. The HTML card is the dial-in instructions; the .pb is for saving and reloading the tone in this tool, NOT a file the unit imports; the .json is this tool's own readable view of the same preset (also not a device or upload format). To put the tone on the unit, dial it in from the card or place a preset in a slot with Cortex Control — qc_usb (qcctl) can recall that slot but cannot upload the .pb. Parameter values are on the screen's own line (GAIN 5 on a 0..10 knob, a dB or % value); list parameters take the option index. Knob names are case-insensitive, and common synonyms resolve automatically (GAIN→VOLUME, MIDDLE→MID, DRIVE→OVERDRIVE, LEVEL→OUTPUT, TIME→DELAY TIME, RATE→CHR RATE, DEPTH→VIB DEPTH); if a model rejects a name, run qc_list_model_params to see its exact knob list. The serial is the unit's 9-character serial (empty for cloud).",
+		Description: "Build a Quad Cortex preset — one serial chain per lane (row): amp, then cab, then the effects in the order given — and write a self-contained HTML setup card, a .pb reference archive, and a human-readable .json view. For a dual-amp or stacked-parallel rig, pass `lanes` (each with its own amp/cab/fx); the top-level amp/cab/fx form lane 1 (row 1). The HTML card is the dial-in instructions; the .pb is for saving and reloading the tone in this tool, NOT a file the unit imports; the .json is this tool's own readable view of the same preset (also not a device or upload format). To put the tone on the unit, dial it in from the card or place a preset in a slot with Cortex Control — qc_usb (qcctl) can recall that slot but cannot upload the .pb. Parameter values are on the screen's own line (GAIN 5 on a 0..10 knob, a dB or % value); list parameters take the option index. Knob names are case-insensitive, and common synonyms resolve automatically (GAIN→VOLUME, MIDDLE→MID, DRIVE→OVERDRIVE, LEVEL→OUTPUT, TIME→DELAY TIME, RATE→CHR RATE, DEPTH→VIB DEPTH); if a model rejects a name, run qc_list_model_params to see its exact knob list. The serial is the unit's 9-character serial (empty for cloud).",
 		InputSchema: objectSchema(map[string]any{
 			"name":               stringSchema("Preset name (becomes the file name)."),
 			"note":               noteSchema(),
@@ -637,6 +643,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 			"cab_params":         floatMapSchema("Cab knob values in screen units."),
 			"cab_encoded_params": floatMapSchema("Cab knob values already on the device's 0..1 line."),
 			"fx":                 arraySchema("Effects after the cab, in signal order.", qcFXItemSchema()),
+			"lanes":              arraySchema("Optional additional lanes (rows 2..N), each a full amp→cab→fx chain — for a dual-amp or stacked-parallel rig.", qcLaneItemSchema()),
 			"author":             stringSchema("Optional author name."),
 			"volume":             numberSchema("Optional preset output level (default 1.0 = unity)."),
 			"output_dir":         stringSchema("Directory to write the .pb and card into (default: current directory)."),
@@ -790,6 +797,24 @@ func (r *Registrar) catalogListFXByCategory(_ context.Context, args map[string]a
 		return "", fmt.Errorf("unknown effect category %q; see catalog_list_fx_categories", category)
 	}
 	return marshal(matches)
+}
+
+func (r *Registrar) catalogListVariants(_ context.Context, args map[string]any) (string, error) {
+	typ := argString(args, "type")
+	if typ == "" {
+		return "", fmt.Errorf("a module \"type\" is required")
+	}
+	f, ok := r.cat.FXByName(typ)
+	if !ok {
+		return "", fmt.Errorf("unknown effect type %q", typ)
+	}
+	out := make([]params.FXListing, 0)
+	for _, v := range params.FXListingsByFamily(r.cat, f.Family) {
+		if !strings.EqualFold(v.Name, f.Name) {
+			out = append(out, v)
+		}
+	}
+	return marshal(out)
 }
 
 func (r *Registrar) catalogListBlockPresets(_ context.Context, args map[string]any) (string, error) {
@@ -1398,6 +1423,20 @@ func qcFXItemSchema() map[string]any {
 		"type":           stringSchema("Effect model name or \"based on\" description, e.g. \"TS808\" or \"Tape Delay\"."),
 		"params":         floatMapSchema("Knob values in screen units (option index for list parameters)."),
 		"encoded_params": floatMapSchema("Knob values already on the device's 0..1 line."),
+	})
+}
+
+// qcLaneItemSchema describes one additional Quad Cortex lane in qc_design: a
+// full amp → cab → fx serial chain.
+func qcLaneItemSchema() map[string]any {
+	return objectSchema(map[string]any{
+		"amp":                stringSchema("Lane amp model: device name or \"based on\" description."),
+		"cab":                stringSchema("Optional lane cab model name or description."),
+		"amp_params":         floatMapSchema("Lane amp knob values in screen units."),
+		"amp_encoded_params": floatMapSchema("Lane amp knob values already on the device's 0..1 line."),
+		"cab_params":         floatMapSchema("Lane cab knob values in screen units."),
+		"cab_encoded_params": floatMapSchema("Lane cab knob values already on the device's 0..1 line."),
+		"fx":                 arraySchema("Lane effects after the cab, in signal order.", qcFXItemSchema()),
 	})
 }
 
@@ -2809,40 +2848,32 @@ func (r *Registrar) qcUSB(args map[string]any) (string, error) {
 	})
 }
 
-// qcDesign builds a serial preset (amp, then cab, then the effects in the
-// order given) and writes an encrypted .pb file plus a setup card.
+// qcDesign builds a preset with one serial chain per lane (row): the top-level
+// amp/cab/fx form lane 1, and each `lanes` entry adds another row.
 func (r *Registrar) qcDesign(args map[string]any) (string, error) {
 	spec := qc.DesignSpec{
 		Name:   argString(args, "name"),
 		Author: argString(args, "author"),
 		Volume: argFloat(args, "volume"),
 	}
-	blocks := []qc.BlockSpec{}
-	for _, kind := range []string{"amp", "cab"} {
-		if model := argString(args, kind); model != "" {
-			blocks = append(blocks, qc.BlockSpec{
-				Model:         model,
-				Params:        argFloatMap(args, kind+"_params"),
-				EncodedParams: argFloatMap(args, kind+"_encoded_params"),
-			})
-		}
+
+	first, err := qcLaneBlocks(args)
+	if err != nil {
+		return "", err
 	}
-	for _, raw := range argList(args, "fx") {
+	spec.Blocks = first
+
+	for _, raw := range argList(args, "lanes") {
 		item, ok := raw.(map[string]any)
 		if !ok {
-			return "", fmt.Errorf("fx entries must be objects")
+			return "", fmt.Errorf("lanes entries must be objects")
 		}
-		model := argString(item, "type")
-		if model == "" {
-			return "", fmt.Errorf("an fx entry needs a \"type\"")
+		blocks, err := qcLaneBlocks(item)
+		if err != nil {
+			return "", err
 		}
-		blocks = append(blocks, qc.BlockSpec{
-			Model:         model,
-			Params:        argFloatMap(item, "params"),
-			EncodedParams: argFloatMap(item, "encoded_params"),
-		})
+		spec.Lanes = append(spec.Lanes, qc.LaneSpec{Blocks: blocks})
 	}
-	spec.Blocks = blocks
 
 	outDir := argString(args, "output_dir")
 	if outDir == "" {
@@ -2857,9 +2888,39 @@ func (r *Registrar) qcDesign(args map[string]any) (string, error) {
 		"card":   cardPath,
 		"json":   jsonPath,
 		"name":   spec.Name,
-		"blocks": len(blocks),
+		"blocks": len(first) + len(spec.Lanes),
 		"caveat": qc.Caveat,
 	})
+}
+
+// qcLaneBlocks reads one lane's amp/cab/fx into an ordered block list.
+func qcLaneBlocks(args map[string]any) ([]qc.BlockSpec, error) {
+	blocks := []qc.BlockSpec{}
+	for _, kind := range []string{"amp", "cab"} {
+		if model := argString(args, kind); model != "" {
+			blocks = append(blocks, qc.BlockSpec{
+				Model:         model,
+				Params:        argFloatMap(args, kind+"_params"),
+				EncodedParams: argFloatMap(args, kind+"_encoded_params"),
+			})
+		}
+	}
+	for _, raw := range argList(args, "fx") {
+		item, ok := raw.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("fx entries must be objects")
+		}
+		model := argString(item, "type")
+		if model == "" {
+			return nil, fmt.Errorf("an fx entry needs a \"type\"")
+		}
+		blocks = append(blocks, qc.BlockSpec{
+			Model:         model,
+			Params:        argFloatMap(item, "params"),
+			EncodedParams: argFloatMap(item, "encoded_params"),
+		})
+	}
+	return blocks, nil
 }
 
 // argList returns the array value of an argument, or nil.

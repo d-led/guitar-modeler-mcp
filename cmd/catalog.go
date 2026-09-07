@@ -51,6 +51,12 @@ func newCatalogCmd() *cobra.Command {
 			RunE:  runListFXCategories,
 		},
 		&cobra.Command{
+			Use:   "variants <module>",
+			Short: "List the other models in the same family as an effect",
+			Args:  cobra.ExactArgs(1),
+			RunE:  runListVariants,
+		},
+		&cobra.Command{
 			Use:   "presets <module>",
 			Short: "List factory presets for an effect module",
 			Args:  cobra.ExactArgs(1),
@@ -112,6 +118,24 @@ func runListFXCategories(_ *cobra.Command, _ []string) error {
 		return err
 	}
 	return printJSON(params.FXCategories(a.cat))
+}
+
+func runListVariants(_ *cobra.Command, args []string) error {
+	a, err := newApp()
+	if err != nil {
+		return err
+	}
+	f, ok := a.cat.FXByName(args[0])
+	if !ok {
+		return fmt.Errorf("unknown effect type %q", args[0])
+	}
+	out := make([]params.FXListing, 0)
+	for _, v := range params.FXListingsByFamily(a.cat, f.Family) {
+		if !strings.EqualFold(v.Name, f.Name) {
+			out = append(out, v)
+		}
+	}
+	return printJSON(out)
 }
 
 func runListPresets(_ *cobra.Command, args []string) error {

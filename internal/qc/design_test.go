@@ -37,6 +37,53 @@ func TestBuildPresetLaysOutASerialChain(t *testing.T) {
 	wantEq(t, "output control hash", chain.OutputControl[0].GetHash(), uint32(laneOutputHash))
 }
 
+func TestBuildPresetLaysOutMultipleLanes(t *testing.T) {
+	cat := mustCatalog(t)
+	preset, err := BuildPreset(cat, DesignSpec{
+		Name:   "Dual Amp",
+		Blocks: []BlockSpec{{Model: "JCM800"}},
+		Lanes:  []LaneSpec{{Blocks: []BlockSpec{{Model: "Mesa Rectifier"}}}},
+	})
+	if err != nil {
+		t.Fatalf("BuildPreset: %v", err)
+	}
+
+	wantEq(t, "chains", len(preset.Chains), 2)
+
+	row0 := preset.Chains[0]
+	wantEq(t, "row 0", row0.GetRow(), uint32(0))
+	wantEq(t, "row 0 in port", row0.GetInPortid(), InputInput1)
+	wantEq(t, "row 0 out port", row0.GetOutPortid(), OutputMultiple)
+	wantEq(t, "row 0 models", len(row0.Models), 1)
+	wantEq(t, "row 0 hash", row0.Models[0].GetHash(), uint32(1001))
+
+	row1 := preset.Chains[1]
+	wantEq(t, "row 1", row1.GetRow(), uint32(1))
+	wantEq(t, "row 1 in port", row1.GetInPortid(), InputInput1)
+	wantEq(t, "row 1 out port", row1.GetOutPortid(), OutputMultiple)
+	wantEq(t, "row 1 models", len(row1.Models), 1)
+	if got := row1.Models[0].GetHash(); got < 12000 || got >= 13000 {
+		t.Fatalf("row 1 hash = %d, want a guitar cab (12xxx)", got)
+	}
+}
+
+func TestBuildPresetLanesOnlyTakeRowZero(t *testing.T) {
+	cat := mustCatalog(t)
+	preset, err := BuildPreset(cat, DesignSpec{
+		Name: "Two Lanes",
+		Lanes: []LaneSpec{
+			{Blocks: []BlockSpec{{Model: "JCM800"}}},
+			{Blocks: []BlockSpec{{Model: "Mesa Rectifier"}}},
+		},
+	})
+	if err != nil {
+		t.Fatalf("BuildPreset: %v", err)
+	}
+	wantEq(t, "chains", len(preset.Chains), 2)
+	wantEq(t, "row 0", preset.Chains[0].GetRow(), uint32(0))
+	wantEq(t, "row 1", preset.Chains[1].GetRow(), uint32(1))
+}
+
 func TestBuildPresetEncodesGainLinearly(t *testing.T) {
 	cat := mustCatalog(t)
 	preset, err := BuildPreset(cat, DesignSpec{
