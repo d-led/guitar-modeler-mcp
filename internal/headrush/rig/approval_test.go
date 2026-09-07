@@ -3,8 +3,8 @@ package rig
 import (
 	"testing"
 
-	"github.com/d-led/guitar-modeler-mcp/internal/catalog"
 	"github.com/d-led/guitar-modeler-mcp/internal/golden"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/catalog"
 )
 
 // TestRigSnapshot approves the exact on-disk format the builder emits for a

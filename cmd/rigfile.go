@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/d-led/guitar-modeler-mcp/internal/rig"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/rig"
 )
 
 // readRigFile loads and parses a .rig file from disk.

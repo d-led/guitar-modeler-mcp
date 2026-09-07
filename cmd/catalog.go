@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/d-led/guitar-modeler-mcp/internal/assets"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/assets"
 	"github.com/d-led/guitar-modeler-mcp/internal/params"
 )
 

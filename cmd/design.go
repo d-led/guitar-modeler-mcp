@@ -8,9 +8,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/d-led/guitar-modeler-mcp/internal/design"
-	"github.com/d-led/guitar-modeler-mcp/internal/htmlreport"
-	"github.com/d-led/guitar-modeler-mcp/internal/rig"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/design"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/htmlreport"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/rig"
 )
 
 type designFlags struct {

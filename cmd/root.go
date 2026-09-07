@@ -7,11 +7,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/d-led/guitar-modeler-mcp/internal/catalog"
-	"github.com/d-led/guitar-modeler-mcp/internal/design"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/catalog"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/design"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/rig"
 	"github.com/d-led/guitar-modeler-mcp/internal/mooer"
 	"github.com/d-led/guitar-modeler-mcp/internal/presetmap"
-	"github.com/d-led/guitar-modeler-mcp/internal/rig"
 )
 
 // version is the release version, stamped at build time via -ldflags

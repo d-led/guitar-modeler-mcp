@@ -10,21 +10,21 @@ import (
 	"strings"
 	"time"
 
-	"github.com/d-led/guitar-modeler-mcp/internal/assets"
-	"github.com/d-led/guitar-modeler-mcp/internal/catalog"
 	"github.com/d-led/guitar-modeler-mcp/internal/cookbook"
-	"github.com/d-led/guitar-modeler-mcp/internal/design"
 	"github.com/d-led/guitar-modeler-mcp/internal/docs"
 	"github.com/d-led/guitar-modeler-mcp/internal/gp200"
-	"github.com/d-led/guitar-modeler-mcp/internal/htmlreport"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/assets"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/catalog"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/design"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/htmlreport"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/rig"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/setlist"
 	"github.com/d-led/guitar-modeler-mcp/internal/mcp"
 	"github.com/d-led/guitar-modeler-mcp/internal/mooer"
 	"github.com/d-led/guitar-modeler-mcp/internal/params"
 	"github.com/d-led/guitar-modeler-mcp/internal/presetmap"
 	"github.com/d-led/guitar-modeler-mcp/internal/qc"
 	"github.com/d-led/guitar-modeler-mcp/internal/qcctl"
-	"github.com/d-led/guitar-modeler-mcp/internal/rig"
-	"github.com/d-led/guitar-modeler-mcp/internal/setlist"
 	"github.com/d-led/guitar-modeler-mcp/internal/thr"
 	"github.com/d-led/guitar-modeler-mcp/internal/waza"
 )
@@ -1090,6 +1090,7 @@ func parseFX(raw any) []design.FXBlock {
 		fx := design.FXBlock{
 			Type:     argString(m, "type"),
 			Enabled:  argBool(m, "enabled", true),
+			Colour:   argString(m, "colour"),
 			Position: argString(m, "position"),
 			Slot:     argIntPtr(m, "slot"),
 		}
@@ -1457,6 +1458,7 @@ func fxItemSchema() map[string]any {
 		"type":     stringSchema("Effect module display name, e.g. \"Tape Echo\"."),
 		"enabled":  map[string]any{"type": "boolean", "description": "Whether the effect is on."},
 		"params":   map[string]any{"type": "object", "description": "Parameter overrides; values are numbers, booleans or strings."},
+		"colour":   stringSchema("Optional module slot colour, one of: " + catalog.ColourList() + ". Empty gives the factory-conventional colour for the effect's category (drives/EQ yellow, compressors red, delays green, reverbs blue, wahs orange, …)."),
 		"position": stringSchema("Optional placement override: \"pre\" (before the amp) or \"post\" (after the amp). Empty = the effect category's conventional placement."),
 		"slot":     numberSchema("Optional absolute 1-based chain slot (serial routing only) — pin the effect to an exact slot, e.g. 1 for a volume pedal at the front of the chain."),
 	})

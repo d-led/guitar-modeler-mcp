@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/d-led/guitar-modeler-mcp/internal/catalog"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/catalog"
 )
 
 // Item is a single parameter value inside a module node. Exactly one of
@@ -51,10 +51,15 @@ func (n *Node) set(name string, item *Item) {
 // Block is one module in the signal chain the caller wants to build. Type is
 // the device module display name (e.g. "Amp", "Cab", "Tape Echo"). Params
 // overrides the module defaults; values are float64, bool or string.
+//
+// Colour is the module's slot colour tag (e.g. "Yellow"), one of the device
+// palette (see catalog.Colours). Empty leaves the module's default (Green),
+// so direct builders get the neutral tag unless they opt in.
 type Block struct {
 	Type    string
 	Enabled bool
 	Params  map[string]any
+	Colour  string
 }
 
 // Routing is the signal-chain topology. The Gigboard has exactly three,

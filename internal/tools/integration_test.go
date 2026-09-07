@@ -9,12 +9,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/d-led/guitar-modeler-mcp/internal/catalog"
-	"github.com/d-led/guitar-modeler-mcp/internal/design"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/catalog"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/design"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/rig"
 	"github.com/d-led/guitar-modeler-mcp/internal/mcp"
 	"github.com/d-led/guitar-modeler-mcp/internal/mooer"
 	"github.com/d-led/guitar-modeler-mcp/internal/presetmap"
-	"github.com/d-led/guitar-modeler-mcp/internal/rig"
 )
 
 // newIntegrationServer builds the fully wired server exactly as the CLI does.

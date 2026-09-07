@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/d-led/guitar-modeler-mcp/internal/cardchain"
-	"github.com/d-led/guitar-modeler-mcp/internal/catalog"
-	"github.com/d-led/guitar-modeler-mcp/internal/rig"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/catalog"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/rig"
 )
 
 type paramKV struct {

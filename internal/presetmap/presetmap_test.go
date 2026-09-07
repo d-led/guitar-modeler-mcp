@@ -3,9 +3,9 @@ package presetmap
 import (
 	"testing"
 
-	"github.com/d-led/guitar-modeler-mcp/internal/catalog"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/catalog"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/rig"
 	"github.com/d-led/guitar-modeler-mcp/internal/mooer"
-	"github.com/d-led/guitar-modeler-mcp/internal/rig"
 )
 
 func newTable(t *testing.T) *Table {

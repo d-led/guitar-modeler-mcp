@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/d-led/guitar-modeler-mcp/internal/catalog"
-	"github.com/d-led/guitar-modeler-mcp/internal/rig"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/catalog"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/rig"
 )
 
 func TestDesignOrdersChainAndResolvesHardware(t *testing.T) {

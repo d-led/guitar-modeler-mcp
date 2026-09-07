@@ -251,6 +251,13 @@ Keep it tight and don't spiral:
    tracked pre-amp), and `"slot": 1..11` pins it to an exact serial slot (e.g.
    a volume pedal at slot 1). `slot` is serial-only; use `path_a_fx`/`path_b_fx`
    for parallel paths.
+   **Every slot also carries its own colour tag.** `design_rig` colours each
+   module by the factory convention (what the device's own rigs use): amp
+   yellow, cab green, drives and EQs yellow, compressors red, delays green,
+   reverbs blue, wahs orange, volume red, and modulation per its kind (chorus
+   purple, phaser/flanger/rotary orange, …). Override an effect's slot with
+   `"colour"` on that `fx` item. Valid tags: Blue, Yellow, Green, Purple, Red,
+   Dark Green, Orange, Light Blue, Pink.
 8. `rig_decode` / `render_report` — inspect or re-report an existing preset.
 9. `estimate_rig_level` — check a rig's net output level and the RigVolume that
    reaches a target. Default gain staging: input 0 dB → amp gain 50% (−6 dB) +
@@ -365,12 +372,16 @@ take the first**: list the family with `catalog_list_variants` (e.g.
 whose description/`color`/`gain` fits the part — the first match is rarely the
 best one.
 
-**Compressors don't default to unity.** `Gray Comp`'s `Level` defaults to 100%
-(unity), but `DynIII Comp` and `Side Comp` default `Gain` to **+2.4 dB** — a
-compressor added at its defaults reads louder when it is on. When a compressor
-is on a footswitch, set its output `Level`/`Gain` so toggling it doesn't change
-loudness (compare active vs bypassed); trim the compressor's own knob, never
-`RigVolume`.
+**Compressors don't default to unity.** A compressor's output `Level` is a
+makeup balance, not a plain volume knob — its unity/bypass point is **50
+(noon)** on the device, not 100. `Gray Comp`'s `Level` defaults to 100%, so it
+reads ≈ +6 dB hotter than bypass; `DynIII Comp` and `Side Comp` instead default
+their makeup `Gain` to **+2.4 dB**. Either way a compressor added at its
+defaults sounds louder when it is on — the level estimator reads a compressor's
+`Level` about 50 to reflect that. When a compressor is on a footswitch, set its
+output `Level`/`Gain` so toggling it doesn't change loudness — on a Ross-style
+comp that lands around `Level` **50**; compare active vs bypassed by ear and
+trim the compressor's own knob, never `RigVolume`.
 
 ## Signal chain & parallel routing
 

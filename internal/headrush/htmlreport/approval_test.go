@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/d-led/guitar-modeler-mcp/internal/catalog"
 	"github.com/d-led/guitar-modeler-mcp/internal/golden"
-	"github.com/d-led/guitar-modeler-mcp/internal/rig"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/catalog"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/rig"
 )
 
 // TestReportSnapshot approves the HTML report for a representative rig. The

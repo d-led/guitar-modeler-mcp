@@ -85,30 +85,40 @@ func BuildPreset(cat *Catalog, spec DesignSpec) (*BinaryPreset, error) {
 	}
 
 	for row, blocks := range lanes {
-		chain := &Chain{
-			XInPortid:  &Chain_InPortid{InPortid: InputInput1},
-			XOutPortid: &Chain_OutPortid{OutPortid: OutputMultiple},
-			XRow:       &Chain_Row{Row: uint32(row)},
+		chain, err := buildLane(cat, row, blocks)
+		if err != nil {
+			return nil, err
 		}
-		for col, block := range blocks {
-			m, err := cat.resolveBlock(block.Model)
-			if err != nil {
-				return nil, err
-			}
-			model := &Model{
-				XHash:   &Model_Hash{Hash: uint32(m.ID)}, // #nosec G115 -- catalog model IDs fit in uint32
-				XColumn: &Model_Column{Column: uint32(col)},
-			}
-			if err := applyParams(m, block, model); err != nil {
-				return nil, fmt.Errorf("%s: %w", m.Name, err)
-			}
-			chain.Models = append(chain.Models, model)
-		}
-		// A lane output control is what factory presets carry at the end of a row.
-		chain.OutputControl = []*Model{{XHash: &Model_Hash{Hash: laneOutputHash}}}
 		preset.Chains = append(preset.Chains, chain)
 	}
 	return preset, nil
+}
+
+// buildLane renders one grid lane (row): the blocks in signal order, resolved
+// and validated against the catalog, followed by the lane's output control.
+func buildLane(cat *Catalog, row int, blocks []BlockSpec) (*Chain, error) {
+	chain := &Chain{
+		XInPortid:  &Chain_InPortid{InPortid: InputInput1},
+		XOutPortid: &Chain_OutPortid{OutPortid: OutputMultiple},
+		XRow:       &Chain_Row{Row: uint32(row)}, // #nosec G115 -- lane row index is small
+	}
+	for col, block := range blocks {
+		m, err := cat.resolveBlock(block.Model)
+		if err != nil {
+			return nil, err
+		}
+		model := &Model{
+			XHash:   &Model_Hash{Hash: uint32(m.ID)}, // #nosec G115 -- catalog model IDs fit in uint32
+			XColumn: &Model_Column{Column: uint32(col)},
+		}
+		if err := applyParams(m, block, model); err != nil {
+			return nil, fmt.Errorf("%s: %w", m.Name, err)
+		}
+		chain.Models = append(chain.Models, model)
+	}
+	// A lane output control is what factory presets carry at the end of a row.
+	chain.OutputControl = []*Model{{XHash: &Model_Hash{Hash: laneOutputHash}}}
+	return chain, nil
 }
 
 // resolveBlock finds a model by name or "based on" description.

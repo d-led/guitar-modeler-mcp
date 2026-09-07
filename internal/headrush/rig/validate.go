@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/d-led/guitar-modeler-mcp/internal/assets"
-	"github.com/d-led/guitar-modeler-mcp/internal/modspec"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/assets"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/catalog"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/modspec"
 )
 
 // structuralParams are rig-level fields that the builder sets itself; they are
@@ -15,12 +16,6 @@ var structuralParams = map[string]bool{
 	"Colour":      true,
 	"PresetName":  true,
 	"PresetName2": true,
-}
-
-// colourPalette is the set of module colours the device accepts.
-var colourPalette = map[string]bool{
-	"Blue": true, "Yellow": true, "Green": true, "Purple": true, "Red": true,
-	"Dark Green": true, "Orange": true, "Light Blue": true, "Pink": true,
 }
 
 // cabLevelBounds caps the Cab block's output trims (dB) so a cabinet never
@@ -94,8 +89,8 @@ func (b *Builder) validateBlockParams(canon string, params map[string]any) error
 func (b *Builder) validateSpecialParam(canon, key string, value any) (handled bool, err error) {
 	if structuralParams[key] {
 		if key == "Colour" {
-			if s, ok := value.(string); ok && !colourPalette[s] {
-				return true, fmt.Errorf("module %q: invalid colour %q", canon, s)
+			if s, ok := value.(string); ok && !catalog.ColourValid(s) {
+				return true, fmt.Errorf("module %q: invalid colour %q (want one of: %s)", canon, s, catalog.ColourList())
 			}
 		}
 		return true, nil

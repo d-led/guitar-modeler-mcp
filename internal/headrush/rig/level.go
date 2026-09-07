@@ -5,8 +5,8 @@ import (
 	"math"
 	"strings"
 
-	"github.com/d-led/guitar-modeler-mcp/internal/catalog"
-	"github.com/d-led/guitar-modeler-mcp/internal/modspec"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/catalog"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/modspec"
 )
 
 // LevelStage is one gain stage contributing to a rig's output level.
@@ -34,7 +34,9 @@ type LevelEstimate struct {
 // preamp gain and master, cab out gain, drive/compressor/EQ knobs, volume
 // pedals, the parallel-path mixer and the output RigVolume) into a net output
 // level in dB. Amp gain/master and volume-pedal positions are linear percentage
-// knobs, converted with 20·log10(v/100) — an estimate, not a measurement. The
+// knobs, converted with 20·log10(v/100); a compressor's output Level is a
+// makeup balance whose unity/bypass point sits at 50 (noon) on the device, not
+// 100, so it is converted about 50 — an estimate, not a measurement. The
 // recommended RigVolume is the output level to set to reach targetDB (clamped
 // to the device's observed -10..+20 dB).
 func EstimateLevel(file *RigFile, targetDB float64) (LevelEstimate, error) {
@@ -154,10 +156,11 @@ func fxLevelStagesForPatch(cat *catalog.Catalog, patch Patch) []LevelStage {
 
 // fxLevelStages returns one level stage per level-relevant knob of an effect
 // module, driven by the module's category and parameter spec: EQ bands and
-// trims are dB values added as-is; a drive or compressor output Level is a
-// percent knob converted with percentToDB. Time-based and modulation effects
-// contribute nothing — their Mix blends wet into dry rather than raising the
-// overall level.
+// trims are dB values added as-is; a drive output Level is a percent volume
+// knob converted about 100 (unity), while a compressor's output Level is a
+// makeup balance converted about 50 — its unity/bypass point on the device.
+// Time-based and modulation effects contribute nothing — their Mix blends wet
+// into dry rather than raising the overall level.
 func fxLevelStages(cat *catalog.Catalog, name string, node *Node) []LevelStage {
 	fx, ok := cat.FXByName(baseType(name))
 	if !ok {
@@ -175,40 +178,56 @@ func fxLevelStages(cat *catalog.Catalog, name string, node *Node) []LevelStage {
 
 	switch fx.Category {
 	case "eq":
-		// Every dB knob on an EQ is a band or trim gain.
-		for key, p := range spec {
-			if p.Kind == "range" && strings.TrimSpace(p.Unit) == "dB" {
-				v := nodeNumber(node, key)
-				add(key, v, dB(v))
-			}
-		}
+		eqLevelStages(spec, node, add)
 	case "dynamics":
-		// A compressor carries an output Level (percent) or a makeup Gain (dB);
-		// gate/threshold/ratio/attack/release are detector controls, not level.
-		for key, p := range spec {
-			if p.Kind != "range" {
-				continue
-			}
-			unit := strings.TrimSpace(p.Unit)
-			switch {
-			case unit == "dB" && key == "Gain":
-				v := nodeNumber(node, key)
-				add(key, v, dB(v))
-			case unit == "%" && (key == "Level" || key == "Volume" || key == "Output"):
-				v := nodeNumber(node, key)
-				add(key, percentToDB(v), percent(v))
-			}
-		}
+		dynamicsLevelStages(spec, node, add)
 	case "distortion":
-		// Output Level/Volume/Output are level; Gain/Drive are the drive amount.
-		for key, p := range spec {
-			if p.Kind == "range" && strings.TrimSpace(p.Unit) == "%" && (key == "Level" || key == "Volume" || key == "Output") {
-				v := nodeNumber(node, key)
-				add(key, percentToDB(v), percent(v))
-			}
-		}
+		distortionLevelStages(spec, node, add)
 	}
 	return stages
+}
+
+// eqLevelStages adds every dB knob of an EQ as a band or trim gain stage.
+func eqLevelStages(spec modspec.Module, node *Node, add func(string, float64, string)) {
+	for key, p := range spec {
+		if p.Kind == "range" && strings.TrimSpace(p.Unit) == "dB" {
+			v := nodeNumber(node, key)
+			add(key, v, dB(v))
+		}
+	}
+}
+
+// dynamicsLevelStages adds a compressor's output Level (a percent makeup
+// balance, unity at 50) or makeup Gain (dB); the detector controls
+// (threshold/ratio/attack/release) are not level.
+func dynamicsLevelStages(spec modspec.Module, node *Node, add func(string, float64, string)) {
+	for key, p := range spec {
+		if p.Kind != "range" {
+			continue
+		}
+		unit := strings.TrimSpace(p.Unit)
+		switch {
+		case unit == "dB" && key == "Gain":
+			v := nodeNumber(node, key)
+			add(key, v, dB(v))
+		case unit == "%" && (key == "Level" || key == "Volume" || key == "Output"):
+			// Unity/bypass is at 50 (noon), not 100, so the 100% default
+			// reads ≈ +6 dB over bypass and sounds louder when switched on.
+			v := nodeNumber(node, key)
+			add(key, percentAbout(v, 50), percent(v))
+		}
+	}
+}
+
+// distortionLevelStages adds a drive's output Level/Volume/Output; Gain and
+// Drive are the drive amount, not level.
+func distortionLevelStages(spec modspec.Module, node *Node, add func(string, float64, string)) {
+	for key, p := range spec {
+		if p.Kind == "range" && strings.TrimSpace(p.Unit) == "%" && (key == "Level" || key == "Volume" || key == "Output") {
+			v := nodeNumber(node, key)
+			add(key, percentToDB(v), percent(v))
+		}
+	}
 }
 
 // Plausibility thresholds: a rig whose estimated net level exceeds these is
@@ -322,12 +341,19 @@ func blendDB(g, mix float64) float64 {
 	return 20 * math.Log10((1-m)+m*math.Pow(10, g/20))
 }
 
-// percentToDB converts a 0..100 percentage knob to a dB estimate (0 = mute).
-func percentToDB(p float64) float64 {
+// percentToDB converts a 0..100 percentage knob to a dB estimate about a unity
+// reference of 100 (full = 0 dB, 0 = mute).
+func percentToDB(p float64) float64 { return percentAbout(p, 100) }
+
+// percentAbout converts a percentage knob to a dB estimate relative to the ref
+// value that reads unity (0 dB): 20·log10(p/ref). Plain volume/level knobs use
+// ref 100; a compressor's output Level is a makeup balance whose unity/bypass
+// point on the device is 50 (noon), so it is converted about 50.
+func percentAbout(p, ref float64) float64 {
 	if p <= 0 {
 		return -60
 	}
-	return 20 * math.Log10(p/100)
+	return 20 * math.Log10(p/ref)
 }
 
 func percent(p float64) string {

@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/d-led/guitar-modeler-mcp/internal/catalog"
-	"github.com/d-led/guitar-modeler-mcp/internal/rig"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/catalog"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/rig"
 )
 
 // FXBlock is a single effect the caller wants in the chain.
@@ -16,6 +16,9 @@ type FXBlock struct {
 	Type    string         `json:"type"`
 	Enabled bool           `json:"enabled"`
 	Params  map[string]any `json:"params,omitempty"`
+	// Colour is the module's slot colour tag (e.g. "Blue"); empty means the
+	// factory-conventional colour for the effect's category.
+	Colour string `json:"colour,omitempty"`
 	// Position overrides the effect category's conventional placement: "pre"
 	// puts it before the amp, "post" after it (e.g. an octaver tracked from
 	// the dry pre-amp signal). Empty = use the category's default.
@@ -114,48 +117,28 @@ func (d *Designer) Design(req Request) (*Result, error) {
 		req.Name = "New Rig"
 	}
 
-	ampModel, note, err := d.resolveAmp(req.Amp)
+	ampModel, cabModel, micModel, note, err := d.resolveHardware(req)
 	if err != nil {
 		return nil, err
 	}
-	cabModel := d.resolveCab(req.Cab, ampModel)
-	micModel := d.resolveMic(req.Mic)
-
-	// An impulse-response loader replaces the cabinet: the signal runs
-	// amp → IR instead of amp → cab, so the cab block is dropped.
 	skipCab := hasIR(req.FX)
-
-	notes := []string{note}
-	if skipCab {
-		notes = append(notes, "IR loader replaces the cabinet")
-	} else {
-		notes = append(notes, fmt.Sprintf("cab %q", cabModel), fmt.Sprintf("mic %q", micModel))
-	}
+	notes := hardwareNotes(note, cabModel, micModel, skipCab)
 
 	pre, post, last, pinned, err := d.classifyFX(req.FX)
 	if err != nil {
 		return nil, err
 	}
-	if len(pinned) > 0 && req.Routing != "" && req.Routing != rig.RoutingSerial {
-		return nil, fmt.Errorf("slot placement is only supported for serial routing (S); use path_a_fx/path_b_fx to place effects on parallel paths")
-	}
-	tempo := req.Tempo
-	if tempo <= 0 {
-		tempo = 100
-	}
-
-	outputVolume := defaultOutputLevel
-	if req.OutputLevel != nil {
-		outputVolume = *req.OutputLevel
+	if err := validatePinnedRouting(req.Routing, pinned); err != nil {
+		return nil, err
 	}
 
 	pedals := d.assignExpressionPedals(req, &notes)
 
 	spec := rig.Spec{
 		Name:         req.Name,
-		Tempo:        tempo,
+		Tempo:        resolveTempo(req.Tempo),
 		InputGain:    req.InputGain,
-		OutputVolume: outputVolume,
+		OutputVolume: resolveOutputVolume(req.OutputLevel),
 		Routing:      req.Routing,
 		Para1Level:   req.Para1Level,
 		Para2Level:   req.Para2Level,
@@ -175,52 +158,121 @@ func (d *Designer) Design(req Request) (*Result, error) {
 	return &Result{Spec: spec, Notes: notes}, nil
 }
 
+// resolveHardware resolves the amp model and, from it, the cabinet and mic,
+// returning the amp-resolution note to surface in the result.
+func (d *Designer) resolveHardware(req Request) (ampModel, cabModel, micModel, note string, err error) {
+	ampModel, note, err = d.resolveAmp(req.Amp)
+	if err != nil {
+		return "", "", "", "", err
+	}
+	return ampModel, d.resolveCab(req.Cab, ampModel), d.resolveMic(req.Mic), note, nil
+}
+
+// hardwareNotes records which cab and mic the rig uses, or that an IR loader
+// replaces the cabinet.
+func hardwareNotes(note, cabModel, micModel string, skipCab bool) []string {
+	notes := []string{note}
+	if skipCab {
+		notes = append(notes, "IR loader replaces the cabinet")
+	} else {
+		notes = append(notes, fmt.Sprintf("cab %q", cabModel), fmt.Sprintf("mic %q", micModel))
+	}
+	return notes
+}
+
+// validatePinnedRouting rejects absolute slot placement on a parallel chain,
+// where the section layout owns the slots.
+func validatePinnedRouting(routing rig.Routing, pinned map[int]rig.Block) error {
+	if len(pinned) > 0 && routing != "" && routing != rig.RoutingSerial {
+		return fmt.Errorf("slot placement is only supported for serial routing (S); use path_a_fx/path_b_fx to place effects on parallel paths")
+	}
+	return nil
+}
+
+// resolveTempo falls back to the device default when no tempo is given.
+func resolveTempo(tempo float64) float64 {
+	if tempo <= 0 {
+		return 100
+	}
+	return tempo
+}
+
+// resolveOutputVolume applies the caller's output level, else the designer's
+// +6 dB default that offsets a fresh amp's −12 dB gain staging.
+func resolveOutputVolume(level *float64) float64 {
+	if level != nil {
+		return *level
+	}
+	return defaultOutputLevel
+}
+
 // applyRouting fills the chain sections according to the requested topology.
 func (d *Designer) applyRouting(spec *rig.Spec, req Request, ampModel, cabModel, micModel string, skipCab bool, pre, post, last []rig.Block, pinned map[int]rig.Block, notes *[]string) error {
 	switch {
 	case req.Routing == rig.RoutingSPS && req.Amp2 == "":
-		// Shared amp: the amp+cab feed two parallel effect paths.
-		spec.Prefix = append(pre, d.ampBlock(ampModel, req.AmpParams), d.cabBlock(cabModel, micModel, req.CabParams))
-		spec.PathA = d.fxBlocks(req.PathAFX)
-		spec.PathB = d.fxBlocks(req.PathBFX)
-		spec.Suffix = append(post, last...)
-		*notes = append(*notes, "shared amp with two parallel effect paths (SPS-1)")
+		return d.applySharedAmpRouting(spec, req, ampModel, cabModel, micModel, pre, post, last, notes)
 	case req.Routing == rig.RoutingSPS:
-		// Dual amp: two full amp paths in parallel.
-		pathA, pathB, note2, cab2Model, err := d.dualAmpPaths(req, ampModel, cabModel, micModel)
-		if err != nil {
-			return err
-		}
+		return d.applyDualAmpRouting(spec, req, ampModel, cabModel, micModel, pre, post, last, notes, false)
+	case req.Routing == rig.RoutingPS:
+		return d.applyDualAmpRouting(spec, req, ampModel, cabModel, micModel, pre, post, last, notes, true)
+	default:
+		d.applySerialRouting(spec, req, ampModel, cabModel, micModel, skipCab, pre, post, last, pinned)
+		return nil
+	}
+}
+
+// applySharedAmpRouting builds the SPS-1 layout with one shared amp feeding two
+// parallel effect paths.
+func (d *Designer) applySharedAmpRouting(spec *rig.Spec, req Request, ampModel, cabModel, micModel string, pre, post, last []rig.Block, notes *[]string) error {
+	spec.Prefix = append(pre, d.ampBlock(ampModel, req.AmpParams), d.cabBlock(cabModel, micModel, req.CabParams))
+	pathA, err := d.fxBlocks(req.PathAFX)
+	if err != nil {
+		return err
+	}
+	pathB, err := d.fxBlocks(req.PathBFX)
+	if err != nil {
+		return err
+	}
+	spec.PathA = pathA
+	spec.PathB = pathB
+	spec.Suffix = append(post, last...)
+	*notes = append(*notes, "shared amp with two parallel effect paths (SPS-1)")
+	return nil
+}
+
+// applyDualAmpRouting builds a dual-amp parallel layout. When splitAtInput is
+// true the chain splits before the amp (PS-1: pre effects join path A);
+// otherwise it splits after a shared prefix (SPS-1).
+func (d *Designer) applyDualAmpRouting(spec *rig.Spec, req Request, ampModel, cabModel, micModel string, pre, post, last []rig.Block, notes *[]string, splitAtInput bool) error {
+	pathA, pathB, note2, cab2Model, err := d.dualAmpPaths(req, ampModel, cabModel, micModel)
+	if err != nil {
+		return err
+	}
+	if splitAtInput {
+		spec.PathA = append(pre, pathA...)
+	} else {
 		spec.Prefix = pre
 		spec.PathA = pathA
-		spec.PathB = pathB
-		spec.Suffix = append(post, last...)
-		*notes = append(*notes, note2, fmt.Sprintf("cab2 %q", cab2Model))
-	case req.Routing == rig.RoutingPS:
-		// Split at the input into two amp paths.
-		pathA, pathB, note2, cab2Model, err := d.dualAmpPaths(req, ampModel, cabModel, micModel)
-		if err != nil {
-			return err
-		}
-		spec.PathA = append(pre, pathA...)
-		spec.PathB = pathB
-		spec.Suffix = append(post, last...)
-		*notes = append(*notes, note2, fmt.Sprintf("cab2 %q", cab2Model))
-	default:
-		// Serial: pre → amp → [cab] → post → volume, with any explicitly
-		// pinned effects occupying their requested slots.
-		blocks := make([]rig.Block, 0, len(pre)+len(post)+len(last)+3)
-		blocks = append(blocks, pre...)
-		blocks = append(blocks, d.ampBlock(ampModel, req.AmpParams))
-		if !skipCab {
-			blocks = append(blocks, d.cabBlock(cabModel, micModel, req.CabParams))
-		}
-		blocks = append(blocks, post...)
-		blocks = append(blocks, last...)
-		spec.Blocks = blocks
-		spec.Pinned = pinned
 	}
+	spec.PathB = pathB
+	spec.Suffix = append(post, last...)
+	*notes = append(*notes, note2, fmt.Sprintf("cab2 %q", cab2Model))
 	return nil
+}
+
+// applySerialRouting fills the serial chain: pre → amp → [cab] → post → last,
+// with any explicitly pinned effects occupying their requested slots.
+func (d *Designer) applySerialRouting(spec *rig.Spec, req Request, ampModel, cabModel, micModel string, skipCab bool, pre, post, last []rig.Block, pinned map[int]rig.Block) {
+	blocks := make([]rig.Block, 0, len(pre)+len(post)+len(last)+3)
+	blocks = append(blocks, pre...)
+	blocks = append(blocks, d.ampBlock(ampModel, req.AmpParams))
+	if !skipCab {
+		blocks = append(blocks, d.cabBlock(cabModel, micModel, req.CabParams))
+	}
+	blocks = append(blocks, post...)
+	blocks = append(blocks, last...)
+	spec.Blocks = blocks
+	spec.Pinned = pinned
 }
 
 // dualAmpPaths resolves the second amp path and returns both paths' blocks.
@@ -332,50 +384,97 @@ func (d *Designer) classifyFX(fx []FXBlock) (pre, post, last []rig.Block, pinned
 		if !ok {
 			return nil, nil, nil, nil, fmt.Errorf("unknown effect type %q", f.Type)
 		}
-		block := rig.Block{Type: def.Name, Enabled: f.Enabled, Params: f.Params}
-		if block.Params == nil {
-			block.Params = map[string]any{}
+		block, err := d.buildFXBlock(def, f)
+		if err != nil {
+			return nil, nil, nil, nil, err
 		}
-
 		if f.Slot != nil {
-			if *f.Slot < 1 || *f.Slot > 11 {
-				return nil, nil, nil, nil, fmt.Errorf("effect %q slot %d is out of range 1..11", def.Name, *f.Slot)
+			if err := d.pinBlock(pinned, f, block); err != nil {
+				return nil, nil, nil, nil, err
 			}
-			if _, dup := pinned[*f.Slot]; dup {
-				return nil, nil, nil, nil, fmt.Errorf("two effects pinned to slot %d", *f.Slot)
-			}
-			pinned[*f.Slot] = block
 			continue
 		}
-
-		place := strings.ToLower(strings.TrimSpace(f.Position))
-		if place == "" {
-			// Volume defaults to the end of the chain (a master output trim);
-			// everything else follows its category. Position overrides both.
-			if strings.EqualFold(def.Name, "Volume") {
-				last = append(last, block)
-				continue
-			}
-			place = placeForCategory(def.Category)
+		place, err := d.placeFXBlock(def, f)
+		if err != nil {
+			return nil, nil, nil, nil, err
 		}
 		switch place {
-		case "pre", "pre-amp":
+		case "pre":
 			pre = append(pre, block)
-		case "post", "post-amp":
+		case "post":
 			post = append(post, block)
-		default:
-			return nil, nil, nil, nil, fmt.Errorf("effect %q position %q is invalid (want \"pre\" or \"post\")", def.Name, f.Position)
+		case "last":
+			last = append(last, block)
 		}
 	}
 	return pre, post, last, pinned, nil
 }
 
-func (d *Designer) fxBlocks(fx []FXBlock) []rig.Block {
+// buildFXBlock resolves one effect into a chain block: its slot colour and
+// (normalised, non-nil) parameter map.
+func (d *Designer) buildFXBlock(def catalog.FX, f FXBlock) (rig.Block, error) {
+	colour, err := d.colourFor(def.Name, f.Colour)
+	if err != nil {
+		return rig.Block{}, fmt.Errorf("effect %q: %w", def.Name, err)
+	}
+	params := f.Params
+	if params == nil {
+		params = map[string]any{}
+	}
+	return rig.Block{Type: def.Name, Enabled: f.Enabled, Params: params, Colour: colour}, nil
+}
+
+// pinBlock pins an effect to an absolute serial slot, rejecting out-of-range
+// or duplicate slots.
+func (d *Designer) pinBlock(pinned map[int]rig.Block, f FXBlock, block rig.Block) error {
+	if *f.Slot < 1 || *f.Slot > 11 {
+		return fmt.Errorf("effect %q slot %d is out of range 1..11", block.Type, *f.Slot)
+	}
+	if _, dup := pinned[*f.Slot]; dup {
+		return fmt.Errorf("two effects pinned to slot %d", *f.Slot)
+	}
+	pinned[*f.Slot] = block
+	return nil
+}
+
+// placeFXBlock returns which chain section an effect belongs to: its explicit
+// position, its category's convention, or "last" for a volume pedal defaulting
+// to the end of the chain.
+func (d *Designer) placeFXBlock(def catalog.FX, f FXBlock) (string, error) {
+	place := strings.ToLower(strings.TrimSpace(f.Position))
+	if place == "" {
+		if strings.EqualFold(def.Name, "Volume") {
+			return "last", nil
+		}
+		if placeForCategory(def.Category) == "pre-amp" {
+			return "pre", nil
+		}
+		return "post", nil
+	}
+	switch place {
+	case "pre", "pre-amp":
+		return "pre", nil
+	case "post", "post-amp":
+		return "post", nil
+	default:
+		return "", fmt.Errorf("effect %q position %q is invalid (want \"pre\" or \"post\")", def.Name, f.Position)
+	}
+}
+
+func (d *Designer) fxBlocks(fx []FXBlock) ([]rig.Block, error) {
 	blocks := make([]rig.Block, 0, len(fx))
 	for _, f := range fx {
-		blocks = append(blocks, rig.Block{Type: f.Type, Enabled: f.Enabled, Params: f.Params})
+		def, ok := d.cat.FXByName(f.Type)
+		if !ok {
+			return nil, fmt.Errorf("unknown effect type %q", f.Type)
+		}
+		block, err := d.buildFXBlock(def, f)
+		if err != nil {
+			return nil, err
+		}
+		blocks = append(blocks, block)
 	}
-	return blocks
+	return blocks, nil
 }
 
 func (d *Designer) ampBlock(model string, params map[string]any) rig.Block {
@@ -385,7 +484,7 @@ func (d *Designer) ampBlock(model string, params map[string]any) rig.Block {
 	}
 	p["Type"] = model
 	p["On"] = true
-	return rig.Block{Type: "Amp", Enabled: true, Params: p}
+	return rig.Block{Type: "Amp", Enabled: true, Params: p, Colour: d.defaultColour("Amp")}
 }
 
 func (d *Designer) cabBlock(cab, mic string, params map[string]any) rig.Block {
@@ -396,7 +495,66 @@ func (d *Designer) cabBlock(cab, mic string, params map[string]any) rig.Block {
 	p["CabType"] = cab
 	p["MicType"] = mic
 	p["On"] = true
-	return rig.Block{Type: "Cab", Enabled: true, Params: p}
+	return rig.Block{Type: "Cab", Enabled: true, Params: p, Colour: d.defaultColour("Cab")}
+}
+
+// colourFor resolves one effect's slot colour: the caller's override wins,
+// otherwise the factory-conventional colour for the effect's category. An
+// override must be one of the device palette colours.
+func (d *Designer) colourFor(moduleType, override string) (string, error) {
+	if override != "" {
+		if !catalog.ColourValid(override) {
+			return "", fmt.Errorf("invalid colour %q (want one of: %s)", override, catalog.ColourList())
+		}
+		return override, nil
+	}
+	return d.defaultColour(moduleType), nil
+}
+
+// defaultSlotColour overrides the category-derived colour for the fixed
+// modules (amp/cab/IR) and the two delays whose factory colour differs from
+// the rest of the delay family.
+var defaultSlotColour = map[string]string{
+	"amp": "Yellow", "cab": "Green", "ir": "Green", "ir (1024)": "Green",
+	"pitch delay": "Purple", "reso delay": "Red",
+}
+
+// familySlotColour maps an effect family to a more specific colour than its
+// category would otherwise get (wahs orange while volume is red, phasers
+// orange while chorus is purple, …).
+var familySlotColour = map[string]string{
+	"hold": "Purple", "wah": "Orange", "whammy": "Purple", "harmonizer": "Blue",
+	"flanger": "Orange", "phaser": "Orange", "rotary": "Orange",
+	"doubler": "Red", "octave": "Blue", "filter": "Yellow",
+}
+
+// categorySlotColour maps an effect category to its factory-conventional slot
+// colour, the dominant colour observed across the device's own rigs.
+var categorySlotColour = map[string]string{
+	"distortion": "Yellow", "eq": "Yellow", "dynamics": "Red",
+	"expression": "Red", "modulation": "Purple",
+	"delay": "Green", "reverb": "Blue", "utility": "Yellow",
+}
+
+// defaultColour is the slot colour the factory rigs conventionally give a
+// module type, so a fresh rig reads like a stock one instead of every slot
+// defaulting to green.
+func (d *Designer) defaultColour(moduleType string) string {
+	n := strings.ToLower(strings.TrimSpace(moduleType))
+	if c, ok := defaultSlotColour[n]; ok {
+		return c
+	}
+	def, ok := d.cat.FXByName(moduleType)
+	if !ok {
+		return "Green"
+	}
+	if c, ok := familySlotColour[def.Family]; ok {
+		return c
+	}
+	if c, ok := categorySlotColour[def.Category]; ok {
+		return c
+	}
+	return "Green"
 }
 
 func (d *Designer) resolveAmp(query string) (string, string, error) {

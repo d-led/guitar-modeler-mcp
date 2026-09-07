@@ -8,8 +8,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/d-led/guitar-modeler-mcp/internal/catalog"
-	"github.com/d-led/guitar-modeler-mcp/internal/modspec"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/catalog"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/modspec"
 )
 
 // ModuleNames lists every module that has a parameter description.

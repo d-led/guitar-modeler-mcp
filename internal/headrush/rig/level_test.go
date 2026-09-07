@@ -235,7 +235,7 @@ func TestEstimateLevelCountsCompressorAndDriveLevel(t *testing.T) {
 			{Type: "Green JRC-OD", Enabled: true, Params: map[string]any{"Level": 50.0}},
 			{Type: "Amp", Params: map[string]any{"Type": "65 Black SR"}},
 			{Type: "Cab", Params: map[string]any{"CabType": "1x12 Black Panel Lux"}},
-			{Type: "Gray Comp", Enabled: true, Params: map[string]any{"Level": 100.0}},
+			{Type: "Gray Comp", Enabled: true, Params: map[string]any{"Level": 50.0}},
 		},
 	})
 	if err != nil {
@@ -246,12 +246,50 @@ func TestEstimateLevelCountsCompressorAndDriveLevel(t *testing.T) {
 		t.Fatalf("EstimateLevel: %v", err)
 	}
 	// amp (gain -6.02 + master -6.02 = -12.04) + drive Level 50% (-6.02) +
-	// compressor Level 100% (0) ≈ -18.1 dB.
+	// compressor Level 50% (0 dB, unity at noon) ≈ -18.1 dB.
 	if est.EstimatedLevelDB != -18.1 {
-		t.Fatalf("estimated = %v, want -18.1 (amp -12.04 + drive -6.02 + comp 0)", est.EstimatedLevelDB)
+		t.Fatalf("estimated = %v, want -18.1 (amp -12.04 + drive -6.02 + comp at unity 0)", est.EstimatedLevelDB)
 	}
 	if !hasStage(est, "Green JRC-OD Level") || !hasStage(est, "Gray Comp Level") {
 		t.Fatalf("expected drive and compressor stages, got %v", est.Stages)
+	}
+}
+
+func TestCompressorOutputLevelUnityIsAtNoon(t *testing.T) {
+	// A compressor's output Level is a makeup balance, not a plain volume knob:
+	// unity/bypass sits at 50 (noon) on the device, so a Level-50 compressor must
+	// not move the rig's level at all, while the 100% default reads ≈ +6 dB hot.
+	b := newTestBuilder(t)
+
+	build := func(comp *Block) float64 {
+		blocks := []Block{
+			{Type: "Amp", Params: map[string]any{"Type": "65 Black SR"}},
+			{Type: "Cab", Params: map[string]any{"CabType": "1x12 Black Panel Lux"}},
+		}
+		if comp != nil {
+			blocks = append(blocks, *comp)
+		}
+		file, err := b.Build(Spec{Name: "Level", Blocks: blocks})
+		if err != nil {
+			t.Fatalf("Build: %v", err)
+		}
+		est, err := EstimateLevel(file, 0)
+		if err != nil {
+			t.Fatalf("EstimateLevel: %v", err)
+		}
+		return est.EstimatedLevelDB
+	}
+
+	comp := func(level float64) *Block {
+		return &Block{Type: "Gray Comp", Enabled: true, Params: map[string]any{"Level": level}}
+	}
+
+	base := build(nil)
+	if got := build(comp(50)); got != base {
+		t.Fatalf("a compressor at Level 50 (unity) moved the level: base %.1f dB, with comp %.1f dB", base, got)
+	}
+	if hot := build(comp(100)) - base; hot < 5.9 || hot > 6.1 {
+		t.Fatalf("a compressor at the 100%% default should read ≈ +6 dB over unity, got %+.1f dB", hot)
 	}
 }
 

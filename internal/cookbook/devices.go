@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/d-led/guitar-modeler-mcp/internal/catalog"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/catalog"
 	"github.com/d-led/guitar-modeler-mcp/internal/mooer"
 	"github.com/d-led/guitar-modeler-mcp/internal/params"
 	"github.com/d-led/guitar-modeler-mcp/internal/qc"

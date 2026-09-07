@@ -4,7 +4,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/d-led/guitar-modeler-mcp/internal/catalog"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/catalog"
 )
 
 // capabilityParams maps a parameter name to the capabilities it implies, so an

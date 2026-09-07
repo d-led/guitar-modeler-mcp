@@ -3,8 +3,8 @@ package presetmap
 import (
 	"strings"
 
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/rig"
 	"github.com/d-led/guitar-modeler-mcp/internal/mooer"
-	"github.com/d-led/guitar-modeler-mcp/internal/rig"
 )
 
 // GigboardToMooer maps a decoded Gigboard rig to a Mooer preset. The mapping

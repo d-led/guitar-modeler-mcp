@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/d-led/guitar-modeler-mcp/internal/assets"
-	"github.com/d-led/guitar-modeler-mcp/internal/catalog"
 	"github.com/d-led/guitar-modeler-mcp/internal/fileutil"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/assets"
+	"github.com/d-led/guitar-modeler-mcp/internal/headrush/catalog"
 )
 
 // RigFile is the outer JSON document of a .rig file.
@@ -141,11 +141,33 @@ func (b *Builder) buildNodes(blocks []Block) ([]string, map[string]*Node, error)
 }
 
 // buildBlockNode validates one block's parameters and renders it into a module
-// node of the correct kind.
+// node of the correct kind, applying the block's slot colour (if any) on top
+// of the module defaults.
 func (b *Builder) buildBlockNode(block Block) (*Node, error) {
 	if err := b.validateBlockParams(block.Type, block.Params); err != nil {
 		return nil, err
 	}
+	if err := validateBlockColour(block); err != nil {
+		return nil, err
+	}
+	node, err := b.buildNode(block)
+	if err != nil {
+		return nil, err
+	}
+	applyBlockColour(node, block)
+	return node, nil
+}
+
+// validateBlockColour rejects a slot colour the device does not accept.
+func validateBlockColour(block Block) error {
+	if block.Colour != "" && !catalog.ColourValid(block.Colour) {
+		return fmt.Errorf("module %q: invalid colour %q (want one of: %s)", block.Type, block.Colour, catalog.ColourList())
+	}
+	return nil
+}
+
+// buildNode renders a validated block into its module node of the correct kind.
+func (b *Builder) buildNode(block Block) (*Node, error) {
 	switch block.Type {
 	case "Amp":
 		model := strParam(block.Params, "Type")
@@ -167,6 +189,14 @@ func (b *Builder) buildBlockNode(block Block) (*Node, error) {
 		return irNode(block.Enabled, block.Params), nil
 	default:
 		return buildFXNode(block.Type, block.Enabled, block.Params)
+	}
+}
+
+// applyBlockColour overrides a built node's slot colour when the block carries
+// one, leaving the module default otherwise.
+func applyBlockColour(node *Node, block Block) {
+	if block.Colour != "" {
+		node.set("Colour", str(block.Colour))
 	}
 }
 

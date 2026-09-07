@@ -62,6 +62,7 @@ Available Commands:
   mics          List microphone models
   params        Describe a module's parameters: kinds, ranges, units and options
   presets       List factory presets for an effect module
+  variants      List the other models in the same family as an effect
 
 Flags:
   -h, --help   help for catalog
@@ -244,13 +245,15 @@ Usage:
   guitar-modeler-mcp design [flags]
 
 Examples:
-  guitar-modeler-mcp design --name "Brown Sound" --song "Van Halen - Panama" \
+  guitar-modeler-mcp design --name "Brown Sound" --note "Van Halen - Panama" \
       --amp "Marshall JCM800" --fx '[{"type":"Tape Echo","enabled":true}]'
 
 Flags:
       --amp string            amp: device model or real-hardware description (required)
+      --amp-params string     amp knob overrides as a JSON object, e.g. '{"GainA":58,"Master":60}'
       --amp2 string           second amp for a dual-amp parallel rig (same model = same amp on both channels)
       --cab string            cab: device model or description
+      --cab-params string     cab knob overrides as a JSON object
       --cab2 string           cab for the second amp path
       --device string         target device (currently only gigboard is supported) (default "gigboard")
       --footswitches string   footswitch assignments as a JSON array, e.g. '[{"module":"Wham"}]'
@@ -260,6 +263,7 @@ Flags:
       --mic string            mic: device model or description
       --mic2 string           mic for the second amp path
       --name string           rig name (default "New Rig")
+      --note string           note annotation shown on the report
       --out string            output directory (default ".")
       --output-level float    overall rig output level in dB (RigVolume, default +6 to compensate the amp master) (default 6)
       --para-delay float      delay of path B in ms (default 0)
@@ -270,7 +274,6 @@ Flags:
       --path-a-fx string      effects for parallel path A as a JSON array
       --path-b-fx string      effects for parallel path B as a JSON array
       --routing string        signal-chain topology: S (serial, default), SPS-1 (serial→parallel→serial) or PS-1 (parallel from input)
-      --song string           song the tone is for
       --tempo float           tempo in BPM
 ```
 
@@ -284,9 +287,9 @@ Usage:
 
 Flags:
   -h, --help          help for report
+      --note string   note annotation
       --out string    output directory (default: same as the rig file)
       --rig string    path to the .rig file (required)
-      --song string   song annotation
 ```
 
 ## `guitar-modeler-mcp decode`
