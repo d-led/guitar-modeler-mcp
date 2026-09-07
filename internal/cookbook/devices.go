@@ -133,7 +133,11 @@ func fromWaza() []Ingredient {
 	d := waza.Default()
 	var out []Ingredient
 	for _, a := range d.Amps {
-		out = append(out, newIngredient(d.Name, KindAmp, a.Name, a.InspiredBy, KindAmp, "", a.Name))
+		kind := KindAmp
+		if strings.EqualFold(a.Name, "FLAT") {
+			kind = KindBassAmp
+		}
+		out = append(out, newIngredient(d.Name, kind, a.Name, a.InspiredBy, kind, "", a.Name))
 	}
 	for _, b := range d.Boosters {
 		out = append(out, newIngredient(d.Name, KindFX, b.Name, b.InspiredBy, "drive", "", b.Name))

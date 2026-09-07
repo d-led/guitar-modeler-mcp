@@ -53,6 +53,27 @@ func TestMatchAmpByReference(t *testing.T) {
 	}
 }
 
+// TestBassAmpMapsToWazaFLAT proves a gigboard bass amp cross-maps to the Waza
+// Air FLAT amp, which is the neutral/bass amp on that device.
+func TestBassAmpMapsToWazaFLAT(t *testing.T) {
+	src, _ := Ingredients("gigboard")
+	tgt, _ := Ingredients("wazaair")
+
+	plan, err := Map(src, tgt, "wazaair", []string{"69 Blue Line Bass"})
+	if err != nil {
+		t.Fatalf("Map: %v", err)
+	}
+	if len(plan.Matches) != 1 || !plan.Matches[0].Matched {
+		t.Fatalf("matches = %+v", plan.Matches)
+	}
+	if plan.Matches[0].Target != "FLAT" {
+		t.Fatalf("bass amp mapped to %q, want FLAT", plan.Matches[0].Target)
+	}
+	if plan.Matches[0].Kind != KindBassAmp {
+		t.Fatalf("kind = %q, want %q", plan.Matches[0].Kind, KindBassAmp)
+	}
+}
+
 func TestTagsEncodeSubFeatures(t *testing.T) {
 	// A "fancy delay" that pitch-shifts carries both delay and pitch.
 	fancy := newIngredient("x", KindFX, "Pitch Echo", "", "", "", "a delay with a built-in harmonizer")

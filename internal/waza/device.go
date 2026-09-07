@@ -53,7 +53,7 @@ func Default() Device {
 			[2]string{"CRUNCH", "Marshall Plexi 1959 / Fender Tweed"},
 			[2]string{"LEAD", "EVH 5150 / Peavey 5150 lead channel"},
 			[2]string{"BROWN", "Soldano SLO-100 (EVH brown sound)"},
-			[2]string{"FLAT", "Studio DI / Acoustic Preamp"},
+			[2]string{"FLAT", "Full-range / neutral preamp for bass and acoustic guitars"},
 		),
 		Boosters: device.Items(
 			[2]string{"CLEAN BOOST", ""},

@@ -354,7 +354,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 
 	s.Register(mcp.Tool{
 		Name:        "waza_catalog_list_amps",
-		Description: "List the five amp types of the Boss Waza Air, with the real hardware each emulates.",
+		Description: "List the five amp types of the Boss Waza Air, with the real hardware each emulates. FLAT is the clean/neutral full-range amp intended for bass.",
 		InputSchema: objectSchema(map[string]any{}),
 		Handler: func(_ context.Context, _ map[string]any) (string, error) {
 			return r.wazaListAmps()
@@ -730,6 +730,7 @@ func wazaPatchProps() map[string]any {
 		"amp_treble":         numberSchema("Optional amp treble (0-100)."),
 		"amp_presence":       numberSchema("Optional amp presence (0-100)."),
 		"booster":            stringSchema("Optional BOOSTER effect, e.g. \"T-SCREAM\" or \"TS-808\"."),
+		"booster_on":         boolSchema("Optional booster on/off (default: on when a booster is set). Set false to keep the booster assigned but bypassed."),
 		"booster_drive":      numberSchema("Optional booster drive (0-120)."),
 		"booster_bottom":     numberSchema("Optional booster bottom (-50..+50)."),
 		"booster_tone":       numberSchema("Optional booster tone (0-100, 50 = neutral)."),
@@ -738,6 +739,7 @@ func wazaPatchProps() map[string]any {
 		"booster_level":      numberSchema("Optional booster level (0-100)."),
 		"booster_direct_mix": numberSchema("Optional booster direct mix (0-100)."),
 		"mod":                stringSchema("Optional MOD effect, e.g. \"CHORUS\"."),
+		"mod_on":             boolSchema("Optional MOD on/off (default: on when a MOD is set). Set false to keep it assigned but bypassed."),
 		"mod_params": objectSchema(map[string]any{
 			"rate":         numberSchema("e.g. 35"),
 			"depth":        numberSchema("e.g. 60"),
@@ -745,14 +747,17 @@ func wazaPatchProps() map[string]any {
 			"direct_mix":   numberSchema("e.g. 50"),
 		}),
 		"fx":                stringSchema("Optional FX effect (same list as MOD)."),
+		"fx_on":             boolSchema("Optional FX on/off (default: on when an FX is set). Set false to keep it assigned but bypassed."),
 		"fx_params":         objectSchema(map[string]any{}),
 		"delay":             stringSchema("Optional DELAY effect, e.g. \"TAPE ECHO\"."),
+		"delay_on":          boolSchema("Optional DELAY on/off (default: on when a delay is set). Set false to keep it assigned but bypassed."),
 		"delay_time":        numberSchema("Optional delay time in milliseconds."),
 		"delay_feedback":    numberSchema("Optional delay feedback (0-100)."),
 		"delay_high_cut":    numberSchema("Optional delay high cut (0-14)."),
 		"delay_level":       numberSchema("Optional delay wet level (0-120; 100 = unity)."),
 		"delay_direct_mix":  numberSchema("Optional delay DRY-signal level (0-100; 50 = noon = dry unity, not 100). To level-match the repeats with the dry signal, use delay_level 100 + delay_direct_mix 50."),
 		"reverb":            stringSchema("Optional REVERB effect, e.g. \"HALL REVERB\"."),
+		"reverb_on":         boolSchema("Optional REVERB on/off (default: on when a reverb is set). Set false to keep it assigned but bypassed."),
 		"reverb_time":       numberSchema("Optional reverb time in seconds (0.1-10.0)."),
 		"reverb_pre_delay":  numberSchema("Optional reverb pre-delay in milliseconds (0-500)."),
 		"reverb_level":      numberSchema("Optional reverb wet level (0-100)."),
@@ -2412,7 +2417,18 @@ func (r *Registrar) wazaWriteTSL(args map[string]any) (string, error) {
 	if err := waza.WriteTSLFile(path, backup); err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("Wrote Waza Air backup (%d patch(es)) to %s", len(patches), path), nil
+
+	// Return the decoded patches inline so the caller can verify the written
+	// tone without a follow-up waza_read_tsl round trip.
+	decoded := make([]map[string]any, 0, len(patches))
+	for _, p := range backup.Patches() {
+		decoded = append(decoded, wazaPatchJSON(p))
+	}
+	summary, err := marshal(map[string]any{"file": path, "patches": decoded})
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("Wrote Waza Air backup (%d patch(es)) to %s\n%s", len(patches), path, summary), nil
 }
 
 // wazaPatches builds the requested patches from the neutral template: either a
@@ -2456,6 +2472,7 @@ func wazaPatch(tmpl waza.Patch, spec waza.Spec) waza.Patch {
 		AmpTreble:        spec.Treble,
 		AmpPresence:      spec.Presence,
 		BoosterType:      spec.Booster,
+		BoosterOn:        spec.BoosterOn,
 		BoosterDrive:     spec.BoosterDrive,
 		BoosterBottom:    spec.BoosterBottom,
 		BoosterTone:      spec.BoosterTone,
@@ -2464,16 +2481,20 @@ func wazaPatch(tmpl waza.Patch, spec waza.Spec) waza.Patch {
 		BoosterLevel:     spec.BoosterLevel,
 		BoosterDirectMix: spec.BoosterDirectMix,
 		ModType:          spec.Mod,
+		ModOn:            spec.ModOn,
 		ModParams:        spec.ModParams,
 		FXType:           spec.FX,
+		FXOn:             spec.FXOn,
 		FXParams:         spec.FXParams,
 		DelayType:        spec.Delay,
+		DelayOn:          spec.DelayOn,
 		DelayTime:        spec.DelayTime,
 		DelayFeedback:    spec.DelayFeedback,
 		DelayHighCut:     spec.DelayHighCut,
 		DelayLevel:       spec.DelayLevel,
 		DelayDirectMix:   spec.DelayDirectMix,
 		ReverbType:       spec.Reverb,
+		ReverbOn:         spec.ReverbOn,
 		ReverbTime:       spec.ReverbTime,
 		ReverbPreDelay:   spec.ReverbPreDelay,
 		ReverbLevel:      spec.ReverbLevel,
@@ -2498,51 +2519,9 @@ func (r *Registrar) wazaReadTSL(args map[string]any) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	patches := b.Patches()
-	decoded := make([]map[string]any, 0, len(patches))
-	for _, p := range patches {
-		params := p.ReadParams()
-		decoded = append(decoded, map[string]any{
-			"name":                p.Name,
-			"amp":                 params.AmpType,
-			"gain":                params.AmpGain,
-			"volume":              params.AmpVolume,
-			"bass":                params.AmpBass,
-			"middle":              params.AmpMiddle,
-			"treble":              params.AmpTreble,
-			"presence":            params.AmpPresence,
-			"booster":             params.BoosterType,
-			"booster_drive":       params.BoosterDrive,
-			"booster_bottom":      params.BoosterBottom,
-			"booster_tone":        params.BoosterTone,
-			"booster_solo":        params.BoosterSolo,
-			"booster_solo_level":  params.BoosterSoloLevel,
-			"booster_level":       params.BoosterLevel,
-			"booster_direct_mix":  params.BoosterDirectMix,
-			"mod":                 params.ModType,
-			"mod_params":          params.ModParams,
-			"fx":                  params.FXType,
-			"fx_params":           params.FXParams,
-			"delay":               params.DelayType,
-			"delay_time_ms":       params.DelayTime,
-			"delay_feedback":      params.DelayFeedback,
-			"delay_high_cut":      params.DelayHighCut,
-			"delay_level":         params.DelayLevel,
-			"delay_direct_mix":    params.DelayDirectMix,
-			"reverb":              params.ReverbType,
-			"reverb_time_s":       params.ReverbTime,
-			"reverb_pre_delay_ms": params.ReverbPreDelay,
-			"reverb_level":        params.ReverbLevel,
-			"reverb_direct_mix":   params.ReverbDirectMix,
-			"position":            params.Position,
-			"guitar_position":     params.GuitarPosition,
-			"ambience":            params.Ambience,
-			"ambience_level":      params.AmbienceLevel,
-			"mode":                params.Mode,
-			"ns_on":               params.NSOn != nil && *params.NSOn,
-			"ns_threshold":        params.NSThreshold,
-			"ns_release":          params.NSRelease,
-		})
+	decoded := make([]map[string]any, 0, len(b.Patches()))
+	for _, p := range b.Patches() {
+		decoded = append(decoded, wazaPatchJSON(p))
 	}
 	return marshal(map[string]any{
 		"name":       b.Name,
@@ -2552,6 +2531,58 @@ func (r *Registrar) wazaReadTSL(args map[string]any) (string, error) {
 	})
 }
 
+// wazaPatchJSON renders one decoded Waza Air patch as a JSON-friendly map. It
+// is shared by the read and write tools so the write tool can self-verify.
+func wazaPatchJSON(p waza.Patch) map[string]any {
+	params := p.ReadParams()
+	return map[string]any{
+		"name":                p.Name,
+		"amp":                 params.AmpType,
+		"gain":                params.AmpGain,
+		"volume":              params.AmpVolume,
+		"bass":                params.AmpBass,
+		"middle":              params.AmpMiddle,
+		"treble":              params.AmpTreble,
+		"presence":            params.AmpPresence,
+		"booster":             params.BoosterType,
+		"booster_on":          params.BoosterOn != nil && *params.BoosterOn,
+		"booster_drive":       params.BoosterDrive,
+		"booster_bottom":      params.BoosterBottom,
+		"booster_tone":        params.BoosterTone,
+		"booster_solo":        params.BoosterSolo,
+		"booster_solo_level":  params.BoosterSoloLevel,
+		"booster_level":       params.BoosterLevel,
+		"booster_direct_mix":  params.BoosterDirectMix,
+		"mod":                 params.ModType,
+		"mod_on":              params.ModOn != nil && *params.ModOn,
+		"mod_params":          params.ModParams,
+		"fx":                  params.FXType,
+		"fx_on":               params.FXOn != nil && *params.FXOn,
+		"fx_params":           params.FXParams,
+		"delay":               params.DelayType,
+		"delay_on":            params.DelayOn != nil && *params.DelayOn,
+		"delay_time_ms":       params.DelayTime,
+		"delay_feedback":      params.DelayFeedback,
+		"delay_high_cut":      params.DelayHighCut,
+		"delay_level":         params.DelayLevel,
+		"delay_direct_mix":    params.DelayDirectMix,
+		"reverb":              params.ReverbType,
+		"reverb_on":           params.ReverbOn != nil && *params.ReverbOn,
+		"reverb_time_s":       params.ReverbTime,
+		"reverb_pre_delay_ms": params.ReverbPreDelay,
+		"reverb_level":        params.ReverbLevel,
+		"reverb_direct_mix":   params.ReverbDirectMix,
+		"position":            params.Position,
+		"guitar_position":     params.GuitarPosition,
+		"ambience":            params.Ambience,
+		"ambience_level":      params.AmbienceLevel,
+		"mode":                params.Mode,
+		"ns_on":               params.NSOn != nil && *params.NSOn,
+		"ns_threshold":        params.NSThreshold,
+		"ns_release":          params.NSRelease,
+	}
+}
+
 // wazaSpec builds and resolves a Waza Air tone from the tool arguments.
 func (r *Registrar) wazaSpec(args map[string]any) (waza.Spec, error) {
 	d := waza.Default()
@@ -2559,10 +2590,15 @@ func (r *Registrar) wazaSpec(args map[string]any) (waza.Spec, error) {
 		Name:             argString(args, "name"),
 		Amp:              argString(args, "amp"),
 		Booster:          argString(args, "booster"),
+		BoosterOn:        argBoolPtr(args, "booster_on"),
 		Mod:              argString(args, "mod"),
+		ModOn:            argBoolPtr(args, "mod_on"),
 		FX:               argString(args, "fx"),
+		FXOn:             argBoolPtr(args, "fx_on"),
 		Delay:            argString(args, "delay"),
+		DelayOn:          argBoolPtr(args, "delay_on"),
 		Reverb:           argString(args, "reverb"),
+		ReverbOn:         argBoolPtr(args, "reverb_on"),
 		CabResonance:     argString(args, "cabinet_resonance"),
 		Ambience:         argString(args, "ambience"),
 		Position:         argString(args, "position"),

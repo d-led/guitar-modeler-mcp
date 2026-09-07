@@ -392,6 +392,33 @@ func TestIntegrationWazaTSLAndCard(t *testing.T) {
 	mustContain(t, bad, "unknown AIRSTEP BW mode 9")
 }
 
+// TestIntegrationWazaBoosterProgrammedOff proves the "assigned but bypassed"
+// case survives the whole tool chain: write RAT + booster_on=false, read it
+// back as RAT with booster_on=false.
+func TestIntegrationWazaBoosterProgrammedOff(t *testing.T) {
+	s := newIntegrationServer(t)
+	dir := t.TempDir()
+
+	out := resultText(t, rpc(t, s, 1, "tools/call", map[string]any{
+		"name": "waza_write_tsl",
+		"arguments": map[string]any{
+			"name":          "Claypool Mud",
+			"output_dir":    dir,
+			"amp":           "CRUNCH",
+			"booster":       "RAT",
+			"booster_on":    false,
+			"booster_drive": 70,
+		},
+	}))
+	mustContain(t, out, ".tsl")
+
+	read := resultText(t, rpc(t, s, 2, "tools/call", map[string]any{
+		"name":      "waza_read_tsl",
+		"arguments": map[string]any{"input_file": singleGlob(t, filepath.Join(dir, "*.tsl"))[0]},
+	}))
+	mustContain(t, read, `"booster": "RAT"`, `"booster_on": false`, `"booster_drive": 70`)
+}
+
 func TestIntegrationWazaMultiPatchBackup(t *testing.T) {
 	s := newIntegrationServer(t)
 	dir := t.TempDir()

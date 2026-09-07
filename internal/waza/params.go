@@ -187,6 +187,7 @@ type Params struct {
 	AmpPresence int
 
 	BoosterType      string
+	BoosterOn        *bool // nil = on iff a type is set; true/false force the block state
 	BoosterDrive     int
 	BoosterBottom    int // -50..+50
 	BoosterTone      int // 0-100, 50 = neutral
@@ -196,11 +197,14 @@ type Params struct {
 	BoosterDirectMix int
 
 	ModType   string
+	ModOn     *bool
 	ModParams map[string]float64 // canonical knob -> value, e.g. rate/depth
 	FXType    string
+	FXOn      *bool
 	FXParams  map[string]float64
 
 	DelayType      string
+	DelayOn        *bool
 	DelayTime      int // milliseconds
 	DelayFeedback  int
 	DelayHighCut   int // 0-14
@@ -208,6 +212,7 @@ type Params struct {
 	DelayDirectMix int // 0-100
 
 	ReverbType      string
+	ReverbOn        *bool
 	ReverbTime      float64 // seconds, 0.1-10.0
 	ReverbPreDelay  int     // milliseconds, 0-500
 	ReverbLevel     int
@@ -224,9 +229,10 @@ type Params struct {
 	NSRelease   int
 }
 
-// ReadParams decodes the patch's active parameters into names and values. An
-// effect type is only reported when its block is on, so an off block reads as
-// empty rather than echoing its remembered type.
+// ReadParams decodes the patch's parameters into names and values. Each effect
+// block reports its remembered type and its on/off state independently, so a
+// block that is assigned but bypassed (type set, off) reads back honestly
+// instead of as empty.
 func (p Patch) ReadParams() Params {
 	raw := p.Raw
 	pr := Params{
@@ -246,39 +252,39 @@ func (p Patch) ReadParams() Params {
 		NSThreshold:    int(raw[offNSThreshold]),
 		NSRelease:      int(raw[offNSRelease]),
 	}
-	if raw[offBoosterOnOff] != 0 {
-		pr.BoosterType = boosterTypeName[raw[offBoosterType]]
-		pr.BoosterDrive = int(raw[offBoosterDrive])
-		pr.BoosterBottom = int(raw[offBoosterBottom]) - 50
-		pr.BoosterTone = int(raw[offBoosterTone])
-		pr.BoosterSolo = raw[offBoosterSoloSW] != 0
-		pr.BoosterSoloLevel = int(raw[offBoosterSoloLv])
-		pr.BoosterLevel = int(raw[offBoosterLevel])
-		pr.BoosterDirectMix = int(raw[offBoosterMix])
-	}
-	if raw[offFX1OnOff] != 0 {
-		pr.ModType = modFXTypeName[raw[offFX1Type]]
-		pr.ModParams = readKnobs(raw, pr.ModType, false)
-	}
-	if raw[offFX2OnOff] != 0 {
-		pr.FXType = modFXTypeName[raw[offFX2Type]]
-		pr.FXParams = readKnobs(raw, pr.FXType, true)
-	}
-	if raw[offDelayOnOff] != 0 {
-		pr.DelayType = delayTypeName[raw[offDelayType]]
-		pr.DelayTime = int(raw[offDelayTimeHi])<<7 | int(raw[offDelayTimeLo])
-		pr.DelayFeedback = int(raw[offDelayFeedback])
-		pr.DelayHighCut = int(raw[offDelayHighCut])
-		pr.DelayLevel = int(raw[offDelayLevel])
-		pr.DelayDirectMix = int(raw[offDelayDirectMix])
-	}
-	if raw[offReverbOnOff] != 0 {
-		pr.ReverbType = reverbTypeName[raw[offReverbType]]
-		pr.ReverbTime = reverbTimeDecode(raw[offReverbTime])
-		pr.ReverbPreDelay = int(raw[offReverbPreDelay])<<7 | int(raw[offReverbPreDelay+1])
-		pr.ReverbLevel = int(raw[offReverbLevel])
-		pr.ReverbDirectMix = int(raw[offReverbDirectMix])
-	}
+
+	pr.BoosterOn = boolPtr(raw[offBoosterOnOff] != 0)
+	pr.BoosterType = boosterTypeName[raw[offBoosterType]]
+	pr.BoosterDrive = int(raw[offBoosterDrive])
+	pr.BoosterBottom = int(raw[offBoosterBottom]) - 50
+	pr.BoosterTone = int(raw[offBoosterTone])
+	pr.BoosterSolo = raw[offBoosterSoloSW] != 0
+	pr.BoosterSoloLevel = int(raw[offBoosterSoloLv])
+	pr.BoosterLevel = int(raw[offBoosterLevel])
+	pr.BoosterDirectMix = int(raw[offBoosterMix])
+
+	pr.ModOn = boolPtr(raw[offFX1OnOff] != 0)
+	pr.ModType = modFXTypeName[raw[offFX1Type]]
+	pr.ModParams = readKnobs(raw, pr.ModType, false)
+
+	pr.FXOn = boolPtr(raw[offFX2OnOff] != 0)
+	pr.FXType = modFXTypeName[raw[offFX2Type]]
+	pr.FXParams = readKnobs(raw, pr.FXType, true)
+
+	pr.DelayOn = boolPtr(raw[offDelayOnOff] != 0)
+	pr.DelayType = delayTypeName[raw[offDelayType]]
+	pr.DelayTime = int(raw[offDelayTimeHi])<<7 | int(raw[offDelayTimeLo])
+	pr.DelayFeedback = int(raw[offDelayFeedback])
+	pr.DelayHighCut = int(raw[offDelayHighCut])
+	pr.DelayLevel = int(raw[offDelayLevel])
+	pr.DelayDirectMix = int(raw[offDelayDirectMix])
+
+	pr.ReverbOn = boolPtr(raw[offReverbOnOff] != 0)
+	pr.ReverbType = reverbTypeName[raw[offReverbType]]
+	pr.ReverbTime = reverbTimeDecode(raw[offReverbTime])
+	pr.ReverbPreDelay = int(raw[offReverbPreDelay])<<7 | int(raw[offReverbPreDelay+1])
+	pr.ReverbLevel = int(raw[offReverbLevel])
+	pr.ReverbDirectMix = int(raw[offReverbDirectMix])
 	return pr
 }
 
@@ -322,6 +328,9 @@ func writeBoosterParams(raw []byte, pr Params) {
 		return
 	}
 	raw[offBoosterOnOff] = 1
+	if pr.BoosterOn != nil && !*pr.BoosterOn {
+		raw[offBoosterOnOff] = 0
+	}
 	raw[offBoosterType] = boosterTypeIndex[pr.BoosterType]
 	setByte(raw, offBoosterDrive, pr.BoosterDrive)
 	if pr.BoosterBottom != 0 {
@@ -339,16 +348,19 @@ func writeBoosterParams(raw []byte, pr Params) {
 }
 
 func writeModFXParams(raw []byte, pr Params) {
-	writeModOrFX(raw, offFX1OnOff, offFX1Type, pr.ModType, pr.ModParams, false)
-	writeModOrFX(raw, offFX2OnOff, offFX2Type, pr.FXType, pr.FXParams, true)
+	writeModOrFX(raw, offFX1OnOff, offFX1Type, pr.ModType, pr.ModOn, pr.ModParams, false)
+	writeModOrFX(raw, offFX2OnOff, offFX2Type, pr.FXType, pr.FXOn, pr.FXParams, true)
 }
 
-func writeModOrFX(raw []byte, onOff, typ int, name string, params map[string]float64, fx bool) {
+func writeModOrFX(raw []byte, onOff, typ int, name string, on *bool, params map[string]float64, fx bool) {
 	if name == "" {
 		raw[onOff] = 0
 		return
 	}
 	raw[onOff] = 1
+	if on != nil && !*on {
+		raw[onOff] = 0
+	}
 	raw[typ] = modFXTypeIndex[name]
 	applyKnobs(raw, name, fx, params)
 }
@@ -360,6 +372,9 @@ func writeDelayParams(raw []byte, pr Params) {
 		return
 	}
 	raw[offDelayOnOff] = 1
+	if pr.DelayOn != nil && !*pr.DelayOn {
+		raw[offDelayOnOff] = 0
+	}
 	raw[offDelayType] = delayTypeIndex[pr.DelayType]
 	if pr.DelayTime > 0 {
 		raw[offDelayTimeHi] = byte(pr.DelayTime / 128) // #nosec G115 -- high byte of a two-byte ms value
@@ -378,6 +393,9 @@ func writeReverbParams(raw []byte, pr Params) {
 		raw[offReverbOnOff] = 0
 	} else {
 		raw[offReverbOnOff] = 1
+		if pr.ReverbOn != nil && !*pr.ReverbOn {
+			raw[offReverbOnOff] = 0
+		}
 		raw[offReverbType] = reverbTypeIndex[pr.ReverbType]
 	}
 	if pr.ReverbTime > 0 {

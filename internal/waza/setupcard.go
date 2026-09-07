@@ -34,10 +34,15 @@ type Spec struct {
 	Name             string
 	Amp              string
 	Booster          string
+	BoosterOn        *bool // nil = on iff Booster is set; true/false force the block
 	Mod              string
+	ModOn            *bool
 	FX               string
+	FXOn             *bool
 	Delay            string
+	DelayOn          *bool
 	Reverb           string
+	ReverbOn         *bool
 	CabResonance     string
 	Ambience         string
 	Position         string
@@ -175,6 +180,24 @@ func effectFor(module string, s Spec) string {
 	return ""
 }
 
+// blockOn returns the explicit on/off flag for an effect block, or nil when
+// the block carries no flag (meaning "on iff its type is set").
+func blockOn(module string, s Spec) *bool {
+	switch module {
+	case "BOOSTER":
+		return s.BoosterOn
+	case "MOD":
+		return s.ModOn
+	case "FX":
+		return s.FXOn
+	case "DELAY":
+		return s.DelayOn
+	case "REVERB":
+		return s.ReverbOn
+	}
+	return nil
+}
+
 // SetupCardHTML renders a printable setup card for a resolved Spec.
 func (d Device) SetupCardHTML(s Spec) string {
 	return d.setupCardHTML(s, nil)
@@ -246,6 +269,8 @@ func (d Device) moduleCards(s Spec) []moduleCard {
 		effect, inspired := d.effectAndInspired(module, s)
 		if effect == "" {
 			effect = "OFF"
+		} else if on := blockOn(module, s); on != nil && !*on {
+			effect += " (off)"
 		}
 		cards = append(cards, moduleCard{Module: module, Effect: effect, Inspired: inspired, Slot: i + 1, Knobs: viewKnobs(moduleKnobs(module, s))})
 	}

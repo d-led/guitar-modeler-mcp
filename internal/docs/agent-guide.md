@@ -56,7 +56,21 @@ are supported:
   100. For a level-matched digital delay, set the delay's `level` (EFFECT
   LEVEL) to 100 and its `direct_mix` (DIRECT MIX) to 50, so the repeats sit at
   the same volume as the dry signal; below 50 attenuates the dry, above 50
-  boosts it.** Browse models
+  boosts it.**
+
+  **Amps are guitar voices — FLAT is the bass/neutral amp.** CLEAN, CRUNCH,
+  LEAD and BROWN are guitar amp models; `FLAT` is the clean/neutral full-range
+  amp intended for bass (and acoustic). Use `FLAT` for bass tones.
+
+  **Every effect block has an on/off flag.** `booster_on`/`mod_on`/`fx_on`/
+  `delay_on`/`reverb_on` set whether a block is engaged or bypassed; they
+  default to ON when the block's type is set. Set one to `false` to assign an
+  effect but leave it bypassed on load (e.g. a fuzz you bring in with an
+  AIRSTEP BW footswitch) — the type and knobs stay assigned. Read-back reports
+  each block's remembered type plus its `*_on` state, so a bypassed block reads
+  as its type with `*_on: false`, never as empty.
+
+  Browse models
   with `waza_catalog_list_*`, design with `waza_write_tsl` (writes a backup
   from the built-in template patch with the chosen tone applied) and
   `waza_setup_card` (a printable card), and read a backup's decoded patches
@@ -150,6 +164,11 @@ cross-device conversion through `map_preset`.
   `waza_catalog_list_*`, `thr_catalog_list_*`, `device_list`, `waza_read_tsl`)
   returns its answer inline as JSON text — there are no files to open
   afterwards.
+- **Writing tools return their own result — don't re-read the file.**
+  `waza_write_tsl` now returns the decoded patches it just wrote inline;
+  `design_rig` returns the assigned footswitches and notes. The read tools
+  (`waza_read_tsl`, `rig_decode`, `gp200_read_prst`) are for the user's own
+  inspection, not a required second step.
 - **Never read source code** (this project's, the MCP's, or the desktop app's).
   The catalog tools are the complete interface to the device's models and
   their parameters; digging into `.go`/`.ts` files is a dead end.
@@ -166,31 +185,29 @@ cross-device conversion through `map_preset`.
 
 ## Workflow discipline
 
-This is a small, well-bounded task: pick models, call `design_rig`, verify.
-Keep it tight and don't spiral:
+Produce one rig in as few tool calls as possible. The design tools translate
+free-text hardware descriptions internally, so catalog search is a fallback,
+never the first step.
 
-- **Research the actual rig before you pick models.** For an artist/song tone,
-  ground the amp/pedal choices in what the player really used (Equipboard,
-  WhatGear, The Gear Page `site:` search, Ultimate Guitar tone notes, TONE3000
-  — listed under "Tools and workflow") instead of guessing from the name
-  alone. One quick lookup beats a wrong translation the user has to correct.
-- **Decide, don't deliberate.** One `search_catalog`/`translate_*` round, pick
-  the first sensible model, move on. Don't re-derive the same amp/pedal choice
-  over and over in prose — the user will correct a wrong pick faster than you
-  can pre-empt it.
-- **One `design_rig` call, then `rig_decode` to verify.** Don't re-plan the
-  chain between calls; the tool's reply already reports the result.
-- **When unsure about a capability, try it once.** A parameter or footswitch
-  the schema doesn't advertise will either work or be rejected with a clear
-  message — testing it costs one turn, reasoning about it costs ten.
-- **Don't re-read `get_guide` or re-list catalogs mid-task.** They are stable
+- **Concrete input → go.** If the user gave a setup (a rig rundown, a page, an
+  Equipboard link), map it straight to device models and call the design tool.
+  Do not re-research what they already handed you.
+- **Unknown sound → ONE lookup.** If you don't know the tone, do a single web
+  search (the URLs under "Tools and workflow") or one `search_catalog`/
+  `translate_*` query, then commit to the top result. Never loop.
+- **Still unsure → ask once, or default and say so.** If one lookup doesn't
+  settle it, ask the user a single question — or pick a sensible default, state
+  it, and move on. Do not browse the catalog to fill the silence.
+- **One design call, then hand off.** Call the design tool once with your choice
+  and its knobs; the tool's reply is the record. Do not re-plan the chain or
+  re-derive the choice in prose between calls.
+- **Never re-read `get_guide` or re-list catalogs mid-task.** They are stable
   for the session; re-calling them is dead time.
-- **Hand off with a visual check.** Once the HTML report/setup card is written,
-  pass the clickable report link to the user — the tool returns it as a
-  `[filename](file://…)` markdown link, so present it as a link (don't flatten
-  it to a raw path) — and tell them to eyeball it before deploying to the
-  device: AI model, parameter and routing choices can be off, and the card is
-  the human verification step against the actual hardware.
+- **Never read source code, session logs, or raw preset bytes.** The tools are
+  the complete interface. If a knob seems missing from a schema, state it and
+  stop — don't reverse-engineer.
+- **Hand off with a visual check.** Present the written report/card as a
+  clickable link and ask the user to eyeball it against the hardware.
 
 ## HeadRush Gigboard — capabilities at a glance
 
@@ -213,6 +230,13 @@ Keep it tight and don't spiral:
   stomp button), so what starts off is visible at a glance.
 
 ## Tools and workflow
+
+**The design tools translate free-text descriptions directly — use them first.**
+`design_rig`, `mooer_design`, `waza_write_tsl`, `thr_setup_card`, `qc_design`
+and `gp200_design` each accept free-text amp/effect descriptions and resolve
+them to device models internally. When the user gave a concrete setup, go
+straight to the design call. The catalog steps below (1–6) are the fallback
+for when a name doesn't resolve or the user asks to browse.
 
 **First, research the actual rig — and get the user to do the search.** For an
 artist/song tone, don't guess from the name alone. Ask the user to search
@@ -269,7 +293,10 @@ clean amp? is that pedal really on the song?). Ready-to-use search URLs
    modules in one call.
 6. `get_fx_placement` — where each effect category goes (before vs after the
    amp) and how many slots each chain layout offers, so you know what fits.
-7. `design_rig` — resolve everything and write the `.rig` + an HTML report.
+7. `design_rig` — the primary step: resolve everything and write the `.rig` +
+   an HTML report. Prefer to call it first with free-text descriptions; fall
+   back to steps 1–6 only when a name doesn't resolve or the user asks to
+   browse.
    **Assign the hardware controls in the same call** (see Footswitches below):
    a wah, whammy or solo-boost that the player toggles must be put on a stomp
    switch, otherwise the rig is unplayable as a stompbox. The tool's reply

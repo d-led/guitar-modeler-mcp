@@ -21,13 +21,16 @@ func TestReadParamsTemplate(t *testing.T) {
 	wantEq(t, "amp middle", p.AmpMiddle, 50)
 	wantEq(t, "amp treble", p.AmpTreble, 50)
 	wantEq(t, "amp presence", p.AmpPresence, 50)
-	wantEq(t, "booster type", p.BoosterType, "")
-	wantEq(t, "booster drive", p.BoosterDrive, 0)
-	wantEq(t, "booster level", p.BoosterLevel, 0)
-	wantEq(t, "mod type", p.ModType, "")
-	wantEq(t, "fx type", p.FXType, "")
-	wantEq(t, "delay type", p.DelayType, "")
-	wantEq(t, "reverb type", p.ReverbType, "")
+	// Every effect block starts bypassed; the template may carry a remembered
+	// type from the factory preset, but the block itself must be off.
+	for name, on := range map[string]*bool{
+		"booster": p.BoosterOn, "mod": p.ModOn, "fx": p.FXOn,
+		"delay": p.DelayOn, "reverb": p.ReverbOn,
+	} {
+		if on == nil || *on {
+			t.Fatalf("%s should be off, got %v", name, on)
+		}
+	}
 	// The neutral template keeps the device's spatial defaults.
 	wantEq(t, "position", p.Position, "SURROUND")
 	wantEq(t, "ambience", p.Ambience, "STAGE")
@@ -106,9 +109,12 @@ func TestWriteParamsLeavesUnsetUntouched(t *testing.T) {
 		t.Fatalf("unspecified amp knobs were changed: %+v", got)
 	}
 	// Unspecified effect blocks must be OFF, not inherited from the template.
-	for name, v := range map[string]string{"mod": got.ModType, "fx": got.FXType, "delay": got.DelayType, "reverb": got.ReverbType} {
-		if v != "" {
-			t.Fatalf("unspecified %s block stayed on (%q)", name, v)
+	for name, on := range map[string]*bool{
+		"booster": got.BoosterOn, "mod": got.ModOn, "fx": got.FXOn,
+		"delay": got.DelayOn, "reverb": got.ReverbOn,
+	} {
+		if on == nil || *on {
+			t.Fatalf("unspecified %s block stayed on (%v)", name, on)
 		}
 	}
 }
@@ -169,8 +175,8 @@ func TestWriteParamsBoosterOnOff(t *testing.T) {
 	if off.Raw[offBoosterOnOff] != 0 {
 		t.Fatalf("booster on/off = %d, want 0 (off)", off.Raw[offBoosterOnOff])
 	}
-	if off.ReadParams().BoosterType != "" {
-		t.Fatalf("booster type = %q, want empty (off)", off.ReadParams().BoosterType)
+	if got := off.ReadParams(); got.BoosterOn == nil || *got.BoosterOn {
+		t.Fatalf("booster should read off, got %v", got.BoosterOn)
 	}
 }
 
@@ -351,5 +357,54 @@ func TestSetupCardShowsValues(t *testing.T) {
 	// Unspecified knobs must not leak zeros.
 	if strings.Contains(html, "TONE") || strings.Contains(html, "HIGH CUT") {
 		t.Fatalf("setup card shows unspecified knobs:\n%s", html)
+	}
+}
+
+// TestWriteParamsBlocksProgrammedOff proves every effect block can be assigned
+// but bypassed: the type is written while the on/off byte stays off.
+func TestWriteParamsBlocksProgrammedOff(t *testing.T) {
+	tmpl, err := TemplatePatch()
+	if err != nil {
+		t.Fatalf("TemplatePatch: %v", err)
+	}
+
+	cases := []struct {
+		name string
+		p    Params
+		off  int
+	}{
+		{"booster", Params{BoosterType: "RAT", BoosterOn: boolPtr(false)}, offBoosterOnOff},
+		{"mod", Params{ModType: "CHORUS", ModOn: boolPtr(false)}, offFX1OnOff},
+		{"fx", Params{FXType: "TREMOLO", FXOn: boolPtr(false)}, offFX2OnOff},
+		{"delay", Params{DelayType: "ANALOG DELAY", DelayOn: boolPtr(false)}, offDelayOnOff},
+		{"reverb", Params{ReverbType: "HALL REVERB", ReverbOn: boolPtr(false)}, offReverbOnOff},
+	}
+	for _, c := range cases {
+		out := tmpl.WriteParams(c.p)
+		if out.Raw[c.off] != 0 {
+			t.Fatalf("%s on/off = %d, want 0 (off)", c.name, out.Raw[c.off])
+		}
+	}
+}
+
+// TestWriteParamsBoosterProgrammedOffRoundTrip proves a bypassed booster keeps
+// its assigned type and knobs on read-back, so "assigned but off" survives a
+// write → read cycle.
+func TestWriteParamsBoosterProgrammedOffRoundTrip(t *testing.T) {
+	tmpl, err := TemplatePatch()
+	if err != nil {
+		t.Fatalf("TemplatePatch: %v", err)
+	}
+
+	out := tmpl.WriteParams(Params{BoosterType: "RAT", BoosterOn: boolPtr(false), BoosterDrive: 70})
+	if out.Raw[offBoosterType] != boosterTypeIndex["RAT"] {
+		t.Fatalf("booster type = %d, want %d (RAT)", out.Raw[offBoosterType], boosterTypeIndex["RAT"])
+	}
+
+	got := out.ReadParams()
+	wantEq(t, "booster type", got.BoosterType, "RAT")
+	wantEq(t, "booster drive", got.BoosterDrive, 70)
+	if got.BoosterOn == nil || *got.BoosterOn {
+		t.Fatalf("booster should read off, got %v", got.BoosterOn)
 	}
 }
