@@ -58,9 +58,20 @@ are supported:
   the same volume as the dry signal; below 50 attenuates the dry, above 50
   boosts it.**
 
-  **Amps are guitar voices — FLAT is the bass/neutral amp.** CLEAN, CRUNCH,
-  LEAD and BROWN are guitar amp models; `FLAT` is the clean/neutral full-range
-  amp intended for bass (and acoustic). Use `FLAT` for bass tones.
+  **Amps are guitar voices — FLAT is a neutral full-range amp, optimised for
+  guitar and acoustic, not a dedicated bass amp.** CLEAN, CRUNCH, LEAD and
+  BROWN are guitar amp models; `FLAT` is the full-range/neutral amp. For bass,
+  use `FLAT` and add the low end the guitar voicing lacks — the user's
+  `DL bass` reference does this with the booster, not the amp EQ: FLAT at
+  gain 42 / volume 71 with a flat amp EQ, and a **CLEAN BOOST** engaged
+  (drive 59, **bottom +23**, tone 50, level 75) to lift the lows and level.
+  **The engaged boost is where a bass tone's loudness and low end come from** —
+  a FLAT bass patch with a bypassed booster reads thin and quiet; match the
+  `DL bass` loudness/bass, don't ship anything thinner or quieter. The Waza
+  Air has a single BOOSTER slot, so a drive/fuzz accent (e.g. RAT) and the
+  CLEAN BOOST low-end lift can't coexist: if the booster holds a bypassed
+  accent, move the low-end lift to the amp (`bass` ≈ 70) and raise the amp
+  level.
 
   **Every effect block has an on/off flag.** `booster_on`/`mod_on`/`fx_on`/
   `delay_on`/`reverb_on` set whether a block is engaged or bypassed; they
@@ -169,6 +180,10 @@ cross-device conversion through `map_preset`.
   `design_rig` returns the assigned footswitches and notes. The read tools
   (`waza_read_tsl`, `rig_decode`, `gp200_read_prst`) are for the user's own
   inspection, not a required second step.
+- **Write into the workspace by default.** The writing tools default
+  `output_dir` to the current directory (the workspace). Do not pass an
+  external path (iCloud, home, `/tmp`, …) unless the user explicitly gives
+  one — generated presets, setup cards and reports belong in the workspace.
 - **Never read source code** (this project's, the MCP's, or the desktop app's).
   The catalog tools are the complete interface to the device's models and
   their parameters; digging into `.go`/`.ts` files is a dead end.

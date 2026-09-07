@@ -53,25 +53,23 @@ func TestMatchAmpByReference(t *testing.T) {
 	}
 }
 
-// TestBassAmpMapsToWazaFLAT proves a gigboard bass amp cross-maps to the Waza
-// Air FLAT amp, which is the neutral/bass amp on that device.
-func TestBassAmpMapsToWazaFLAT(t *testing.T) {
-	src, _ := Ingredients("gigboard")
-	tgt, _ := Ingredients("wazaair")
-
-	plan, err := Map(src, tgt, "wazaair", []string{"69 Blue Line Bass"})
+// TestWazaFlatIsNeutralGuitarAmp documents that FLAT is the Waza Air's neutral
+// guitar/acoustic amp, not a dedicated bass amp — bass tones use FLAT with a
+// booster low-end lift instead (see the agent guide).
+func TestWazaFlatIsNeutralGuitarAmp(t *testing.T) {
+	ing, err := Ingredients("wazaair")
 	if err != nil {
-		t.Fatalf("Map: %v", err)
+		t.Fatalf("Ingredients: %v", err)
 	}
-	if len(plan.Matches) != 1 || !plan.Matches[0].Matched {
-		t.Fatalf("matches = %+v", plan.Matches)
+	for _, in := range ing {
+		if in.Name == "FLAT" {
+			if in.Kind != KindAmp {
+				t.Fatalf("FLAT kind = %q, want %q (neutral guitar amp, not bassamp)", in.Kind, KindAmp)
+			}
+			return
+		}
 	}
-	if plan.Matches[0].Target != "FLAT" {
-		t.Fatalf("bass amp mapped to %q, want FLAT", plan.Matches[0].Target)
-	}
-	if plan.Matches[0].Kind != KindBassAmp {
-		t.Fatalf("kind = %q, want %q", plan.Matches[0].Kind, KindBassAmp)
-	}
+	t.Fatal("FLAT amp not found in wazaair ingredients")
 }
 
 func TestTagsEncodeSubFeatures(t *testing.T) {

@@ -354,7 +354,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 
 	s.Register(mcp.Tool{
 		Name:        "waza_catalog_list_amps",
-		Description: "List the five amp types of the Boss Waza Air, with the real hardware each emulates. FLAT is the clean/neutral full-range amp intended for bass.",
+		Description: "List the five amp types of the Boss Waza Air, with the real hardware each emulates. FLAT is the neutral full-range amp optimised for guitar and acoustic — for bass, add low-end EQ via the booster.",
 		InputSchema: objectSchema(map[string]any{}),
 		Handler: func(_ context.Context, _ map[string]any) (string, error) {
 			return r.wazaListAmps()
