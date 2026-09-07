@@ -27,8 +27,8 @@ func TestClassifyFXColor(t *testing.T) {
 		if !ok {
 			t.Fatalf("effect %q not found", name)
 		}
-		if f.Color != want {
-			t.Errorf("effect %q color = %q, want %q", name, f.Color, want)
+		if f.Character != want {
+			t.Errorf("effect %q character = %q, want %q", name, f.Character, want)
 		}
 	}
 }

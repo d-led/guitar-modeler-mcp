@@ -1423,7 +1423,7 @@
       "category": "delay",
       "description": "Wide, atmospheric delay.",
       "confirmed": false,
-      "color": "atmospheric",
+      "character": "atmospheric",
       "family": "delay"
     },
     {
@@ -1431,7 +1431,7 @@
       "category": "delay",
       "description": "Digital delay whose repeats duck under your playing; turn the ducking off for fixed, clean repeats.",
       "confirmed": false,
-      "color": "clean",
+      "character": "clean",
       "family": "delay"
     },
     {
@@ -1440,7 +1440,7 @@
       "description": "Analog bucket-brigade delay.",
       "modeled_after": "Elektro Harmonix Deluxe Memory Man",
       "confirmed": false,
-      "color": "analog",
+      "character": "analog",
       "family": "delay"
     },
     {
@@ -1448,7 +1448,7 @@
       "category": "delay",
       "description": "Tape echo with wow, flutter and hiss.",
       "confirmed": false,
-      "color": "tape",
+      "character": "tape",
       "family": "delay"
     },
     {
@@ -1456,7 +1456,7 @@
       "category": "delay",
       "description": "Delay with pitch-shifted repeats.",
       "confirmed": false,
-      "color": "pitch",
+      "character": "pitch",
       "family": "delay"
     },
     {
@@ -1464,7 +1464,7 @@
       "category": "delay",
       "description": "Resonant filtered delay.",
       "confirmed": false,
-      "color": "resonant",
+      "character": "resonant",
       "family": "delay"
     },
     {
@@ -1472,7 +1472,7 @@
       "category": "delay",
       "description": "Backwards delay.",
       "confirmed": false,
-      "color": "reverse",
+      "character": "reverse",
       "family": "delay"
     },
     {
@@ -1480,7 +1480,7 @@
       "category": "reverb",
       "description": "Expansive hall-style reverb.",
       "confirmed": false,
-      "color": "hall",
+      "character": "hall",
       "family": "reverb"
     },
     {
@@ -1488,7 +1488,7 @@
       "category": "reverb",
       "description": "Ambient reverb with long tails.",
       "confirmed": false,
-      "color": "ambient",
+      "character": "ambient",
       "family": "reverb"
     },
     {
@@ -1496,7 +1496,7 @@
       "category": "reverb",
       "description": "Natural room and hall reverb.",
       "confirmed": false,
-      "color": "room",
+      "character": "room",
       "family": "reverb"
     },
     {
@@ -1504,7 +1504,7 @@
       "category": "reverb",
       "description": "Lush, modulated reverb.",
       "confirmed": false,
-      "color": "modulated",
+      "character": "modulated",
       "family": "reverb"
     },
     {
@@ -1513,7 +1513,7 @@
       "description": "Spring tank reverb.",
       "modeled_after": "Fender Blackface Amp Reverb",
       "confirmed": false,
-      "color": "spring",
+      "character": "spring",
       "family": "reverb"
     },
     {
@@ -1521,7 +1521,7 @@
       "category": "reverb",
       "description": "Pitch-shifted shimmer reverb.",
       "confirmed": false,
-      "color": "shimmer",
+      "character": "shimmer",
       "family": "reverb"
     },
     {

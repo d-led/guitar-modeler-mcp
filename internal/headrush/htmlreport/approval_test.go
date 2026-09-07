@@ -38,6 +38,37 @@ func TestReportSnapshot(t *testing.T) {
 	golden.Assert(t, "report", []byte(html))
 }
 
+// TestReportRendersSlotColour guards that each chain-slot card shows the
+// module's slot colour: an explicit override and the device default.
+func TestReportRendersSlotColour(t *testing.T) {
+	b, err := rig.NewBuilder(catalog.New())
+	if err != nil {
+		t.Fatalf("NewBuilder: %v", err)
+	}
+	file, err := b.Build(rig.Spec{
+		Name: "Colour Rig",
+		Blocks: []rig.Block{
+			{Type: "Amp", Params: map[string]any{"Type": "82 Lead 800 100W"}},
+			{Type: "Cab", Params: map[string]any{"CabType": "4x12 Green 25W", "MicType": "Dyn 57"}},
+			{Type: "Gray Comp", Enabled: true, Colour: "Purple"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+
+	html, err := Render(file, "", catalog.New())
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+	if !strings.Contains(html, `style="background:#bf5af2"></span>Purple`) {
+		t.Fatal("expected the Gray Comp card to show a Purple slot-colour swatch")
+	}
+	if !strings.Contains(html, `style="background:#30d158"></span>Green`) {
+		t.Fatal("expected the default-coloured modules to show a Green slot-colour swatch")
+	}
+}
+
 // TestReportGreysOutBypassedModules guards the visual cue that a module is off
 // by default: its card is greyed and carries an "off" badge.
 func TestReportGreysOutBypassedModules(t *testing.T) {

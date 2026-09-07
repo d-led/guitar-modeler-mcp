@@ -67,12 +67,14 @@ type FX struct {
 	// can match the pedal to the part (mirrors Amp.Gain). Empty for non-drive
 	// effects.
 	Gain string `json:"gain,omitempty"`
-	// Color classifies a time-based effect's character — for delay: "clean",
-	// "atmospheric", "analog", "tape", "pitch", "resonant", "reverse"; for
-	// reverb: "hall", "ambient", "room", "modulated", "spring", "shimmer" — so
-	// an agent can match the effect's flavour to the part. Empty for effects
-	// without a time-based character.
-	Color string `json:"color,omitempty"`
+	// Character classifies a time-based effect's tonal character — for delay:
+	// "clean", "atmospheric", "analog", "tape", "pitch", "resonant",
+	// "reverse"; for reverb: "hall", "ambient", "room", "modulated",
+	// "spring", "shimmer" — so an agent can match the effect's flavour to the
+	// part. Empty for effects without a time-based character. This is NOT the
+	// module's slot colour (the per-slot "Colour" tag set on the device, or via
+	// design_rig's fx[].colour override).
+	Character string `json:"character,omitempty"`
 	// Family groups the model variants that are interchangeable for the same
 	// job ("chorus", "compressor", "wah", "delay", …), so an agent can see and
 	// compare the alternatives to a given pick instead of always reaching for

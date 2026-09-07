@@ -32,6 +32,6 @@ func classifyFXColor(f FX) string {
 // load, the same way classifyFXGain derives the drive-strength label.
 func init() {
 	for i := range fx {
-		fx[i].Color = classifyFXColor(fx[i])
+		fx[i].Character = classifyFXColor(fx[i])
 	}
 }

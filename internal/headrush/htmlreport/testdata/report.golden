@@ -45,6 +45,7 @@
   .module h2 { margin: 0 0 2px; font-size: 1.1em; }
   .module .cat { font-size: .78em; color: #888; text-transform: uppercase; letter-spacing: .05em; }
   .module .desc { color: #666; margin: 4px 0 10px; }
+  .swatch { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-left: 8px; margin-right: 4px; vertical-align: -1px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.15); }
   .params { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px 16px; }
   .param { font-size: .9em; }
   .param .k { color: #888; margin-right: 6px; }
@@ -112,7 +113,7 @@
   
   <div class="module">
     <h2><span class="slotbadge">1</span>Amp</h2>
-    <div class="cat"></div>
+    <div class="cat"><span class="swatch" style="background:#30d158"></span>Green</div>
     <div class="desc">Marshall JCM800 2203 · 100W · rock, hard rock</div>
     
     <div class="params">
@@ -122,7 +123,7 @@
   
   <div class="module">
     <h2><span class="slotbadge">2</span>Cab</h2>
-    <div class="cat"></div>
+    <div class="cat"><span class="swatch" style="background:#30d158"></span>Green</div>
     <div class="desc">4x12 · Celestion Greenback 25W · mic Shure SM57</div>
     
     <div class="params">
@@ -132,7 +133,7 @@
   
   <div class="module">
     <h2><span class="slotbadge">3</span>Spring Reverb</h2>
-    <div class="cat">reverb</div>
+    <div class="cat">reverb<span class="swatch" style="background:#30d158"></span>Green</div>
     <div class="desc">Spring tank reverb.</div>
     <div class="params">
       <div class="param"><span class="k">Decay</span><span class="v">1.5</span></div><div class="param"><span class="k">Tone</span><span class="v">6</span></div><div class="param"><span class="k">Mix</span><span class="v">40</span></div><div class="param"><span class="k">DiffusionOn</span><span class="v">on</span></div><div class="param"><span class="k">Width</span><span class="v">0</span></div><div class="param"><span class="k">On</span><span class="v">on</span></div><div class="param"><span class="k">Colour</span><span class="v">Green</span></div>

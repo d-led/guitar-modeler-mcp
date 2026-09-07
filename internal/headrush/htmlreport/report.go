@@ -26,6 +26,8 @@ type moduleInfo struct {
 	Category    string
 	Description string
 	On          bool
+	Colour      string // device slot colour tag (empty for the fixed sections)
+	ColourHex   string // CSS colour of the slot's swatch
 	Params      []paramKV
 
 	Amp *catalog.Amp
@@ -143,9 +145,34 @@ func isFixed(name string) bool {
 
 func moduleInfoFor(name string, node *rig.Node, cat *catalog.Catalog) moduleInfo {
 	info := moduleInfo{Name: name, On: nodeEnabled(node)}
+	if c := nodeString(node, "Colour"); c != "" {
+		info.Colour = c
+		info.ColourHex = colourHex(c)
+	}
 	info.Params = moduleParams(name, node)
 	enrichModule(&info, name, node, cat)
 	return info
+}
+
+// colourHex maps a device slot colour tag to the CSS colour of its swatch,
+// mirroring the report's iOS-grey palette.
+func colourHex(colour string) string {
+	if hex, ok := slotColourHex[colour]; ok {
+		return hex
+	}
+	return "#8e8e93" // neutral fallback for an unexpected tag
+}
+
+var slotColourHex = map[string]string{
+	"Blue":       "#0a84ff",
+	"Yellow":     "#ffd60a",
+	"Green":      "#30d158",
+	"Purple":     "#bf5af2",
+	"Red":        "#ff453a",
+	"Dark Green": "#248a3d",
+	"Orange":     "#ff9f0a",
+	"Light Blue": "#64d2ff",
+	"Pink":       "#ff375f",
 }
 
 func moduleParams(name string, node *rig.Node) []paramKV {
@@ -365,6 +392,7 @@ const reportHTML = `<!doctype html>
   .module h2 { margin: 0 0 2px; font-size: 1.1em; }
   .module .cat { font-size: .78em; color: #888; text-transform: uppercase; letter-spacing: .05em; }
   .module .desc { color: #666; margin: 4px 0 10px; }
+  .swatch { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-left: 8px; margin-right: 4px; vertical-align: -1px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.15); }
   .params { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px 16px; }
   .param { font-size: .9em; }
   .param .k { color: #888; margin-right: 6px; }
@@ -406,7 +434,7 @@ const reportHTML = `<!doctype html>
   {{range .Chain}}
   <div class="module{{if not .On}} off{{end}}">
     <h2>{{if .Slot}}<span class="slotbadge">{{.Slot}}</span>{{end}}{{.Name}}{{if not .On}}<span class="offbadge">off</span>{{end}}</h2>
-    <div class="cat">{{.Category}}</div>
+    <div class="cat">{{.Category}}{{if .Colour}}<span class="swatch" style="background:{{.ColourHex}}"></span>{{.Colour}}{{end}}</div>
     {{if .Amp}}<div class="desc">{{.Amp.Brand}} {{.Amp.RealModel}}{{if .Amp.Wattage}} · {{.Amp.Wattage}}{{end}}{{if .Amp.Style}} · {{range $i, $s := .Amp.Style}}{{if $i}}, {{end}}{{$s}}{{end}}{{end}}</div>
     {{else if .Cab}}<div class="desc">{{.Cab.Speakers}} · {{.Cab.SpeakersRef}}{{if .Mic}} · mic {{.Mic.RealModel}}{{end}}</div>
     {{else}}<div class="desc">{{.Description}}</div>{{end}}

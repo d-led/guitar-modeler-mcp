@@ -354,22 +354,28 @@ singing/high-gain lead usually wants a **distortion** (`Black OP` Pro Co Rat,
 `DC Distort`, `D1 Dist`, `MX Dist`) or a drive→distortion stack. Match the
 pedal's `gain` to the part exactly as you match the amp's.
 
-Delay and reverb effects carry a `color` character the same way, shown by the
-same three tools: delay `clean` (`Dyn Delay`), `atmospheric` (`AIR Delay`),
+Delay and reverb effects carry a `character` the same way, shown by the same
+three tools: delay `clean` (`Dyn Delay`), `atmospheric` (`AIR Delay`),
 `analog` (`BBD Delay`), `tape` (`Tape Echo`), `pitch`, `resonant`, `reverse`;
 reverb `hall` (`AIR Reverb`), `room` (`Eleven Reverb`), `spring`, `ambient`,
 `modulated`, `shimmer`. **For a clean, uncolored repeat** (a percussive slap
 delay, a crisp dotted-eighth) use `Dyn Delay` — it is the clean digital delay;
 set its ducking off for fixed repeats. `AIR Delay` is an *atmospheric* wash,
 not a clean digital delay, and is the wrong choice when the part needs crisp
-repeats. Match the `color` to the part just like you match drive `gain`.
+repeats. Match the `character` to the part just like you match drive `gain`.
+
+**Do not confuse this `character` with a module's slot colour.** The `character`
+is a tonal flavour hint from the catalog; the slot colour is the device's
+per-module `Colour` tag (Green, Yellow, Purple, …) — set on the device grid or
+via `design_rig` (`fx[].colour`), and shown in the HTML report. They are
+unrelated.
 
 Every effect also carries a `family` — the group of model variants that are
 interchangeable for the same job (`chorus`, `compressor`, `wah`, `phaser`,
 `octave`, …). When several models share a family, **compare them, don't just
 take the first**: list the family with `catalog_list_variants` (e.g.
 `type: "Chorus"` → `Multi Chorus`, `Dim Chorus`, `Detune`) and pick the variant
-whose description/`color`/`gain` fits the part — the first match is rarely the
+whose description/`character`/`gain` fits the part — the first match is rarely the
 best one.
 
 **Compressors don't default to unity.** A compressor's output `Level` is a

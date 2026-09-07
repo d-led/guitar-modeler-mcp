@@ -16,7 +16,7 @@ type SearchResult struct {
 	ModeledAfter string  `json:"modeled_after,omitempty"` // real hardware it emulates
 	Category     string  `json:"category,omitempty"`      // effects only
 	Gain         string  `json:"gain,omitempty"`          // distortion effects: drive strength
-	Color        string  `json:"color,omitempty"`         // delay/reverb effects: character
+	Character    string  `json:"character,omitempty"`     // delay/reverb effects: tonal character
 	Family       string  `json:"family,omitempty"`        // effects: variant group (e.g. "chorus")
 	Description  string  `json:"description,omitempty"`
 	Score        float64 `json:"score"`      // 0..1 relevance
@@ -104,7 +104,7 @@ func searchFX(k, q string) []SearchResult {
 	for _, f := range fx {
 		if r, ok := matchEntry("fx", f.Name, f.ModeledAfter, f.Category, f.Description, q); ok {
 			r.Gain = f.Gain
-			r.Color = f.Color
+			r.Character = f.Character
 			r.Family = f.Family
 			results = append(results, r)
 		}
