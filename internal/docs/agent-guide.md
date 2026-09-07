@@ -169,6 +169,11 @@ cross-device conversion through `map_preset`.
 This is a small, well-bounded task: pick models, call `design_rig`, verify.
 Keep it tight and don't spiral:
 
+- **Research the actual rig before you pick models.** For an artist/song tone,
+  ground the amp/pedal choices in what the player really used (Equipboard,
+  WhatGear, The Gear Page `site:` search, Ultimate Guitar tone notes, TONE3000
+  — listed under "Tools and workflow") instead of guessing from the name
+  alone. One quick lookup beats a wrong translation the user has to correct.
 - **Decide, don't deliberate.** One `search_catalog`/`translate_*` round, pick
   the first sensible model, move on. Don't re-derive the same amp/pedal choice
   over and over in prose — the user will correct a wrong pick faster than you
@@ -208,6 +213,38 @@ Keep it tight and don't spiral:
   stomp button), so what starts off is visible at a glance.
 
 ## Tools and workflow
+
+**First, research the actual rig — and get the user to do the search.** For an
+artist/song tone, don't guess from the name alone. Ask the user to search
+Google/DuckDuckGo for the sound, paste back whatever they find (rig rundowns,
+gear lists, forum threads, tab "tone notes"), then you map it to the closest
+device models below and re-check it for plausibility (does a clean song get a
+clean amp? is that pedal really on the song?). Ready-to-use search URLs
+(replace the `{…}` parts; keep spaces as `+` or `%20`):
+
+- **DuckDuckGo** (general fallback, also supports `site:`):
+  `https://duckduckgo.com/?q={query}&t=h_&ia=web` — e.g. `{artist} {song} rig`
+- **Google** (general fallback, also supports `site:`):
+  `https://www.google.com/search?q={query}`
+- **Equipboard** (artist gear wiki) — go straight to the profile page:
+  `https://equipboard.com/pros/{artist-slug}` (e.g. `pros/tom-morello`). To
+  discover the slug, search:
+  `https://www.google.com/search?q=site%3Aequipboard.com+{artist}+gear`
+- **WhatGear** (artist gear wiki; bot-walled, so search via Google/DuckDuckGo):
+  `https://duckduckgo.com/?q=site%3Awhatgear.com+{artist}+gear&t=h_&ia=web`
+- **The Gear Page** (forum, ear-broken-down rig threads; search via
+  Google/DuckDuckGo):
+  `https://duckduckgo.com/?q=site%3Athegearpage.net+%22{artist}%22+%22{song}%22+signal+chain&t=h_&ia=web`
+- **Ultimate Guitar** (tab "tone notes") — title search:
+  `https://www.ultimate-guitar.com/search.php?search_type=title&value={song}`
+- **TONE3000** (free community NAM captures) — keyless web search:
+  `https://www.tone3000.com/search?q={query}` (e.g. `{artist} {song}`). It also
+  has a JSON API (`GET /api/v1/tones/search`, full docs at `tone3000.com/api`),
+  but that needs the user's TONE3000 API key (Settings → API Keys, a
+  `t3k_pub_…` publishable key) and OAuth for user-scoped resources — ask the
+  user for their key if you want API-level search, otherwise use the web URL.
+- **The Guitar Loot archive** — per-song pedal order and amp channel settings
+  (no public search URL; browse the site).
 
 1. `search_catalog` — fuzzy-search every amp, cab, mic and effect by device name
    or the real hardware it emulates (`modeled_after`), in both directions:
