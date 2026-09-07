@@ -179,7 +179,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 			"mic2":       stringSchema("Optional mic for the second amp path."),
 			"tempo":      numberSchema("Optional tempo in BPM."),
 			"input_gain": numberSchema("Optional input gain in dB."), "output_level": numberSchema("Optional overall rig output level in dB (RigVolume; default +6 dB to compensate the amp master's −6 dB)."), "output_dir": stringSchema("Directory to write the files into (default: current directory)."),
-			"fx":           arraySchema("Optional effects, in any order; they will be placed sensibly.", fxItemSchema()),
+			"fx":           arraySchema("Optional effects, in any order; they are placed sensibly by category (see get_fx_placement). Each item may pin itself with \"slot\" (absolute 1-based serial slot) or \"position\": \"pre\"/\"post\" to override its category's default.", fxItemSchema()),
 			"path_a_fx":    arraySchema("Optional effects for parallel path A (shared-amp SPS-1).", fxItemSchema()),
 			"path_b_fx":    arraySchema("Optional effects for parallel path B (shared-amp SPS-1).", fxItemSchema()),
 			"para1_level":  numberSchema("Optional level of path A in dB (default -6)."),
@@ -1063,8 +1063,10 @@ func parseFX(raw any) []design.FXBlock {
 			continue
 		}
 		fx := design.FXBlock{
-			Type:    argString(m, "type"),
-			Enabled: argBool(m, "enabled", true),
+			Type:     argString(m, "type"),
+			Enabled:  argBool(m, "enabled", true),
+			Position: argString(m, "position"),
+			Slot:     argIntPtr(m, "slot"),
 		}
 		if p, ok := m["params"].(map[string]any); ok {
 			fx.Params = p
@@ -1269,6 +1271,26 @@ func argFloatPtr(args map[string]any, key string) *float64 {
 	return nil
 }
 
+// argIntPtr returns the integer value as a pointer, or nil when the argument
+// is absent or not a number. Used for optional integer parameters.
+func argIntPtr(args map[string]any, key string) *int {
+	v, ok := args[key]
+	if !ok {
+		return nil
+	}
+	switch n := v.(type) {
+	case float64:
+		i := int(n)
+		return &i
+	case int:
+		return &n
+	case int64:
+		i := int(n)
+		return &i
+	}
+	return nil
+}
+
 func argBool(args map[string]any, key string, def bool) bool {
 	if v, ok := args[key]; ok {
 		if b, ok := v.(bool); ok {
@@ -1393,9 +1415,11 @@ func mergeMaps(maps ...map[string]any) map[string]any {
 
 func fxItemSchema() map[string]any {
 	return objectSchema(map[string]any{
-		"type":    stringSchema("Effect module display name, e.g. \"Tape Echo\"."),
-		"enabled": map[string]any{"type": "boolean", "description": "Whether the effect is on."},
-		"params":  map[string]any{"type": "object", "description": "Parameter overrides; values are numbers, booleans or strings."},
+		"type":     stringSchema("Effect module display name, e.g. \"Tape Echo\"."),
+		"enabled":  map[string]any{"type": "boolean", "description": "Whether the effect is on."},
+		"params":   map[string]any{"type": "object", "description": "Parameter overrides; values are numbers, booleans or strings."},
+		"position": stringSchema("Optional placement override: \"pre\" (before the amp) or \"post\" (after the amp). Empty = the effect category's conventional placement."),
+		"slot":     numberSchema("Optional absolute 1-based chain slot (serial routing only) — pin the effect to an exact slot, e.g. 1 for a volume pedal at the front of the chain."),
 	})
 }
 

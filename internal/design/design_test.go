@@ -140,8 +140,8 @@ func TestDesignDefaultsOutputLevelToCompensateMaster(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Design: %v", err)
 	}
-	// The amp master defaults to 50% (−6 dB); the designer defaults the output
-	// to +6 dB so a fresh rig lands at unity.
+	// The designer defaults the output to +6 dB (matching the device's own
+	// presets) rather than leaving RigVolume at unity.
 	if res.Spec.OutputVolume != 6 {
 		t.Fatalf("default output volume = %v, want 6", res.Spec.OutputVolume)
 	}
@@ -316,4 +316,145 @@ func TestDesignNoFootswitchHintForNonExpressionModule(t *testing.T) {
 	if notesMention(t, res.Notes, "has no footswitch") {
 		t.Fatalf("did not expect a footswitch hint for a distortion, notes = %v", res.Notes)
 	}
+}
+
+func TestDesignPositionsVolumeAtFront(t *testing.T) {
+	d := NewDesigner(catalog.New())
+	res, err := d.Design(Request{
+		Name: "Tails",
+		Amp:  "65 Black SR",
+		FX: []FXBlock{
+			{Type: "Volume", Enabled: true, Position: "pre"},
+			{Type: "AIR Delay", Enabled: true},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Design: %v", err)
+	}
+	if res.Spec.Blocks[0].Type != "Volume" {
+		t.Fatalf("first block = %q, want Volume at the front", res.Spec.Blocks[0].Type)
+	}
+}
+
+func TestDesignPositionsOctavePreAmp(t *testing.T) {
+	d := NewDesigner(catalog.New())
+	res, err := d.Design(Request{
+		Name: "Sledge",
+		Amp:  "65 Black SR",
+		FX: []FXBlock{
+			{Type: "Octaves", Enabled: true, Position: "pre"},
+			{Type: "Dim Chorus", Enabled: true},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Design: %v", err)
+	}
+	// Octaves (modulation, post by default) must sit before the amp; the chorus
+	// stays after the cab.
+	types := blockTypes(res.Spec.Blocks)
+	want := []string{"Octaves", "Amp", "Cab", "Dim Chorus"}
+	if !equalStrings(types, want) {
+		t.Fatalf("chain = %v, want %v", types, want)
+	}
+}
+
+func TestDesignPinsEffectToSlot(t *testing.T) {
+	d := NewDesigner(catalog.New())
+	slot := 2
+	res, err := d.Design(Request{
+		Name: "Pinned",
+		Amp:  "65 Black SR",
+		FX: []FXBlock{
+			{Type: "Volume", Enabled: true, Slot: &slot},
+			{Type: "Tape Echo", Enabled: true},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Design: %v", err)
+	}
+	if res.Spec.Pinned[2].Type != "Volume" {
+		t.Fatalf("pinned slot 2 = %v, want Volume", res.Spec.Pinned[2])
+	}
+	// The unpinned chain flows around the pin: Tape Echo stays post-amp.
+	for _, b := range res.Spec.Blocks {
+		if b.Type == "Volume" {
+			t.Fatalf("Volume must be pinned, not left in the unpinned chain: %v", res.Spec.Blocks)
+		}
+	}
+}
+
+func TestDesignRejectsDuplicateSlots(t *testing.T) {
+	d := NewDesigner(catalog.New())
+	slot := 1
+	_, err := d.Design(Request{
+		Name: "Dup",
+		Amp:  "65 Black SR",
+		FX: []FXBlock{
+			{Type: "Volume", Slot: &slot},
+			{Type: "Tape Echo", Slot: &slot},
+		},
+	})
+	if err == nil || !strings.Contains(err.Error(), "slot 1") {
+		t.Fatalf("expected a duplicate-slot error, got %v", err)
+	}
+}
+
+func TestDesignRejectsSlotOutOfRange(t *testing.T) {
+	d := NewDesigner(catalog.New())
+	slot := 12
+	_, err := d.Design(Request{
+		Name: "Range",
+		Amp:  "65 Black SR",
+		FX:   []FXBlock{{Type: "Volume", Slot: &slot}},
+	})
+	if err == nil || !strings.Contains(err.Error(), "1..11") {
+		t.Fatalf("expected an out-of-range slot error, got %v", err)
+	}
+}
+
+func TestDesignRejectsSlotOnParallelRouting(t *testing.T) {
+	d := NewDesigner(catalog.New())
+	slot := 1
+	_, err := d.Design(Request{
+		Name:    "Parallel",
+		Amp:     "65 Black SR",
+		Amp2:    "67 Black Duo",
+		Routing: rig.RoutingSPS,
+		FX:      []FXBlock{{Type: "Volume", Slot: &slot}},
+	})
+	if err == nil || !strings.Contains(err.Error(), "serial") {
+		t.Fatalf("expected a serial-only slot error, got %v", err)
+	}
+}
+
+func TestDesignRejectsBadPosition(t *testing.T) {
+	d := NewDesigner(catalog.New())
+	_, err := d.Design(Request{
+		Name: "BadPos",
+		Amp:  "65 Black SR",
+		FX:   []FXBlock{{Type: "Tape Echo", Position: "middle"}},
+	})
+	if err == nil || !strings.Contains(err.Error(), "position") {
+		t.Fatalf("expected an invalid-position error, got %v", err)
+	}
+}
+
+func blockTypes(blocks []rig.Block) []string {
+	out := make([]string, len(blocks))
+	for i, b := range blocks {
+		out[i] = b.Type
+	}
+	return out
+}
+
+func equalStrings(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }

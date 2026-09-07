@@ -55,3 +55,43 @@ func TestFXByCategoryIsCaseInsensitiveAndRejectsUnknown(t *testing.T) {
 		t.Fatalf("expected nil for unknown category, got %v", got)
 	}
 }
+
+func TestFXByCategoryDynamicsResolves(t *testing.T) {
+	c := New()
+	// "dynamics" ends in "s"; it must resolve to the canonical category rather
+	// than being singularised into the unknown "dynamic".
+	dynamics := c.FXByCategory("dynamics")
+	if len(dynamics) == 0 {
+		t.Fatal("expected dynamics effects (the category must resolve)")
+	}
+	for _, f := range dynamics {
+		if f.Category != "dynamics" {
+			t.Fatalf("%q is in category %q, want dynamics", f.Name, f.Category)
+		}
+	}
+}
+
+func TestFXByCategoryEQContainsGraphicEQ(t *testing.T) {
+	c := New()
+	eq := c.FXByCategory("eq")
+	if len(eq) == 0 {
+		t.Fatal("expected EQ effects")
+	}
+	found := false
+	for _, f := range eq {
+		if f.Name == "Graphic EQ" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("eq category should contain Graphic EQ, got %v", names(eq))
+	}
+}
+
+func names(fx []FX) []string {
+	out := make([]string, len(fx))
+	for i, f := range fx {
+		out[i] = f.Name
+	}
+	return out
+}

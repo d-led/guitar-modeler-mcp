@@ -22,12 +22,12 @@ func TestEstimateLevelDefaultSerialRig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("EstimateLevel: %v", err)
 	}
-	// Master defaults to 50% = -6 dB; everything else is 0.
-	if est.EstimatedLevelDB != -6 {
-		t.Fatalf("estimated = %v, want -6", est.EstimatedLevelDB)
+	// Gain and Master both default to 50% = -6 dB each; everything else is 0.
+	if est.EstimatedLevelDB != -12 {
+		t.Fatalf("estimated = %v, want -12", est.EstimatedLevelDB)
 	}
-	if est.RecommendedRigVolume != 6 {
-		t.Fatalf("recommended RigVolume = %v, want 6", est.RecommendedRigVolume)
+	if est.RecommendedRigVolume != 12 {
+		t.Fatalf("recommended RigVolume = %v, want 12", est.RecommendedRigVolume)
 	}
 }
 
@@ -48,11 +48,11 @@ func TestEstimateLevelWithOutputVolume(t *testing.T) {
 	if err != nil {
 		t.Fatalf("EstimateLevel: %v", err)
 	}
-	if est.EstimatedLevelDB != 0 {
-		t.Fatalf("estimated = %v, want 0 (master -6 + rigvolume +6)", est.EstimatedLevelDB)
+	if est.EstimatedLevelDB != -6 {
+		t.Fatalf("estimated = %v, want -6 (amp -12 + rigvolume +6)", est.EstimatedLevelDB)
 	}
-	if est.RecommendedRigVolume != 6 {
-		t.Fatalf("recommended = %v, want 6 (already at target)", est.RecommendedRigVolume)
+	if est.RecommendedRigVolume != 12 {
+		t.Fatalf("recommended = %v, want 12 (reaching 0 from -6)", est.RecommendedRigVolume)
 	}
 }
 
@@ -72,9 +72,9 @@ func TestEstimateLevelWithIR(t *testing.T) {
 	if err != nil {
 		t.Fatalf("EstimateLevel: %v", err)
 	}
-	// amp master -6 dB + IR gain +6 dB (mix 100 = full wet) = 0 dB.
-	if est.EstimatedLevelDB != 0 {
-		t.Fatalf("estimated = %v, want 0 (amp master -6 + IR gain +6)", est.EstimatedLevelDB)
+	// amp -12 dB (gain + master) + IR gain +6 dB (mix 100 = full wet) = -6 dB.
+	if est.EstimatedLevelDB != -6 {
+		t.Fatalf("estimated = %v, want -6 (amp -12 + IR gain +6)", est.EstimatedLevelDB)
 	}
 }
 
@@ -84,9 +84,8 @@ func TestEstimateLevelWithIRMixBlend(t *testing.T) {
 		Name: "Level",
 		Blocks: []Block{
 			{Type: "Amp", Params: map[string]any{"Type": "65 Black SR"}},
-			// Mix 0 = dry passthrough, so the IR contributes nothing; mix 100 of
-			// a 0 dB IR is also unity. Either way the estimate stays at the amp
-			// master's -6 dB.
+			// Mix 0 = dry passthrough, so the IR contributes nothing; the
+			// estimate stays at the amp's -12 dB (gain + master at 50% each).
 			{Type: "IR", Params: map[string]any{"IR": "[directory](York)[name](Mix 01)", "Mix": 0.0}},
 		},
 	})
@@ -97,8 +96,8 @@ func TestEstimateLevelWithIRMixBlend(t *testing.T) {
 	if err != nil {
 		t.Fatalf("EstimateLevel: %v", err)
 	}
-	if est.EstimatedLevelDB != -6 {
-		t.Fatalf("estimated = %v, want -6 (mix 0 passes dry, no IR gain)", est.EstimatedLevelDB)
+	if est.EstimatedLevelDB != -12 {
+		t.Fatalf("estimated = %v, want -12 (mix 0 passes dry, no IR gain)", est.EstimatedLevelDB)
 	}
 }
 
@@ -121,36 +120,48 @@ func TestEstimateLevelParallelRig(t *testing.T) {
 	if est.Routing != "SPS-1" {
 		t.Fatalf("routing = %q", est.Routing)
 	}
-	// amp master -6 + mixer (max of -6/-6 = -6) = -12
-	if est.EstimatedLevelDB != -12 {
-		t.Fatalf("estimated = %v, want -12", est.EstimatedLevelDB)
+	// amp -12 (gain + master) + mixer (max of -6/-6 = -6) = -18
+	if est.EstimatedLevelDB != -18 {
+		t.Fatalf("estimated = %v, want -18", est.EstimatedLevelDB)
 	}
 }
 
-func TestEstimateLevelNotesPreampGainBlindSpot(t *testing.T) {
-	b := newTestBuilder(t)
-	file, err := b.Build(Spec{
-		Name: "Level",
-		Blocks: []Block{
-			{Type: "Amp", Params: map[string]any{"Type": "65 Black SR", "GainA": 78.0}},
-			{Type: "Cab", Params: map[string]any{"CabType": "1x12 Black Panel Lux"}},
-		},
-	})
-	if err != nil {
-		t.Fatalf("Build: %v", err)
+func TestEstimateLevelIncludesPreampGain(t *testing.T) {
+	build := func(gain float64) (LevelEstimate, error) {
+		b := newTestBuilder(t)
+		file, err := b.Build(Spec{
+			Name: "Level",
+			Blocks: []Block{
+				{Type: "Amp", Params: map[string]any{"Type": "65 Black SR", "GainA": gain}},
+				{Type: "Cab", Params: map[string]any{"CabType": "1x12 Black Panel Lux"}},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Build: %v", err)
+		}
+		return EstimateLevel(file, 0)
 	}
 
-	est, err := EstimateLevel(file, 0)
+	clean, err := build(25)
 	if err != nil {
-		t.Fatalf("EstimateLevel: %v", err)
+		t.Fatalf("EstimateLevel (clean): %v", err)
 	}
-	// The amp preamp gain is deliberately excluded from the dB sum; the estimate
-	// must say so rather than pretending the number is an absolute loudness.
-	if len(est.Notes) == 0 {
-		t.Fatal("expected a note flagging the preamp-gain blind spot, got none")
+	driven, err := build(78)
+	if err != nil {
+		t.Fatalf("EstimateLevel (driven): %v", err)
 	}
-	if !strings.Contains(est.Notes[0], "preamp gain") {
-		t.Fatalf("note = %q, want it to mention the preamp gain", est.Notes[0])
+	if !(driven.EstimatedLevelDB > clean.EstimatedLevelDB) {
+		t.Fatalf("preamp gain should raise the estimate: gain 25 = %v, gain 78 = %v", clean.EstimatedLevelDB, driven.EstimatedLevelDB)
+	}
+
+	found := false
+	for _, s := range driven.Stages {
+		if strings.Contains(s.Stage, "preamp gain") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected a preamp-gain stage, got %v", driven.Stages)
 	}
 }
 

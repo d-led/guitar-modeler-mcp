@@ -67,6 +67,12 @@ type FX struct {
 	// can match the pedal to the part (mirrors Amp.Gain). Empty for non-drive
 	// effects.
 	Gain string `json:"gain,omitempty"`
+	// Color classifies a time-based effect's character — for delay: "clean",
+	// "atmospheric", "analog", "tape", "pitch", "resonant", "reverse"; for
+	// reverb: "hall", "ambient", "room", "modulated", "spring", "shimmer" — so
+	// an agent can match the effect's flavour to the part. Empty for effects
+	// without a time-based character.
+	Color string `json:"color,omitempty"`
 }
 
 // Category is one effect category, e.g. "delay" or "reverb". Categories mirror

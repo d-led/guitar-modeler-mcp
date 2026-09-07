@@ -112,7 +112,23 @@ func normalizeCategory(category string) (string, bool) {
 	if q == "" {
 		return "", false
 	}
-	q = strings.TrimSuffix(q, "s") // "delays" → "delay"
+	// Match the canonical name first — "dynamics" already ends in "s" and must
+	// not be trimmed to "dynamic" before it is looked up.
+	if name, ok := matchCategory(q); ok {
+		return name, true
+	}
+	// Fall back to the singular form ("delays" → "delay", "reverbs" → "reverb").
+	if strings.HasSuffix(q, "s") {
+		if name, ok := matchCategory(strings.TrimSuffix(q, "s")); ok {
+			return name, true
+		}
+	}
+	return "", false
+}
+
+// matchCategory reports whether q is a canonical category name, returning the
+// canonical form.
+func matchCategory(q string) (string, bool) {
 	for _, name := range categoryOrder {
 		if q == name || q == strings.ReplaceAll(name, "/", " ") {
 			return name, true

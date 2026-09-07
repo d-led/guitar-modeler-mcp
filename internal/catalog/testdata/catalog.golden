@@ -1118,25 +1118,25 @@
     },
     {
       "name": "Acoustic Pre",
-      "category": "dynamics",
+      "category": "eq",
       "description": "Acoustic guitar preamp/EQ.",
       "confirmed": false
     },
     {
       "name": "Graphic EQ",
-      "category": "dynamics",
+      "category": "eq",
       "description": "Graphic equalizer.",
       "confirmed": false
     },
     {
       "name": "Para EQ",
-      "category": "dynamics",
+      "category": "eq",
       "description": "Parametric equalizer.",
       "confirmed": false
     },
     {
       "name": "Ten Freq EQ",
-      "category": "dynamics",
+      "category": "eq",
       "description": "Ten-band graphic equalizer.",
       "confirmed": false
     },
@@ -1357,82 +1357,95 @@
     {
       "name": "AIR Delay",
       "category": "delay",
-      "description": "Wide, atmospheric digital delay.",
-      "confirmed": false
+      "description": "Wide, atmospheric delay.",
+      "confirmed": false,
+      "color": "atmospheric"
     },
     {
       "name": "Dyn Delay",
       "category": "delay",
-      "description": "Dynamic ducking delay.",
-      "confirmed": false
+      "description": "Digital delay whose repeats duck under your playing; turn the ducking off for fixed, clean repeats.",
+      "confirmed": false,
+      "color": "clean"
     },
     {
       "name": "BBD Delay",
       "category": "delay",
       "description": "Analog bucket-brigade delay.",
       "modeled_after": "Elektro Harmonix Deluxe Memory Man",
-      "confirmed": false
+      "confirmed": false,
+      "color": "analog"
     },
     {
       "name": "Tape Echo",
       "category": "delay",
       "description": "Tape echo with wow, flutter and hiss.",
-      "confirmed": false
+      "confirmed": false,
+      "color": "tape"
     },
     {
       "name": "Pitch Delay",
       "category": "delay",
       "description": "Delay with pitch-shifted repeats.",
-      "confirmed": false
+      "confirmed": false,
+      "color": "pitch"
     },
     {
       "name": "Reso Delay",
       "category": "delay",
       "description": "Resonant filtered delay.",
-      "confirmed": false
+      "confirmed": false,
+      "color": "resonant"
     },
     {
       "name": "Reverse Delay",
       "category": "delay",
       "description": "Backwards delay.",
-      "confirmed": false
+      "confirmed": false,
+      "color": "reverse"
     },
     {
       "name": "AIR Reverb",
       "category": "reverb",
       "description": "Expansive hall-style reverb.",
-      "confirmed": false
+      "confirmed": false,
+      "color": "hall"
     },
     {
       "name": "Ambi Verb",
       "category": "reverb",
       "description": "Ambient reverb with long tails.",
-      "confirmed": false
+      "confirmed": false,
+      "color": "ambient"
     },
     {
       "name": "Eleven Reverb",
       "category": "reverb",
       "description": "Natural room and hall reverb.",
-      "confirmed": false
+      "confirmed": false,
+      "color": "room"
     },
     {
       "name": "Party Verb",
       "category": "reverb",
       "description": "Lush, modulated reverb.",
-      "confirmed": false
+      "confirmed": false,
+      "color": "modulated"
     },
     {
       "name": "Spring Reverb",
       "category": "reverb",
       "description": "Spring tank reverb.",
       "modeled_after": "Fender Blackface Amp Reverb",
-      "confirmed": false
+      "confirmed": false,
+      "color": "spring"
     },
     {
       "name": "Shimmer",
       "category": "reverb",
       "description": "Pitch-shifted shimmer reverb.",
-      "confirmed": false
+      "confirmed": false,
+      "color": "shimmer"
     },
     {
       "name": "Acoust Sim",

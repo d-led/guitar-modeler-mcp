@@ -194,8 +194,8 @@ Keep it tight and don't spiral:
 - **Preset names are stored and displayed ALL CAPS** (the device's convention);
   put the human title in `note`.
 - **Amp `Master` = loudness, `Gain` = drive.** Gain-stage with the amp, not the
-  output: RigVolume is a final trim (designer default +6 dB compensates a 50%
-  master).
+  output: RigVolume is a final trim (the designer default +6 dB offsets a 50%
+  gain + 50% master, leaving a healthy −6 dB net).
 - Bypassed blocks render **grey** in the report (chain, card badge, and the
   stomp button), so what starts off is visible at a glance.
 
@@ -235,22 +235,31 @@ Keep it tight and don't spiral:
    keyed by the exact parameter names from `catalog_list_module_params` — e.g.
    `{"GainA": 62, "Master": 55}`; the amp uses `GainA`/`GainB`, not `Gain`,
    and toggles like `OnAxis` take booleans). FX knobs go in each `fx` item's
-   `params` the same way.
+   `params` the same way. **Effects are placed by category by default** (see
+   `get_fx_placement`), but each `fx` item can override it: `"position":
+   "pre"|"post"` moves a block to the other side of the amp (e.g. an octaver
+   tracked pre-amp), and `"slot": 1..11` pins it to an exact serial slot (e.g.
+   a volume pedal at slot 1). `slot` is serial-only; use `path_a_fx`/`path_b_fx`
+   for parallel paths.
 8. `rig_decode` / `render_report` — inspect or re-report an existing preset.
 9. `estimate_rig_level` — check a rig's net output level and the RigVolume that
-   reaches a target. Default gain staging: input 0 dB → amp master 50% (−6 dB)
-   → cab 0 dB → output **+6 dB** (the designer's default) ≈ 0 dB net. For more
-   **drive** raise the amp `Gain` (or the drive pedal's `Drive`) — raising
-   `Master`/`output_level` only makes it louder, not more overdriven.
+   reaches a target. Default gain staging: input 0 dB → amp gain 50% (−6 dB) +
+   master 50% (−6 dB) → cab 0 dB → output **+6 dB** (the designer's default)
+   ≈ −6 dB net — healthy, not hot; raise `Master` (or `output_level`) to get
+   louder. For more **drive** raise the amp `Gain` (or the drive pedal's
+   `Drive`) — raising `Master`/`output_level` only makes it louder, not more
+   overdriven.
 
-   **The estimate is a relative hint, not a measurement.** It sums only the
-   *known* stages — input gain, amp **Master** (power-amp volume), cab out
-   gain, the parallel mixer and **RigVolume** — and deliberately leaves out
-   the amp's preamp gain (`GainA`/`GainB`) and drive-pedal `Level`, so a clean
-   amp and a high-gain amp at the same Master read identically even though the
-   high-gain amp plays much louder. To make a rig louder **without overdrive**,
-   raise the amp **Master** (loudness), not `Gain` (drive), and leave RigVolume
-   near unity as a final trim — see the "Level first" step under *Optimizing a
+   **The estimate is a relative hint, not a measurement.** It sums the *known*
+   stages — input gain, amp preamp gain (the louder of `GainA`/`GainB`) plus
+   amp **Master** (power-amp volume), cab out gain, the parallel mixer and
+   **RigVolume** — and deliberately leaves out drive-pedal `Level`, so a rig
+   with a boost or overdrive plays louder than the estimate suggests. Because
+   the amp stage now includes preamp gain, a clean amp (low `GainA`) reads
+   quieter than a driven one — that is the single most common reason a rig
+   comes out too quiet. To make a rig louder **without overdrive**, raise the
+   amp **Master** (loudness), not `Gain` (drive), and leave RigVolume near
+   unity as a final trim — see the "Level first" step under *Optimizing a
    rig* below.
 
 ## Effect categories
@@ -258,7 +267,10 @@ Keep it tight and don't spiral:
 Effects are grouped into eight categories, mirroring the standard HeadRush
 effect grouping: `distortion`, `dynamics`, `eq`, `expression`, `modulation`,
 `delay`, `reverb`, `utility`. List them with `catalog_list_fx_categories` and
-the modules of one with `catalog_list_fx_by_category`.
+the modules of one with `catalog_list_fx_by_category`. Compressors and gates
+live in `dynamics`; **the graphic/parametric EQs** (`Graphic EQ`, `Para EQ`,
+`Ten Freq EQ`, plus `Bass EQ` and `Acoustic Pre`) live in `eq` — when a tone
+asks for a "graphic EQ", browse `category: "eq"`.
 
 ## Impulse responses (custom IR)
 
@@ -323,6 +335,16 @@ default to `Green JRC-OD`: it is a low-gain TS-808 **overdrive**, and a
 singing/high-gain lead usually wants a **distortion** (`Black OP` Pro Co Rat,
 `DC Distort`, `D1 Dist`, `MX Dist`) or a drive→distortion stack. Match the
 pedal's `gain` to the part exactly as you match the amp's.
+
+Delay and reverb effects carry a `color` character the same way, shown by the
+same three tools: delay `clean` (`Dyn Delay`), `atmospheric` (`AIR Delay`),
+`analog` (`BBD Delay`), `tape` (`Tape Echo`), `pitch`, `resonant`, `reverse`;
+reverb `hall` (`AIR Reverb`), `room` (`Eleven Reverb`), `spring`, `ambient`,
+`modulated`, `shimmer`. **For a clean, uncolored repeat** (a percussive slap
+delay, a crisp dotted-eighth) use `Dyn Delay` — it is the clean digital delay;
+set its ducking off for fixed repeats. `AIR Delay` is an *atmospheric* wash,
+not a clean digital delay, and is the wrong choice when the part needs crisp
+repeats. Match the `color` to the part just like you match drive `gain`.
 
 ## Signal chain & parallel routing
 
@@ -399,6 +421,15 @@ the chain (`Wham`, `Green JRC-OD`, `Amp`, `Amp 2` — repeated modules get a
 pass a different `operation` to control a module-specific parameter instead.
 A module that is not in the chain is rejected, and you can never assign more
 than four switches.
+
+**The block's load-time on/off state is its `enabled` flag, not the switch.**
+A `"Toggle"` switch flips the block on and off *from its saved state* — it does
+not change what state the rig loads in. To ship a switch-controlled block
+**off by default** (delay off, octave off, …), pass `"enabled": false` on its
+`fx` item and still assign the footswitch; the player stomps it to bring the
+block in. Conversely `"enabled": true` makes the block on at load and the
+switch turns it off. The HTML report greys out blocks (and their buttons) that
+start off, so always check it.
 
 A **Scene** switch is how you **turn several blocks on and off at once** with a
 single stomp: one press recalls a saved snapshot of which of the 11 chain slots
@@ -530,8 +561,8 @@ instance names, mixer and footswitches.
 Once you have decoded a rig, improve it in this order:
 
 1. **Level first.** `estimate_rig_level` with a target (default 0 dB) tells you
-   how far off the rig is — but treat it as a *relative* hint, because it
-   ignores amp preamp gain (see above). Balance in this order:
+   how far off the rig is — treat it as a *relative* hint (it still leaves out
+   drive-pedal `Level`). Balance in this order:
    - **Amp `Master` is the loudness control, `Gain` is the drive control.**
      Raise `Master` to get louder *without* overdriving; raise `Gain` only to
      add drive. This is the most common fix — an under-driven clean amp
@@ -574,7 +605,7 @@ it:
 
 | Effect | `Mix` range | Notes |
 | --- | --- | --- |
-| Delay (`Tape Echo`, `BBD Delay`, `Air Delay`, …) | **15–25** | The repeats should be *felt*, not heard as a separate echo; above ~30 the dry attack smears. Keep `Feedback` ≤ ~30 unless you want obvious repeats. |
+| Delay (`Dyn Delay`, `Tape Echo`, `BBD Delay`, `AIR Delay`, …) | **15–25** | The repeats should be *felt*, not heard as a separate echo; above ~30 the dry attack smears. Keep `Feedback` ≤ ~30 unless you want obvious repeats. |
 | Reverb (`AIR Reverb`, `Eleven Reverb`, …) | clean **35–45**, dense/high-gain **15–30** | A clean or ambient part can sit wetter; a dense high-gain tone wants less room, or the reverb buries the gain. |
 | Modulation (`Chorus`, `Flanger`, `Phaser`) | **15–25** | Low depth+mix reads as width; a high mix wobbles the pitch of the dry note. |
 

@@ -28,11 +28,12 @@ type LevelEstimate struct {
 }
 
 // EstimateLevel sums the level-relevant stages of a rig (input gain, amp
-// master, cab out gain, volume pedals, the parallel-path mixer and the output
-// RigVolume) into a net output level in dB. Amp master and volume-pedal
-// positions are linear percentage knobs, converted with 20·log10(v/100) — an
-// estimate, not a measurement. The recommended RigVolume is the output level
-// to set to reach targetDB (clamped to the device's observed -10..+20 dB).
+// preamp gain and master, cab out gain, volume pedals, the parallel-path mixer
+// and the output RigVolume) into a net output level in dB. Amp gain/master and
+// volume-pedal positions are linear percentage knobs, converted with
+// 20·log10(v/100) — an estimate, not a measurement. The recommended RigVolume
+// is the output level to set to reach targetDB (clamped to the device's
+// observed -10..+20 dB).
 func EstimateLevel(file *RigFile, targetDB float64) (LevelEstimate, error) {
 	content, err := file.Decode()
 	if err != nil {
@@ -66,6 +67,10 @@ func estimateLevel(patch Patch) LevelEstimate {
 		master := nodeNumber(node, "Master")
 		return "amp master (" + name + ")", percentToDB(master), fmt.Sprintf("master %s", percent(master))
 	})
+	addTypeStages(patch, "Amp", add, func(name string, node *Node) (string, float64, string) {
+		gain := math.Max(nodeNumber(node, "GainA"), nodeNumber(node, "GainB"))
+		return "amp preamp gain (" + name + ")", percentToDB(gain), fmt.Sprintf("gain %s (louder of GainA/GainB)", percent(gain))
+	})
 	addTypeStages(patch, "Cab", add, func(name string, node *Node) (string, float64, string) {
 		return "cab out gain (" + name + ")", nodeNumber(node, "OutGain"), ""
 	})
@@ -92,7 +97,7 @@ func estimateLevel(patch Patch) LevelEstimate {
 
 	if sawAmp {
 		est.Notes = append(est.Notes,
-			"amp preamp gain (GainA/GainB) and any drive-pedal Level are not in this sum: a high-gain amp plays louder than the estimate suggests. Set loudness with the amp Master (power-amp volume), drive with Gain, and use RigVolume only as a final trim.")
+			"the amp stage sums preamp gain (the louder of GainA/GainB) plus Master, so a clean amp reads quieter than a driven one; drive-pedal Level is still not in this sum, so a rig with a boost or overdrive plays louder than the estimate suggests.")
 	}
 
 	est.EstimatedLevelDB = round1(total)

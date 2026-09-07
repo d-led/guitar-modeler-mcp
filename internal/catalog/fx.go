@@ -24,7 +24,7 @@ var fx = []FX{
 	{Name: "Oct Fuzz", Category: "distortion", Description: "Octave-up fuzz."},
 	{Name: "8-Bit Crush", Category: "distortion", Description: "Lo-fi bitcrusher with drive."},
 
-	// Dynamics / EQ
+	// Dynamics
 	{Name: "DynIII Comp", Category: "dynamics", Description: "Studio-style compressor."},
 	{Name: "Gray Comp", Category: "dynamics", Description: "Ross-style optical compressor."},
 	{Name: "Side Comp", Category: "dynamics", Description: "Compressor with sidechain options."},
@@ -32,10 +32,12 @@ var fx = []FX{
 	{Name: "Noise Filter", Category: "dynamics", Description: "Adaptive noise reduction."},
 	{Name: "Hold", Category: "dynamics", Description: "Freeze/hold effect."},
 	{Name: "Auto Swell", Category: "dynamics", Description: "Volume swell triggered by picking."},
-	{Name: "Acoustic Pre", Category: "dynamics", Description: "Acoustic guitar preamp/EQ."},
-	{Name: "Graphic EQ", Category: "dynamics", Description: "Graphic equalizer."},
-	{Name: "Para EQ", Category: "dynamics", Description: "Parametric equalizer."},
-	{Name: "Ten Freq EQ", Category: "dynamics", Description: "Ten-band graphic equalizer."},
+
+	// EQ
+	{Name: "Acoustic Pre", Category: "eq", Description: "Acoustic guitar preamp/EQ."},
+	{Name: "Graphic EQ", Category: "eq", Description: "Graphic equalizer."},
+	{Name: "Para EQ", Category: "eq", Description: "Parametric equalizer."},
+	{Name: "Ten Freq EQ", Category: "eq", Description: "Ten-band graphic equalizer."},
 	{Name: "Bass EQ", Category: "eq", Description: "Bass-specific equalizer."},
 
 	// Filter / wah / expression
@@ -77,8 +79,8 @@ var fx = []FX{
 	{Name: "Drop Tune", Category: "modulation", Description: "Drop-tuning pitch shifter."},
 
 	// Delay / reverb
-	{Name: "AIR Delay", Category: "delay", Description: "Wide, atmospheric digital delay."},
-	{Name: "Dyn Delay", Category: "delay", Description: "Dynamic ducking delay."},
+	{Name: "AIR Delay", Category: "delay", Description: "Wide, atmospheric delay."},
+	{Name: "Dyn Delay", Category: "delay", Description: "Digital delay whose repeats duck under your playing; turn the ducking off for fixed, clean repeats."},
 	{Name: "BBD Delay", Category: "delay", Description: "Analog bucket-brigade delay."},
 	{Name: "Tape Echo", Category: "delay", Description: "Tape echo with wow, flutter and hiss."},
 	{Name: "Pitch Delay", Category: "delay", Description: "Delay with pitch-shifted repeats."},

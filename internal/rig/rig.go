@@ -160,6 +160,12 @@ type Spec struct {
 	// Blocks is the serial chain, used when Routing is "".
 	Blocks []Block
 
+	// Pinned pins serial blocks to absolute 1-based chain slots (Routing "S"
+	// only). Unpinned Blocks flow into the remaining slots in their given
+	// order, so a block pinned to slot 1 lands at the front of the chain and a
+	// gap is left where no block claims a slot. nil = sequential layout.
+	Pinned map[int]Block
+
 	// Parallel sections (Routing SPS-1 / PS-1).
 	Prefix []Block // SPS-1: shared slots before the split
 	PathA  []Block // first parallel path
@@ -450,26 +456,56 @@ type chain struct {
 	pathA   []Block
 	pathB   []Block
 	suffix  []Block
-	serial  []Block // RoutingSerial
+	serial  []Block       // RoutingSerial
+	pins    map[int]Block // RoutingSerial: absolute 1-based slot → block
 }
 
 // blocks returns the chain blocks in signal order (prefix → path A → path B →
-// suffix), canonicalized so every Type matches the device display name.
+// suffix), canonicalized so every Type matches the device display name. For a
+// serial chain the blocks come back in slot order (pinned blocks at their slot,
+// unpinned blocks filling the remaining slots), gaps omitted.
 func (c chain) blocks() []Block {
+	if c.routing == RoutingSerial {
+		return c.serialOrdered()
+	}
 	var blocks []Block
 	blocks = append(blocks, c.prefix...)
 	blocks = append(blocks, c.pathA...)
 	blocks = append(blocks, c.pathB...)
 	blocks = append(blocks, c.suffix...)
-	blocks = append(blocks, c.serial...)
 	return blocks
+}
+
+// serialOrdered returns the serial blocks in 1..11 slot order, gaps omitted:
+// pinned blocks sit at their slot and unpinned blocks fill the remaining slots
+// in their given order.
+func (c chain) serialOrdered() []Block {
+	if len(c.pins) == 0 {
+		return c.serial
+	}
+	out := make([]Block, 0, len(c.serial)+len(c.pins))
+	si := 0
+	for slot := 1; slot <= 11; slot++ {
+		if b, ok := c.pins[slot]; ok {
+			out = append(out, b)
+		} else if si < len(c.serial) {
+			out = append(out, c.serial[si])
+			si++
+		}
+	}
+	return out
 }
 
 // slots lays the blocks out into the 11 chain slots, padding every section to
 // its slot budget so the split and merge points stay fixed regardless of how
-// many blocks each path actually holds. Repeated modules get their device
-// instance names ("Amp", "Amp 2", ...).
+// many blocks each path actually holds. A serial chain honours explicit slot
+// pins, leaving "Empty Slot" where no block claims a slot. Repeated modules
+// get their device instance names ("Amp", "Amp 2", ...).
 func (c chain) slots() []string {
+	if c.routing == RoutingSerial {
+		return c.serialSlots()
+	}
+
 	blocks := c.blocks()
 	seen := make(map[string]int, len(blocks))
 	names := make([]string, len(blocks))
@@ -500,8 +536,25 @@ func (c chain) slots() []string {
 		place(c.pathA, psPathASlots)
 		place(c.pathB, psPathBSlots)
 		place(c.suffix, 11-psPathASlots-psPathBSlots)
-	default:
-		place(c.serial, 11)
+	}
+	return slots
+}
+
+// serialSlots lays a serial chain out into its 11 slots, honouring pinned
+// blocks and leaving "Empty Slot" for unclaimed positions.
+func (c chain) serialSlots() []string {
+	seen := make(map[string]int, len(c.serial)+len(c.pins))
+	si := 0
+	slots := make([]string, 0, 11)
+	for slot := 1; slot <= 11; slot++ {
+		if b, ok := c.pins[slot]; ok {
+			slots = append(slots, instanceName(b.Type, seen))
+		} else if si < len(c.serial) {
+			slots = append(slots, instanceName(c.serial[si].Type, seen))
+			si++
+		} else {
+			slots = append(slots, "Empty Slot")
+		}
 	}
 	return slots
 }
@@ -548,7 +601,25 @@ func (c *chain) fill(cat *catalog.Catalog, spec Spec) error {
 func (c *chain) fillSerial(cat *catalog.Catalog, spec Spec) error {
 	var err error
 	c.serial, err = canonicalizeBlocks(cat, spec.Blocks)
-	return err
+	if err != nil {
+		return err
+	}
+	if len(spec.Pinned) == 0 {
+		return nil
+	}
+	c.pins = make(map[int]Block, len(spec.Pinned))
+	for slot, b := range spec.Pinned {
+		if slot < 1 || slot > 11 {
+			return fmt.Errorf("pinned slot %d is out of range 1..11", slot)
+		}
+		canon, ok := normalizeBlockName(cat, b.Type)
+		if !ok {
+			return fmt.Errorf("unknown module type %q", b.Type)
+		}
+		b.Type = canon
+		c.pins[slot] = b
+	}
+	return nil
 }
 
 func (c *chain) fillSPS(cat *catalog.Catalog, spec Spec) error {

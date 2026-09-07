@@ -59,7 +59,8 @@ type PlacementRouting struct {
 // after the amp, and how each routing topology's sections map onto those slots.
 type Placement struct {
 	Categories []PlacementCategory `json:"categories"`
-	AlwaysLast string              `json:"always_last"` // the Volume pedal
+	AlwaysLast string              `json:"always_last"` // the Volume pedal — its default, overridable via fx "position"/"slot"
+	Notes      []string            `json:"notes,omitempty"`
 	Routings   []PlacementRouting  `json:"routings"`
 }
 
@@ -73,6 +74,10 @@ func PlacementGuide() Placement {
 	return Placement{
 		Categories: categories,
 		AlwaysLast: "Volume",
+		Notes: []string{
+			"Volume defaults to the last slot (a master output trim). To place a volume pedal elsewhere — e.g. at the front of the chain so delay/reverb tails keep ringing — pass the fx with \"position\": \"pre\" (list it first for the very front) or pin it with \"slot\": 1.",
+			"Any effect can override its category's default with \"position\": \"pre\" or \"post\", or be pinned to an absolute 1-based slot with \"slot\" (serial routing only).",
+		},
 		Routings: []PlacementRouting{
 			{
 				Routing:     "S",
