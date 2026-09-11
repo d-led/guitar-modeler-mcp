@@ -10,9 +10,24 @@ are supported:
   `device_list`, browse models with `mooer_catalog_list_*`, and design with
   `mooer_design`. Only the file-capable models — GE150 Pro Li, GE200, GE100 Pro
   — write a `.mo` file; the classic **GE150 is card-only** (no `.mo`, just the
-  printable HTML **setup card**). The GE200 and GE150 Pro Li `.mo` byte layouts
-  differ; the tools detect and write each device's own format automatically, so
-  a preset designed with `device: "ge200"` loads on the GE200.
+  printable HTML **setup card**).
+
+  **Each Mooer device has its own `.mo` layout, and the tools write the right
+  one.** The GE150 Pro Li writes a 0x200-byte record; the GE200 writes its own
+  record with a checksum; the **GE100 Pro writes a dump of the device's USB
+  frames** (a frame table, then the frames) because that is what its editor
+  imports — replaying frames to the device. Reading auto-detects the layout, so
+  a preset designed with `model: "ge200"` loads on the GE200 and one designed
+  for the GE100 Pro imports into *Mooer Studio For GE100 Pro*.
+
+  **The GE100 Pro's chain is a ten-slot pedalboard, not the fixed nine-module
+  order.** A slot holds one of the nine module kinds, so the device can run two
+  noise gates, a gate after the cab, and so on. `mooer_design` lays the modules
+  out in signal order (NS → FX → DS → AMP → CAB → EQ → MOD → DELAY → REVERB),
+  fills only the modules the tone uses, and a preset that repeats a module kind
+  is read back as its first slot. Its cab block exposes LOW CUT / HIGH CUT (Hz)
+  and ROOM rather than the mic/position knobs other Mooer cab blocks have, and
+  its knob names per model are listed in `mooer_catalog_list_fx`.
 
   **Dial in the knobs, don't leave them at noon.** `mooer_design` accepts raw
   parameter values (0–100, 50 = noon) via `amp_params`, `cab_params`, and each

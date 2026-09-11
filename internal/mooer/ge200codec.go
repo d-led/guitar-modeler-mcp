@@ -42,8 +42,17 @@ var ge200ModuleOrder = []string{"fx", "od", "amp", "cab", "ns", "eq", "mod", "de
 //go:embed ge200-template.mo
 var ge200Template []byte
 
-// isGE200 reports whether a model's .mo files use the GE200 layout.
-func isGE200(m Model) bool { return m.Name == "ge200" }
+// ge200Codec is the GE200 .mo layout. Its exports carry the 0x08/0x01 magic
+// bytes at the head, which is what Match looks for.
+type ge200Codec struct{}
+
+func (ge200Codec) Marshal(p Preset) []byte { return marshalGE200(p) }
+
+func (ge200Codec) Unmarshal(data []byte) (Preset, error) { return unmarshalGE200(data) }
+
+func (ge200Codec) Match(data []byte) bool {
+	return len(data) == ge200FileSize && data[1] == 8 && data[8] == 1
+}
 
 // ge200ModuleOff returns the file offset of a module's 8-byte record.
 func ge200ModuleOff(module string) (int, bool) {

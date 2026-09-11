@@ -31,33 +31,18 @@ func UnmarshalMO(data []byte) (Preset, error) {
 
 // MarshalMOFor renders a preset in the target model's .mo layout.
 func MarshalMOFor(m Model, p Preset) []byte {
-	if isGE200(m) {
-		return marshalGE200(p)
-	}
-	return MarshalMO(p)
+	return m.layout().Marshal(p)
 }
 
 // UnmarshalMOFor parses a .mo file in the target model's .mo layout.
 func UnmarshalMOFor(m Model, data []byte) (Preset, error) {
-	if isGE200(m) {
-		return unmarshalGE200(data)
-	}
-	return UnmarshalMO(data)
+	return m.layout().Unmarshal(data)
 }
 
-// looksGE200 reports whether a .mo file is in the GE200 layout. GE200 exports
-// carry the 0x08/0x01 magic bytes at the head; the GE150 Pro Li layout zeroes
-// its whole 0x200-byte header.
-func looksGE200(data []byte) bool {
-	return len(data) == ge200FileSize && data[1] == 8 && data[8] == 1
-}
-
-// UnmarshalMOAny parses a .mo file, auto-detecting the layout.
+// UnmarshalMOAny parses a .mo file, detecting the layout. The layouts that are
+// recognised by a signature are asked first; see moLayouts.
 func UnmarshalMOAny(data []byte) (Preset, error) {
-	if looksGE200(data) {
-		return unmarshalGE200(data)
-	}
-	return UnmarshalMO(data)
+	return parseMOFile(data)
 }
 
 // WriteMOFile writes a preset to a .mo file in the target model's layout.
@@ -74,7 +59,7 @@ func ReadMOFile(m Model, path string) (Preset, error) {
 	return UnmarshalMOFor(m, data)
 }
 
-// ReadMOFileAny reads a preset from a .mo file, auto-detecting the layout.
+// ReadMOFileAny reads a preset from a .mo file, detecting the layout.
 func ReadMOFileAny(path string) (Preset, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {

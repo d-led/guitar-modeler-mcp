@@ -102,16 +102,22 @@ func TestGE150IsCardOnly(t *testing.T) {
 	}
 }
 
+// TestGE100ProCatalogIsTheDeviceCatalog pins the GE100 Pro model lists to the
+// tables Mooer Studio For GE100 Pro publishes: 72 amps and 67 cabs, before the
+// user-capture and user-IR slots the device appends. The indices matter - a
+// preset stores a model index, so a list that is short or out of order loads
+// the wrong model - which TestGE100ProCatalogMatchesDeviceExport checks against
+// a real export.
 func TestGE100ProCoreCatalog(t *testing.T) {
 	m, ok := ModelByName("ge100pro")
 	if !ok {
 		t.Fatal("ge100pro not registered")
 	}
-	if len(m.Amps) != 15 {
-		t.Fatalf("ge100pro has %d amps, want 15 core amps", len(m.Amps))
+	if len(m.Amps) != 72 {
+		t.Fatalf("ge100pro has %d amps, want 72", len(m.Amps))
 	}
-	if len(m.Cabs) != 5 {
-		t.Fatalf("ge100pro has %d cabs, want 5 core cabs", len(m.Cabs))
+	if len(m.Cabs) != 67 {
+		t.Fatalf("ge100pro has %d cabs, want 67", len(m.Cabs))
 	}
 	if !m.FileExchange {
 		t.Fatal("ge100pro should support file exchange")

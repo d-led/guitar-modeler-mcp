@@ -61,7 +61,7 @@ finer details (CLI, tool list, architecture) for anyone who wants them.
 | Device | Models | Preset exchange | Extra output |
 |---|---|---|---|
 | HeadRush Gigboard | — | `.rig` (read & write) | HTML report |
-| Mooer | GE150 Pro Li, GE200, GE100 Pro | `.mo` (write) | printable setup card |
+| Mooer | GE150 Pro Li, GE200, GE100 Pro | `.mo` (read & write, each model's own layout) | printable setup card |
 | Mooer GE150 | GE150 | — | card only (no `.mo` for this model) |
 | BOSS Waza Air | — | `.tsl` (read & write) | printable setup card |
 | Yamaha THR | THR-II, THR10, THR10C, THR10X | — | card only |
@@ -85,7 +85,8 @@ sponsored by HeadRush or any of the referenced brands.
 
 Designs and writes presets for the HeadRush Gigboard (`.rig` read/write,
 parallel routing, footswitch scenes, setlists), Mooer GE150 Pro Li / GE200 /
-GE100 Pro (`.mo` write plus a setup card; the classic GE150 is card-only),
+GE100 Pro (`.mo` read/write in each device's own layout, plus a setup card; the
+classic GE150 is card-only),
 BOSS Waza Air (`.tsl` read/write, setup card, XSONIC AIRSTEP BW footswitch
 modes), Yamaha THR (setup cards) and Neural DSP Quad Cortex (catalog,
 translation, per-model parameters, a setup card plus a `.pb` reference archive,

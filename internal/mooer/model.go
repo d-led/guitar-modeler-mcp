@@ -38,6 +38,20 @@ type Model struct {
 	Cabs []Item `json:"cabs"`
 	// Effects is each module's effect list in effect_type index order.
 	Effects map[string][]Item `json:"effects"`
+	// codec renders and reads this device's .mo files. It is set by the device's
+	// own constructor and is not part of the catalog data.
+	codec codec
+}
+
+// layout returns the codec this device's presets are read and written with. A
+// Model that names no codec - the zero value, as tests and catalog-only models
+// have - falls back to the GE150 family record layout, the one this package was
+// built around.
+func (m Model) layout() codec {
+	if m.codec == nil {
+		return recordCodec{}
+	}
+	return m.codec
 }
 
 // AmpName returns the amp model for an effect_type index, or "" when out of
@@ -63,24 +77,40 @@ func (m Model) CabIndex(name string) (uint8, bool) {
 }
 
 // EffectName returns the human-readable effect name for a module and
-// effect_type index. Modules with a fixed single effect (ns, eq) return their
+// effect_type index. Modules whose models the catalog lists answer from that
+// list - the GE100 Pro's noise gate has three models, say - while modules with a
+// single fixed effect (the GE150 Pro Li's NS and EQ) answer with the module's
 // own name.
 func (m Model) EffectName(module string, index uint8) string {
-	switch strings.ToLower(module) {
+	key := strings.ToLower(module)
+	switch key {
 	case "amp":
 		return m.AmpName(index)
 	case "cab":
 		return m.CabName(index)
+	}
+	if name := itemName(m.Effects[key], index); name != "" {
+		return name
+	}
+	switch key {
 	case "ns":
 		return "Noise Gate"
 	case "eq":
 		return "EQ"
 	}
-	return itemName(m.Effects[strings.ToLower(module)], index)
+	return ""
 }
 
-// EffectIndex returns the effect_type index for a named effect in a module.
+// EffectIndex returns the effect_type index for a named effect in a module. It
+// is the inverse of EffectName, including for the amp and cab modules, whose
+// models live in their own lists.
 func (m Model) EffectIndex(module, name string) (uint8, bool) {
+	switch strings.ToLower(module) {
+	case "amp":
+		return m.AmpIndex(name)
+	case "cab":
+		return m.CabIndex(name)
+	}
 	return itemIndex(m.Effects[strings.ToLower(module)], name)
 }
 

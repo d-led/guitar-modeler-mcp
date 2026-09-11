@@ -9,6 +9,7 @@ func ge150() Model {
 		Display:      "Mooer GE150",
 		FileExchange: false,
 		ModuleOrder:  append([]string(nil), ModuleOrder...),
+		codec:        recordCodec{},
 		Amps:         mooerAmps,
 		Cabs:         mooerCabs,
 		Effects:      mooerEffects,

@@ -11,6 +11,7 @@ func ge150pro() Model {
 		FileExchange: true,
 		FileExt:      ".mo",
 		ModuleOrder:  append([]string(nil), ModuleOrder...),
+		codec:        recordCodec{},
 		Amps:         buildItems(Amps, ampInspiredBy),
 		Cabs:         buildItems(Cabs, cabInspiredBy),
 		Effects:      buildEffects(Effects, fxInspiredBy),
