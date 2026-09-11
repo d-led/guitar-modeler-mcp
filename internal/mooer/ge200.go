@@ -18,7 +18,7 @@ func ge200() Model {
 		ModuleOrder:  append([]string(nil), ModuleOrder...),
 		codec:        ge200Codec{},
 		Amps:         mooerAmps,
-		Cabs:         mooerCabs,
+		Cabs:         ge200Cabs,
 		Effects:      mooerEffects,
 	}
 }
@@ -112,6 +112,22 @@ var mooerCabs = device.Items(
 	[2]string{"ACOUSTIC 112", "Acoustic 1x12"},
 )
 
+// ge200Cabs is the GE200's cabinet list: the factory cabinets above, then the
+// ten slots the device keeps for user impulse responses. A preset that uses one
+// stores the slot's index, so the slots need names to be read back.
+var ge200Cabs = append(append([]Item{}, mooerCabs...), device.Items(
+	[2]string{"IR-1", "User IR slot 1"},
+	[2]string{"IR-2", "User IR slot 2"},
+	[2]string{"IR-3", "User IR slot 3"},
+	[2]string{"IR-4", "User IR slot 4"},
+	[2]string{"IR-5", "User IR slot 5"},
+	[2]string{"IR-6", "User IR slot 6"},
+	[2]string{"IR-7", "User IR slot 7"},
+	[2]string{"IR-8", "User IR slot 8"},
+	[2]string{"IR-9", "User IR slot 9"},
+	[2]string{"IR-10", "User IR slot 10"},
+)...)
+
 // mooerEffects is the shared per-module effect list, in effect_type order.
 var mooerEffects = map[string][]Item{
 	"fx": device.Items(
@@ -152,9 +168,9 @@ var mooerEffects = map[string][]Item{
 		[2]string{"NOISE GATE", "Mooer Digital Noise Gate"},
 	),
 	"eq": device.Items(
-		[2]string{"EQ-G", "5-band Graphic EQ"},
-		[2]string{"EQ-B", "5-band Bass Graphic EQ"},
-		[2]string{"EQ-G6", "6-band Graphic EQ"},
+		[2]string{"MOOER G", "5-band Graphic EQ"},
+		[2]string{"MOOER HM", "Heavy Metal Graphic EQ"},
+		[2]string{"MOOER G-6", "6-band Graphic EQ"},
 		[2]string{"CUSTOM EQ", "Parametric EQ"},
 	),
 	"mod": device.Items(
@@ -177,17 +193,17 @@ var mooerEffects = map[string][]Item{
 		[2]string{"LOW PASS", "Low Pass Filter"},
 		[2]string{"SLOW GEAR", "BOSS SG-1 Slow Gear"},
 		[2]string{"LOFI", "Low Rate Sampling Filter"},
+		[2]string{"MONO PITCH", "Mono Pitch Shifter"},
 	),
 	"delay": device.Items(
 		[2]string{"DIGITAL", "Digital Delay"},
 		[2]string{"ANALOG", "Analog BBD Delay"},
-		[2]string{"DYNAMIC", "Dynamic Delay"},
 		[2]string{"REAL", "Natural Echo"},
 		[2]string{"TAPE", "Tape Echo"},
-		[2]string{"MOD", "Modulated Delay"},
 		[2]string{"REVERSE", "Reverse Delay"},
-		[2]string{"DUAL DELAY", "Dual Delay"},
 		[2]string{"PINGPONG", "Stereo Ping-Pong Delay"},
+		[2]string{"DYNAMIC", "Dynamic Delay"},
+		[2]string{"DUAL DELAY", "Dual Delay"},
 	),
 	"reverb": device.Items(
 		[2]string{"ROOM", "Room Reverb"},

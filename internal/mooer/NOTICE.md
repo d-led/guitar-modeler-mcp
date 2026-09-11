@@ -11,9 +11,18 @@ firmware.
 ### GE150 Pro Li / GE150 Max / GE200 (`catalog.go`, `inspired.go`, `preset.go`, `ge200codec.go`)
 
 - **Model lists and the "inspired by" column** follow the real hardware the
-  vendor's own owner's manual names for each model.
+  vendor's own owner's manual names for each model. They were cross-checked
+  against the model tables the vendor's GE200 editor (Mooer Studio GE200 2.0.3)
+  carries in its own binary: the counts and the order of every module's list
+  agree, which is what makes an index mean the same thing on both sides. What
+  remains different is the spelling of a few of our labels (the editor writes
+  `J800`, `MTL ZONE`, `JET-FLANGER`, where we write `800`, `MTLZONE`,
+  `JET FLANGER`).
 - **The `.mo` record layout** was reverse-engineered from single-preset files the
-  devices themselves export, cross-checked against community converters.
+  devices themselves export, cross-checked against community converters. The
+  checksum rule (the u16 sum of bytes 0x200..0x7FF) is verified against two real
+  exports, and the cab block's MIC and TUBE knobs are selectors over the editor's
+  own lists (ten microphones, four tube types).
 - **Fixtures**: two community presets, described in `testdata/ATTRIBUTION.md`.
 
 ### GE100 Pro (`ge100pro.go`, `ge100procodec.go`, `ge100pro_catalog_data.go`)

@@ -152,3 +152,85 @@ func TestGE200UnmarshalRejectsShortFile(t *testing.T) {
 		t.Fatal("expected an error for a short GE200 .mo file")
 	}
 }
+
+// The device's own export must satisfy the checksum rule we write, byte for
+// byte: this is what turns the checksum from a guess into a fact.
+func TestGE200RealExportsCarryOurChecksum(t *testing.T) {
+	for _, name := range []string{"ge200-clean.mo", "ge200-lead.mo"} {
+		raw := readFixture(t, name)
+
+		var sum uint32
+		for _, b := range raw[ge200OrderOff:] {
+			sum += uint32(b)
+		}
+		stored := binary.LittleEndian.Uint16(raw[ge200ChecksumOff:])
+		if stored != uint16(sum&0xFFFF) {
+			t.Fatalf("%s checksum = %#x, want %#x", name, stored, uint16(sum&0xFFFF))
+		}
+	}
+}
+
+// The editor lists the delay models in its own order, and a preset stores the
+// index: reading REVERSE as DYNAMIC would silently change a tone.
+func TestGE200DelayOrderMatchesTheDevice(t *testing.T) {
+	m, _ := ModelByName("ge200")
+
+	for index, want := range map[uint8]string{
+		0: "DIGITAL", 1: "ANALOG", 2: "REAL", 3: "TAPE",
+		4: "REVERSE", 5: "PINGPONG", 6: "DYNAMIC", 7: "DUAL DELAY",
+	} {
+		if got := m.EffectName("delay", index); got != want {
+			t.Fatalf("delay model %d = %q, want %q", index, got, want)
+		}
+	}
+	if got := len(m.Effects["delay"]); got != 8 {
+		t.Fatalf("delay has %d models, want the device's 8", got)
+	}
+}
+
+// A real export uses a user IR slot, so the slots after the factory cabinets
+// have to resolve to something.
+func TestGE200CabIRSlotsAreNamed(t *testing.T) {
+	m, _ := ModelByName("ge200")
+
+	if got := m.CabName(25); got != "ACOUSTIC 112" {
+		t.Fatalf("cab 25 = %q, want the last factory cabinet", got)
+	}
+	if got := m.CabName(26); got != "IR-1" {
+		t.Fatalf("cab 26 = %q, want the first user IR slot", got)
+	}
+	if p := mustReadGE200Clean(t); p.Cab.Type >= 26 {
+		t.Logf("clean fixture uses IR slot %d", p.Cab.Type)
+	}
+	lead, err := ReadMOFileAny("testdata/ge200-lead.mo")
+	if err != nil {
+		t.Fatalf("reading the lead fixture failed: %v", err)
+	}
+	if lead.Cab.Type < 26 {
+		t.Fatalf("lead fixture cab = %d, want a user IR slot (it is the fixture that showed the gap)", lead.Cab.Type)
+	}
+	if got := m.CabName(lead.Cab.Type); got == "" {
+		t.Fatalf("lead fixture cab %d has no name", lead.Cab.Type)
+	}
+}
+
+// MIC and TUBE select entries in the device's own lists (ten microphones, four
+// tube types); a preset that carries noon there must not write a selector the
+// device has no entry for.
+func TestGE200CabSelectorsStayInRange(t *testing.T) {
+	m, _ := ModelByName("ge200")
+	// BuildPreset leaves unset selectors at their first entry; a hand-made preset
+	// can still hold anything, so the writer has to cope.
+	p := New()
+	p.Name = "Selectors"
+	p.Cab = Cab{Enabled: true, Type: 5, Mic: 50, Center: 50, Distance: 50, Tube: 50}
+
+	raw := MarshalMOFor(m, p)
+	cab := raw[ge200ModulesOff+3*ge200ModuleSize:][2:]
+	if cab[0] >= ge200MicCount {
+		t.Fatalf("mic selector = %d, want one of %d", cab[0], ge200MicCount)
+	}
+	if cab[3] >= ge200TubeCount {
+		t.Fatalf("tube selector = %d, want one of %d", cab[3], ge200TubeCount)
+	}
+}

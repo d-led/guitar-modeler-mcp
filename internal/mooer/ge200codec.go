@@ -101,7 +101,7 @@ func patchGE200(buf []byte, p Preset) {
 	putGE200Module(buf, "fx", p.FX.Type, p.FX.Enabled, p.FX.Q, p.FX.Position, p.FX.Peak, p.FX.Level)
 	putGE200Module(buf, "od", p.Drive.Type, p.Drive.Enabled, p.Drive.Volume, p.Drive.Tone, p.Drive.Gain)
 	putGE200Module(buf, "amp", p.Amp.Type, p.Amp.Enabled, p.Amp.Gain, p.Amp.Bass, p.Amp.Mid, p.Amp.Treble, p.Amp.Presence, p.Amp.Master)
-	putGE200Module(buf, "cab", p.Cab.Type, p.Cab.Enabled, p.Cab.Mic, p.Cab.Center, p.Cab.Distance, p.Cab.Tube)
+	putGE200Module(buf, "cab", p.Cab.Type, p.Cab.Enabled, cabMic(p.Cab.Mic), p.Cab.Center, p.Cab.Distance, cabTube(p.Cab.Tube))
 	putGE200Module(buf, "ns", p.NoiseGate.Type, p.NoiseGate.Enabled, p.NoiseGate.Attack, p.NoiseGate.Release, p.NoiseGate.Threshold)
 	putGE200Module(buf, "eq", p.EQ.Type, p.EQ.Enabled, ge200EQBand(p.EQ.Bands[0]), ge200EQBand(p.EQ.Bands[1]), ge200EQBand(p.EQ.Bands[2]), ge200EQBand(p.EQ.Bands[3]), ge200EQBand(p.EQ.Bands[4]), ge200EQBand(p.EQ.Bands[5]))
 	putGE200Module(buf, "mod", p.Mod.Type, p.Mod.Enabled, p.Mod.Rate, p.Mod.Level, p.Mod.Depth, p.Mod.Param4)
@@ -117,6 +117,25 @@ func patchGE200(buf []byte, p Preset) {
 		sum += uint32(b)
 	}
 	binary.LittleEndian.PutUint16(buf[ge200ChecksumOff:], uint16(sum&0xFFFF))
+}
+
+// The cab block's microphone and tube knobs are selectors, not amounts: the
+// device lists ten microphones (SM57, U47, U87, NT1, MD421, MD441, MXL2001,
+// MXL2003, C3000, C4000B) and four tube types (EL34, EL84, 6L6, 6V6). A value
+// outside those ranges means "unset" - the shared preset's noon default, say -
+// and is written as the first entry rather than as an out-of-range selector.
+const (
+	ge200MicCount  = 10
+	ge200TubeCount = 4
+)
+
+func cabMic(v uint8) uint8  { return inDeviceRange(v, ge200MicCount) }
+func cabTube(v uint8) uint8 { return inDeviceRange(v, ge200TubeCount) }
+func inDeviceRange(v uint8, count int) uint8 {
+	if int(v) >= count {
+		return 0
+	}
+	return v
 }
 
 // putGE200Module writes one 8-byte module record: type is stored as type+1,

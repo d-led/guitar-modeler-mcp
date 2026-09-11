@@ -15,7 +15,10 @@ func neutralDrive() Drive { return Drive{Volume: noon, Tone: noon, Gain: noon} }
 func neutralAmp() Amp {
 	return Amp{Gain: noon, Bass: noon, Mid: noon, Treble: noon, Presence: noon, Master: noon}
 }
-func neutralCab() Cab { return Cab{Mic: 0, Center: noon, Distance: noon, Tube: noon} }
+
+// neutralCab keeps the tube selector at its first entry: the cab block's MIC
+// and TUBE knobs are selectors over the device's own lists, not 0-100 amounts.
+func neutralCab() Cab { return Cab{Mic: 0, Center: noon, Distance: noon, Tube: 0} }
 
 // neutralNoiseGate keeps the threshold at 0 (gate fully open) so an enabled
 // gate never clamps the signal; only its attack/release sit at noon.

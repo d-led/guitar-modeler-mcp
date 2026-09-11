@@ -33,6 +33,9 @@ func TestModelByNameCaseInsensitive(t *testing.T) {
 	}
 }
 
+// TestGE200CatalogShape pins the GE200 lists to the device's own: 55 amps and 26
+// factory cabinets followed by ten user IR slots. The counts matter because a
+// preset stores an index into these lists.
 func TestGE200CatalogShape(t *testing.T) {
 	m, ok := ModelByName("ge200")
 	if !ok {
@@ -41,8 +44,8 @@ func TestGE200CatalogShape(t *testing.T) {
 	if len(m.Amps) != 55 {
 		t.Fatalf("ge200 has %d amps, want 55", len(m.Amps))
 	}
-	if len(m.Cabs) != 26 {
-		t.Fatalf("ge200 has %d cabs, want 26", len(m.Cabs))
+	if len(m.Cabs) != 36 {
+		t.Fatalf("ge200 has %d cabs, want 26 factory cabinets and 10 IR slots", len(m.Cabs))
 	}
 	if !m.FileExchange || m.FileExt != ".mo" {
 		t.Fatalf("ge200 FileExchange=%v FileExt=%q, want true/.mo", m.FileExchange, m.FileExt)
@@ -292,7 +295,7 @@ func TestBuildPresetAppliesParams(t *testing.T) {
 		FX: []FXSpec{
 			{Module: "od", Type: "808", Enabled: true, Params: Params{"Gain": 20, "Tone": 70, "Volume": 85}},
 			{Module: "ns", Type: "NOISE GATE", Enabled: true, Params: Params{"Threshold": 40}},
-			{Module: "eq", Type: "EQ-G", Enabled: true, Params: Params{"band1": 60, "band3": 46}},
+			{Module: "eq", Type: "MOOER G", Enabled: true, Params: Params{"band1": 60, "band3": 46}},
 			{Module: "delay", Type: "DIGITAL", Enabled: true, Params: Params{"Time (ms)": 400, "feedback": 76}},
 		},
 	})
@@ -317,9 +320,11 @@ func TestBuildPresetAppliesParams(t *testing.T) {
 	wantEq(t, "eq band3", p.EQ.Bands[2], 46)
 	wantEq(t, "delay time", p.Delay.TimeMS, 400)
 	wantEq(t, "delay feedback", p.Delay.Feedback, 76)
-	// Unspecified knobs stay at their neutral value, not zero.
+	// Unspecified amounts stay at their neutral value; the cab block's MIC and
+	// TUBE knobs are selectors, so they start at the first entry of the device's
+	// own list rather than at noon.
 	wantEq(t, "cab center", p.Cab.Center, 50)
-	wantEq(t, "cab tube", p.Cab.Tube, 50)
+	wantEq(t, "cab tube", p.Cab.Tube, 0)
 }
 
 // wantEq fails the test when got differs from want, with the checked field
