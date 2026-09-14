@@ -29,6 +29,14 @@ are supported:
   and ROOM rather than the mic/position knobs other Mooer cab blocks have, and
   its knob names per model are listed in `mooer_catalog_list_fx`.
 
+  Its **EQ model decides how many bands the preset may carry** — 3-Band EQ
+  three, Mooer G, Mooer HM and Mooer B five, Mooer G-6 six — and the device keeps
+  a band in decibels, which `mooer_design` converts from the shared scale. A knob
+  the chosen model has not got, a cab knob (this device keeps its cab in Hz) and
+  Custom EQ, whose knobs alternate gain and frequency, are **refused with a
+  message rather than clamped**: a design cannot quietly ask the device for a
+  value it has no knob for.
+
   **Dial in the knobs, don't leave them at noon.** `mooer_design` accepts raw
   parameter values (0–100, 50 = noon) via `amp_params`, `cab_params`, and each
   `fx` item's `params` object. Canonical keys per module: amp `gain`/`bass`/

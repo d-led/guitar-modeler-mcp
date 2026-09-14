@@ -1623,7 +1623,7 @@ func (r *Registrar) mooerDesign(args map[string]any) (string, error) {
 	if outDir == "" {
 		outDir = "."
 	}
-	return r.writeMooerOutput(m, p, outDir, argString(args, "note"))
+	return r.writeMooerOutput(m, p, outDir, argString(args, "note"), designedKnobNote)
 }
 
 func parseMooerFX(raw any) []mooer.FXSpec {
@@ -1658,9 +1658,17 @@ func sanitizeFileBase(name string) string {
 	return strings.ReplaceAll(name, "/", "-")
 }
 
+// Knob-value notes close a Mooer write with where the values came from: a design
+// applies the values it was given, where a preset mapped from another device
+// keeps the neutral 50s until someone dials it.
+const (
+	designedKnobNote = "Knob values were applied as given, on the shared 0-100 scale (50 = noon); the file stores them in the device's own units, which the setup card lists."
+	mappedKnobNote   = "Parameter values are neutral defaults (raw 0-100, 50 = noon); source knob positions are not copied across devices."
+)
+
 // writeMooerOutput writes a .mo file (when the model supports file exchange)
 // and always writes a printable HTML setup card, then returns a text summary.
-func (r *Registrar) writeMooerOutput(m mooer.Model, p mooer.Preset, outDir, note string) (string, error) {
+func (r *Registrar) writeMooerOutput(m mooer.Model, p mooer.Preset, outDir, note, knobNote string) (string, error) {
 	base := sanitizeFileBase(p.Name)
 	var b strings.Builder
 
@@ -1691,7 +1699,7 @@ func (r *Registrar) writeMooerOutput(m mooer.Model, p mooer.Preset, outDir, note
 		}
 		fmt.Fprintf(&b, "- %s: %s (%s)\n", d.Module, d.Effect, state)
 	}
-	fmt.Fprintf(&b, "Parameter values are neutral defaults (raw 0-100, 50 = noon); source knob positions are not copied across devices.\n")
+	fmt.Fprintf(&b, "%s\n", knobNote)
 	return b.String(), nil
 }
 
@@ -2332,7 +2340,7 @@ func (r *Registrar) mapPreset(args map[string]any) (string, error) {
 		return "", err
 	}
 	m, _ := mooer.ModelByName("ge150pro")
-	return r.writeMooerOutput(m, p, outDir, "")
+	return r.writeMooerOutput(m, p, outDir, "", mappedKnobNote)
 }
 
 func (r *Registrar) wazaListAmps() (string, error) {

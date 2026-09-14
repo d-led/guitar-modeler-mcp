@@ -81,12 +81,14 @@ func TestGE100ProReferenceReadsBack(t *testing.T) {
 }
 
 // withoutFieldsTheDeviceDoesNotCarry clears the shared preset fields the GE100
-// Pro has no slot for: its cab block is LOW CUT / HIGH CUT / ROOM rather than
-// mic and position knobs, and its delay has four knobs, so the extra fields come
-// back at their zero value.
+// Pro's models have no knob for: its cab block is LOW CUT / HIGH CUT / ROOM
+// rather than mic and position knobs, its delay has four knobs, and the
+// reference tone's INTEL REDUCER gate drives one knob - its sensitivity - so the
+// gate's attack and release have no knob either. Those fields come back empty.
 func withoutFieldsTheDeviceDoesNotCarry(p Preset) Preset {
 	p.Cab.Mic, p.Cab.Center, p.Cab.Distance, p.Cab.Tube = 0, 0, 0, 0
 	p.Delay.Param5, p.Delay.Param6 = 0, 0
+	p.NoiseGate.Attack, p.NoiseGate.Release = 0, 0
 	return p
 }
 
@@ -387,6 +389,36 @@ func TestGE100ProReadsADeviceExport(t *testing.T) {
 		if name := m.EffectName(module, model); name == "" {
 			t.Fatalf("%s model %d is not in the catalog", module, model)
 		}
+	}
+
+	assertExportEQIsOnTheDevicesScale(t, p, data)
+}
+
+// assertExportEQIsOnTheDevicesScale checks a hardware export's EQ against the
+// device's dB scale: a band the device stored as 16 is 0 dB, which is the shared
+// preset's flat 50 rather than 16, and a parametric model's gains are read from
+// its gain knobs rather than from the frequencies between them.
+func assertExportEQIsOnTheDevicesScale(t *testing.T, p Preset, data []byte) {
+	t.Helper()
+	file, err := parseGE100ProFile(data)
+	if err != nil {
+		t.Fatalf("the export is not a frame dump: %v", err)
+	}
+	body, err := file.body()
+	if err != nil {
+		t.Fatalf("the export carries no preset body: %v", err)
+	}
+	for _, slot := range body.Slots {
+		if slot.empty() || slot.Kind != ge100ProKindEQ {
+			continue
+		}
+		for i, band := range ge100ProTableAt(ge100ProEQModels, slot.Model).bands {
+			want := ge100ProBandFromWire(byte(slot.Params[band.wire]))
+			if got := p.EQ.Bands[i]; got != want {
+				t.Fatalf("EQ band %d of the export = %d, want %d from the device's dB scale", i+1, got, want)
+			}
+		}
+		return
 	}
 }
 

@@ -217,6 +217,54 @@ func TestIntegrationMooerCatalogDesignAndCard(t *testing.T) {
 	mustContain(t, string(body), `<p class="note-text">Mooer **JCM800** rhythm</p>`)
 }
 
+// A GE100 Pro design goes through the knobs the device's own models carry: the
+// tool writes the preset and says where the values came from, and a knob the
+// chosen model has not got comes back as a message naming it instead of a value
+// written into the next knob along.
+func TestIntegrationGE100ProDesignUsesTheDevicesKnobs(t *testing.T) {
+	s := newIntegrationServer(t)
+	dir := t.TempDir()
+
+	out := resultText(t, rpc(t, s, 1, "tools/call", map[string]any{
+		"name": "mooer_design",
+		"arguments": map[string]any{
+			"model":      "ge100pro",
+			"name":       "GE100 EQ",
+			"amp":        "MARKV DS",
+			"cab":        "CT-BOG OS 412",
+			"output_dir": dir,
+			"fx": []any{
+				map[string]any{
+					"module": "eq", "type": "Mooer HM", "enabled": true,
+					"params": map[string]any{"band1": 60, "band3": 30},
+				},
+			},
+		},
+	}))
+	mustContain(t, out, "Setup card:", "Knob values were applied as given")
+	singleGlob(t, filepath.Join(dir, "*.mo"))
+
+	refused := resultText(t, rpc(t, s, 2, "tools/call", map[string]any{
+		"name": "mooer_design",
+		"arguments": map[string]any{
+			"model":      "ge100pro",
+			"name":       "GE100 SIX BANDS",
+			"amp":        "MARKV DS",
+			"output_dir": dir,
+			"fx": []any{
+				map[string]any{
+					"module": "eq", "type": "Mooer HM", "enabled": true,
+					"params": map[string]any{"band6": 60},
+				},
+			},
+		},
+	}))
+	mustContain(t, refused, `no knob "band6"`, "Mooer HM")
+	if written, _ := filepath.Glob(filepath.Join(dir, "GE100 SIX BANDS*")); len(written) != 0 {
+		t.Fatalf("a refused design wrote %v", written)
+	}
+}
+
 func TestIntegrationMooerCardOnlyDevice(t *testing.T) {
 	s := newIntegrationServer(t)
 	dir := t.TempDir()

@@ -219,10 +219,35 @@ func (m Model) ResolveFX(module, name string) (uint8, error) {
 	return 0, fmt.Errorf("no %s %s effect %q", m.Name, module, name)
 }
 
+// specValidator is implemented by a device's codec when the device stores knobs
+// its own way. BuildPreset then checks a Spec against the device's own knobs and
+// ranges before applying a value, so a typo or an out-of-range value is reported
+// instead of landing on the device as a clamped byte.
+type specValidator interface {
+	ValidateSpec(Model, Spec) error
+}
+
+// normalizeModule maps a Spec's module name onto the shared preset's module
+// keys: the chain calls the overdrive module DS/OD, every other module is its
+// own name.
+func normalizeModule(name string) string {
+	module := strings.ToLower(strings.TrimSpace(name))
+	if module == "ds" {
+		return "od"
+	}
+	return module
+}
+
 // BuildPreset resolves a Spec into a concrete Preset for this model.
 func (m Model) BuildPreset(s Spec) (Preset, error) {
 	p := New()
 	p.Name = s.Name
+
+	if v, ok := m.codec.(specValidator); ok {
+		if err := v.ValidateSpec(m, s); err != nil {
+			return p, err
+		}
+	}
 
 	ampIndex, err := m.ResolveAmp(s.Amp)
 	if err != nil {
@@ -241,10 +266,7 @@ func (m Model) BuildPreset(s Spec) (Preset, error) {
 	}
 
 	for _, f := range s.FX {
-		module := strings.ToLower(strings.TrimSpace(f.Module))
-		if module == "ds" {
-			module = "od"
-		}
+		module := normalizeModule(f.Module)
 		index, err := m.ResolveFX(module, f.Type)
 		if err != nil {
 			return p, err
