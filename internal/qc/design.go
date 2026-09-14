@@ -2,10 +2,11 @@ package qc
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/d-led/guitar-modeler-mcp/internal/fileutil"
 )
 
 // Grid port constants, from the device's own protocol (pyquadcortex enums).
@@ -247,11 +248,11 @@ func WritePresetWithCard(serial string, spec DesignSpec, note, outputDir string)
 	}
 	stem := sanitizeName(spec.Name)
 	pbPath = filepath.Join(outputDir, stem+".pb")
-	if err := os.WriteFile(pbPath, data, 0o600); err != nil {
+	if err := fileutil.WriteFile(pbPath, data); err != nil {
 		return "", "", "", fmt.Errorf("write preset: %w", err)
 	}
 	cardPath = filepath.Join(outputDir, stem+".html")
-	if err := os.WriteFile(cardPath, []byte(SetupCardHTML(cat, preset, note)), 0o600); err != nil {
+	if err := fileutil.WriteFile(cardPath, []byte(SetupCardHTML(cat, preset, note))); err != nil {
 		return "", "", "", fmt.Errorf("write setup card: %w", err)
 	}
 	view, err := PresetJSON(cat, preset)
@@ -259,7 +260,7 @@ func WritePresetWithCard(serial string, spec DesignSpec, note, outputDir string)
 		return "", "", "", err
 	}
 	jsonPath = filepath.Join(outputDir, stem+".json")
-	if err := os.WriteFile(jsonPath, []byte(view), 0o600); err != nil {
+	if err := fileutil.WriteFile(jsonPath, []byte(view)); err != nil {
 		return "", "", "", fmt.Errorf("write preset JSON view: %w", err)
 	}
 	return pbPath, cardPath, jsonPath, nil

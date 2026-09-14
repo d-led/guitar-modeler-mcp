@@ -1,10 +1,13 @@
 // Package fileutil holds small filesystem-oriented helpers shared by the
-// device backends: portable file-name sanitisation and UUID generation.
+// device backends: portable file-name sanitisation, UUID generation and writing
+// into a directory a caller names.
 package fileutil
 
 import (
 	"crypto/rand"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -23,6 +26,16 @@ func SanitizeName(name string) string {
 		}
 	}
 	return strings.TrimRight(strings.TrimSpace(b.String()), ". ")
+}
+
+// WriteFile writes data to path, creating the directory it sits in when that
+// does not exist yet - an output directory a caller names should not have to
+// exist first. Files are written 0600, like the rest of the tool's output.
+func WriteFile(path string, data []byte) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0o600)
 }
 
 // NewUUID returns a random version-4 UUID string.

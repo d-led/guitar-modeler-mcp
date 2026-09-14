@@ -1,14 +1,19 @@
 package gp200
 
-import "os"
+import (
+	"os"
 
-// WriteFile writes a preset to a .prst file (1224-byte user format).
+	"github.com/d-led/guitar-modeler-mcp/internal/fileutil"
+)
+
+// WriteFile writes a preset to a .prst file (1224-byte user format), creating
+// the directory when it does not exist yet.
 func WriteFile(path string, p Preset) error {
 	data, err := p.Marshal()
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, data, 0o600)
+	return fileutil.WriteFile(path, data)
 }
 
 // ReadFile reads a preset from a .prst file (1224-byte user or 1176-byte

@@ -634,8 +634,8 @@ sweep range** (`min`/`max`):
 
 ## Songs with multiple sounds (scenes vs setlists)
 
-When one song needs several distinct tones (clean, drive, solo), you have two
-tools. **Ask the user which they want when it is not obvious** — the wrong
+When one song needs several distinct tones (clean, drive, solo), pick the tool
+that fits. **Ask the user which they want when it is not obvious** — the wrong
 guess wastes a round trip:
 
 - **Scenes** — one rig, one chain. A Scene footswitch turns several blocks on
@@ -648,6 +648,12 @@ guess wastes a round trip:
   device afterwards. Scenes flip *on/off state only* — they do not change
   parameter values, so a scene cannot switch the amp's gain or the delay's
   time; for that you need two rigs (see setlists).
+- **A Mooer bank** — on a Mooer device that files presets as bank + position,
+  the footswitches step through a bank, so *several presets in one bank* is
+  that device's scene equivalent. `mooer_design_bank` designs the song's
+  variations in one call (2–4, one per position) and names each file for the
+  position it belongs in. It is the only option there: Mooer has no per-effect
+  footswitches and no scene snapshots in our model of it.
 - **A setlist of rigs** — several full `.rig` files stepped through as a bank.
   Use this when the sounds need *incompatible chains* (different amps/cabs that
   won't all fit in 11 slots, or a chain that must be rebuilt). Design each rig
@@ -790,6 +796,22 @@ MOD, DELAY, REVERB) — there is no free slot layout, no parallel paths and no
 dual-amp config. Each module holds one effect, selected by its `effect_type`
 index into that module's own list.
 
+**A bank is how a Mooer device switches sounds mid-song.** Two of the four
+devices file their presets as bank + position and step through the positions
+with their footswitches: the **GE100 Pro** holds 50 banks of 3 (`01A`–`50C`, 150
+presets) and the **GE150 Pro Li / GE150 Max** 50 banks of 4 (`01A`–`50D`, 200).
+No bank addressing is modelled for the **GE200** (whose manual switches presets
+with ▼/▲, with no bank letters) or the classic **GE150** (card-only here). So
+when a song needs
+several chains (clean, drive, solo), design them as **one bank**:
+`mooer_design_bank` takes 2–4 whole designs, writes each as its own `.mo` named
+for its position (`01A RHYTHM.mo`) and prints the bank plan on every card, so the
+player loads them into one bank and switches with their feet. `device_list`
+reports each device's `banks` and `positions_per_bank`; a device with none has no
+bank to design into. The **position is not stored in the `.mo`** — the player
+picks the slot when importing — so the file name and the card are what say where
+each preset goes. Say so rather than claiming the file lands in `01A`.
+
 1. `device_list` — which devices are supported and whether each supports
    preset **file exchange** (`file_ext`) or only a **printable setup card**
    (`file_exchange: false`).
@@ -803,8 +825,13 @@ index into that module's own list.
    `{"module": "od|fx|mod|delay|reverb|ns|eq", "type": "...", "enabled": bool}`.
    It always writes an `.html` setup card; file-capable models also write a
    `.mo` file.
-4. `render_setup_card` — turn an existing `.mo` file into the printable card.
-5. `map_preset` — convert a preset between devices. A `.rig` maps to a Mooer
+4. `mooer_design_bank` — design a song's variations into one bank of a device
+   that files presets as bank + position: `bank` (1..the device's banks) and 2–4
+   `scenes`, each a whole design (`name`, `amp`, `cab`, `fx`, optional `note`),
+   in position order. Each scene is written as its own `.mo` named for its
+   position, and the card carries the bank plan.
+5. `render_setup_card` — turn an existing `.mo` file into the printable card.
+6. `map_preset` — convert a preset between devices. A `.rig` maps to a Mooer
    preset (GE150 Pro Li) plus a setup card; a `.mo` maps back to a Gigboard
    `.rig`.
 
@@ -855,7 +882,13 @@ Re-decide them for the target device instead of copying the source:
   flattened to a serial Mooer chain — decide which blocks survive the squeeze.
 - **Switching differs.** Gigboard: 4 stomp switches (FS5–FS8) + scenes + 2
   expression pedals. Mooer: no per-effect footswitches — it switches whole
-  patches. Waza Air: no footswitches at all (an AIRSTEP BW adds them). Quad
+  patches, and the GE100 Pro / GE150 Pro Li file them as banks of 3 / 4 whose
+  positions their footswitches step through (`mooer_design_bank`); no bank
+  addressing is modelled for the GE200 or the classic GE150. The GE150 Max Li
+  can also toggle
+  assigned modules between two saved A/B states from its CTRL footswitch, which
+  this tooling does not write. Waza Air: no footswitches at all (an AIRSTEP BW
+  adds them). Quad
   Cortex: 8+ switches + scenes. Re-map the *control intent* — a wah on a
   pedal, a drive on a stomp, a clean/lead scene — to what the target actually
   has, don't copy the source's assignments.

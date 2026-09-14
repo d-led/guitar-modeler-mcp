@@ -2,11 +2,11 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
 
+	"github.com/d-led/guitar-modeler-mcp/internal/fileutil"
 	"github.com/d-led/guitar-modeler-mcp/internal/headrush/htmlreport"
 )
 
@@ -37,7 +37,7 @@ func newReportCmd() *cobra.Command {
 				dir = filepath.Dir(rigFile)
 			}
 			htmlPath := filepath.Join(dir, file.Name()+".gigboard.html")
-			if err := os.WriteFile(htmlPath, []byte(html), 0o600); err != nil {
+			if err := fileutil.WriteFile(htmlPath, []byte(html)); err != nil {
 				return err
 			}
 			fmt.Printf("Report: %s\n", htmlPath)

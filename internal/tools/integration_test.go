@@ -241,7 +241,7 @@ func TestIntegrationGE100ProDesignUsesTheDevicesKnobs(t *testing.T) {
 			},
 		},
 	}))
-	mustContain(t, out, "Setup card:", "Knob values were applied as given")
+	mustContain(t, out, "Setup card:", "Knob values were applied as given", "Bank hint: the Mooer GE100 Pro files presets as 50 banks of 3 (01A..50C)")
 	singleGlob(t, filepath.Join(dir, "*.mo"))
 
 	refused := resultText(t, rpc(t, s, 2, "tools/call", map[string]any{
@@ -263,6 +263,96 @@ func TestIntegrationGE100ProDesignUsesTheDevicesKnobs(t *testing.T) {
 	if written, _ := filepath.Glob(filepath.Join(dir, "GE100 SIX BANDS*")); len(written) != 0 {
 		t.Fatalf("a refused design wrote %v", written)
 	}
+}
+
+// mooerScene is one scene of a bank, as a caller sends it.
+func mooerScene(name string) map[string]any {
+	return map[string]any{"name": name, "amp": "MARKV DS"}
+}
+
+// A bank is how a Mooer device switches chains mid-song, so one call designs the
+// song's variations: each scene lands in its own file, named for the position it
+// belongs in, and the card carries the bank plan.
+func TestIntegrationMooerDesignBank(t *testing.T) {
+	s := newIntegrationServer(t)
+	dir := t.TempDir()
+
+	out := resultText(t, rpc(t, s, 1, "tools/call", map[string]any{
+		"name": "mooer_design_bank",
+		"arguments": map[string]any{
+			"model":      "ge100pro",
+			"bank":       1,
+			"output_dir": dir,
+			"scenes": []any{
+				map[string]any{"name": "MOP RHYTHM", "amp": "MARKV DS", "fx": []any{
+					map[string]any{"module": "eq", "type": "Mooer HM", "enabled": true,
+						"params": map[string]any{"band1": 60, "band3": 30}},
+				}},
+				map[string]any{"name": "MOP LEAD", "amp": "MARKV DS", "fx": []any{
+					map[string]any{"module": "delay", "type": "TAPE", "enabled": true,
+						"params": map[string]any{"level": 30, "time_ms": 380}},
+				}},
+				mooerScene("MOP CLEAN"),
+			},
+		},
+	}))
+	mustContain(t, out, "Bank 01 of the Mooer GE100 Pro", `01A "MOP RHYTHM"`, `01B "MOP LEAD"`, "Load into 01A on the device")
+
+	singleGlob(t, filepath.Join(dir, "01A MOP RHYTHM.mo"))
+	singleGlob(t, filepath.Join(dir, "01B MOP LEAD.mo"))
+	singleGlob(t, filepath.Join(dir, "01C MOP CLEAN.mo"))
+	mustGlobCount(t, filepath.Join(dir, "*.mo"), 3)
+
+	// The position lives in the file name, not in the preset: the device shows
+	// the name the player dialled in.
+	p, err := mooer.ReadMOFileAny(filepath.Join(dir, "01A MOP RHYTHM.mo"))
+	if err != nil {
+		t.Fatalf("reading the bank's file failed: %v", err)
+	}
+	wantEq(t, "preset name", p.Name, "MOP RHYTHM")
+
+	// The card carries the bank plan, so the printed sheet says what the other
+	// footswitch positions hold.
+	card, err := os.ReadFile(filepath.Join(dir, "01A MOP RHYTHM.ge100pro.html"))
+	if err != nil {
+		t.Fatalf("reading the setup card failed: %v", err)
+	}
+	mustContain(t, string(card), "this is 01A", "MOP LEAD", "MOP CLEAN")
+}
+
+// A bank holds as many presets as the device has and no more, and a refused bank
+// leaves nothing on disk.
+func TestIntegrationMooerDesignBankRefusesMoreScenesThanTheDeviceHolds(t *testing.T) {
+	s := newIntegrationServer(t)
+	dir := t.TempDir()
+
+	out := resultText(t, rpc(t, s, 1, "tools/call", map[string]any{
+		"name": "mooer_design_bank",
+		"arguments": map[string]any{
+			"model":      "ge100pro",
+			"output_dir": dir,
+			"scenes":     []any{mooerScene("A"), mooerScene("B"), mooerScene("C"), mooerScene("D")},
+		},
+	}))
+	mustContain(t, out, "a bank of the Mooer GE100 Pro holds 3 presets")
+	if written, _ := filepath.Glob(filepath.Join(dir, "*.mo")); len(written) != 0 {
+		t.Fatalf("a refused bank wrote %v", written)
+	}
+}
+
+// A device this tool knows has no bank addressing cannot hold a bank of scenes,
+// so the tool says so rather than inventing an address for the files.
+func TestIntegrationMooerDesignBankRefusesADeviceWithoutBanks(t *testing.T) {
+	s := newIntegrationServer(t)
+	out := resultText(t, rpc(t, s, 1, "tools/call", map[string]any{
+		"name": "mooer_design_bank",
+		"arguments": map[string]any{
+			"model":      "ge200",
+			"output_dir": t.TempDir(),
+			"scenes":     []any{mooerScene("A"), mooerScene("B")},
+		},
+	}))
+	mustContain(t, out, "has no bank addressing")
 }
 
 func TestIntegrationMooerCardOnlyDevice(t *testing.T) {

@@ -257,6 +257,7 @@ guitar-modeler-mcp serve
 | `device_list` | List every supported device and whether it exchanges preset files |
 | `mooer_catalog_list_amps` / `_cabs` / `_fx` | List a Mooer model's amps, cabs and effects (with the real hardware each emulates) |
 | `mooer_design` | Build a Mooer preset: writes `.mo` (file-capable models) + a printable setup card |
+| `mooer_design_bank` | Design a song's variations into one bank (2–4 presets, one per position) on devices that address presets as `01A`/`01B`/… |
 | `render_setup_card` | Render a setup card from an existing `.mo` |
 | `map_preset` | Convert a preset across devices: Gigboard `.rig` ↔ Mooer `.mo` |
 | `map_ingredients` | Port a preset's blocks to another modeler by matching feature tags; returns a mapping table with per-block knob links and coverage % |
@@ -343,8 +344,12 @@ guitar-modeler-mcp setlist --name "Song" --out <card>/Setlists <card>/Rigs/*.rig
 
 Copy `Rigs/` and `Setlists/` onto the Gigboard's SD card and the whole song
 travels as one bank. Scenes (one rig, blocks toggled) suit variations of the
-*same* chain; setlists suit chains that must be rebuilt. On the other devices,
-keep the song's sounds as separate presets.
+*same* chain; setlists suit chains that must be rebuilt. On the Mooer devices
+that file presets as bank + position — the GE100 Pro (50 banks of 3, `01A`–`50C`)
+and the GE150 Pro Li / GE150 Max (50 banks of 4, `01A`–`50D`) — the footswitches
+step through a bank, so `mooer_design_bank` designs the song's variations into
+one; on the GE200 and the classic GE150, keep the song's sounds as separate
+presets.
 
 The builder **validates every parameter** against the device's specifications
 (extracted from `headrush-desktop/renderer/config/modules/*.ts` plus the

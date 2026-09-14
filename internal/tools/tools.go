@@ -12,6 +12,7 @@ import (
 
 	"github.com/d-led/guitar-modeler-mcp/internal/cookbook"
 	"github.com/d-led/guitar-modeler-mcp/internal/docs"
+	"github.com/d-led/guitar-modeler-mcp/internal/fileutil"
 	"github.com/d-led/guitar-modeler-mcp/internal/gp200"
 	"github.com/d-led/guitar-modeler-mcp/internal/headrush/assets"
 	"github.com/d-led/guitar-modeler-mcp/internal/headrush/catalog"
@@ -250,7 +251,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 
 	s.Register(mcp.Tool{
 		Name:        "device_list",
-		Description: "List the supported target devices and whether each supports preset file exchange (file_ext) or only a printable setup card.",
+		Description: "List the supported target devices, whether each supports preset file exchange (file_ext) or only a printable setup card, and how each files its presets: a device with banks and positions_per_bank addresses them as bank + position (the GE100 Pro's 01A..50C), which is what mooer_design_bank designs into.",
 		InputSchema: objectSchema(map[string]any{}),
 		Handler: func(_ context.Context, _ map[string]any) (string, error) {
 			return marshal(deviceList())
@@ -296,7 +297,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 
 	s.Register(mcp.Tool{
 		Name:        "mooer_design",
-		Description: "Dial in a tone for a Mooer device: resolve the amp/cab/effects to model indices, then write a .mo file (file-capable models) and a printable HTML setup card.",
+		Description: "Dial in a tone for a Mooer device: resolve the amp/cab/effects to model indices, then write a .mo file (file-capable models) and a printable HTML setup card. A device that files presets as bank + position can hold a song's variations in one bank (see mooer_design_bank).",
 		InputSchema: objectSchema(map[string]any{
 			"model":      stringSchema("Mooer model: ge150pro, ge200, ge150 or ge100pro (default ge150pro)."),
 			"name":       stringSchema("Preset name."),
@@ -310,6 +311,28 @@ func (r *Registrar) Register(s *mcp.Server) {
 		}),
 		Handler: func(_ context.Context, args map[string]any) (string, error) {
 			return r.mooerDesign(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "mooer_design_bank",
+		Description: "Design a song's variations as the presets of one bank on a Mooer device that files presets as bank + position (the GE100 Pro's 50 banks of 3, the GE150 Pro Li's 50 of 4). Its footswitches step through a bank, so a bank is how a Mooer device switches chains mid-song the way a Gigboard switches scenes. Each scene is a whole design; each is written as its own .mo named for its position (e.g. \"01A RHYTHM.mo\") with a setup card carrying the bank plan.",
+		InputSchema: objectSchema(map[string]any{
+			"model": stringSchema("Mooer model: ge150pro, ge200, ge150 or ge100pro (default ge150pro)."),
+			"bank":  numberSchema("Bank number to design into (1..the device's banks, default 1)."),
+			"scenes": arraySchema("One design per bank position, in order: the first becomes position A. Give 2..the device's positions (3 on the GE100 Pro, 4 on the GE150 Pro Li).", objectSchema(map[string]any{
+				"name":       stringSchema("Preset name shown on the device (up to 16 characters)."),
+				"note":       noteSchema(),
+				"amp":        stringSchema("Amp: device model name or a real-hardware description."),
+				"amp_params": mooerAmpParamsSchema(),
+				"cab":        stringSchema("Optional cab: device model name or description."),
+				"cab_params": mooerCabParamsSchema(),
+				"fx":         arraySchema("Optional effects; each names a module and an effect within it.", mooerFXItemSchema()),
+			})),
+			"output_dir": stringSchema("Directory to write the files into (default: current directory)."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.mooerDesignBank(args)
 		},
 	})
 
@@ -934,7 +957,7 @@ func (r *Registrar) designRig(args map[string]any) (string, error) {
 		return "", err
 	}
 	htmlPath := filepath.Join(outDir, file.Name()+".gigboard.html")
-	if err := os.WriteFile(htmlPath, []byte(html), 0o600); err != nil {
+	if err := fileutil.WriteFile(htmlPath, []byte(html)); err != nil {
 		return "", err
 	}
 
@@ -959,7 +982,7 @@ func (r *Registrar) renderReport(args map[string]any) (string, error) {
 		outDir = filepath.Dir(path)
 	}
 	htmlPath := filepath.Join(outDir, file.Name()+".gigboard.html")
-	if err := os.WriteFile(htmlPath, []byte(html), 0o600); err != nil {
+	if err := fileutil.WriteFile(htmlPath, []byte(html)); err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("Wrote report: %s", fileLink(htmlPath)), nil
@@ -1499,6 +1522,11 @@ type deviceInfo struct {
 	Description  string `json:"description"`
 	FileExchange bool   `json:"file_exchange"`
 	FileExt      string `json:"file_ext,omitempty"`
+	Banks        int    `json:"banks,omitempty"`
+	// PositionsPerBank is how many presets a bank holds, and PresetCount the
+	// device's total, for a device that files presets as bank + position.
+	PositionsPerBank int `json:"positions_per_bank,omitempty"`
+	PresetCount      int `json:"preset_count,omitempty"`
 }
 
 func deviceList() []deviceInfo {
@@ -1510,7 +1538,12 @@ func deviceList() []deviceInfo {
 		if m.FileExchange {
 			ext = m.FileExt
 		}
-		list = append(list, deviceInfo{Name: m.Name, Description: m.Display, FileExchange: m.FileExchange, FileExt: ext})
+		list = append(list, deviceInfo{
+			Name: m.Name, Description: m.Display, FileExchange: m.FileExchange, FileExt: ext,
+			Banks:            m.Banks,
+			PositionsPerBank: m.PositionsPerBank,
+			PresetCount:      m.Banks * m.PositionsPerBank,
+		})
 	}
 	w := waza.Default()
 	list = append(list, deviceInfo{Name: w.Name, Description: w.Display, FileExchange: w.FileExchange, FileExt: w.FileExt})
@@ -1603,27 +1636,50 @@ func (r *Registrar) mooerDesign(args map[string]any) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	name := strings.TrimSpace(argString(args, "name"))
-	if name == "" {
-		name = "New Preset"
+	spec := mooerSpec(args)
+	if spec.Name == "" {
+		spec.Name = "New Preset"
 	}
-	spec := mooer.Spec{
-		Name:      name,
+	p, err := m.BuildPreset(spec)
+	if err != nil {
+		return "", err
+	}
+	return r.writeMooerOutput(m, mooerWrite{
+		preset:  p,
+		outDir:  mooerOutputDir(args),
+		note:    argString(args, "note"),
+		closing: []string{designedKnobNote, mooerBankHint(m)},
+	})
+}
+
+// mooerSpec reads one design out of a call's arguments: a whole mooer_design
+// call, or one scene of a bank.
+func mooerSpec(args map[string]any) mooer.Spec {
+	return mooer.Spec{
+		Name:      strings.TrimSpace(argString(args, "name")),
 		Amp:       argString(args, "amp"),
 		AmpParams: argFloatMap(args, "amp_params"),
 		Cab:       argString(args, "cab"),
 		CabParams: argFloatMap(args, "cab_params"),
 		FX:        parseMooerFX(args["fx"]),
 	}
-	p, err := m.BuildPreset(spec)
-	if err != nil {
-		return "", err
+}
+
+// mooerOutputDir is the directory a Mooer call writes into.
+func mooerOutputDir(args map[string]any) string {
+	if dir := argString(args, "output_dir"); dir != "" {
+		return dir
 	}
-	outDir := argString(args, "output_dir")
-	if outDir == "" {
-		outDir = "."
+	return "."
+}
+
+// mooerBankHint points a single-preset design at the device's own way of
+// switching chains mid-song: a bank of presets its footswitches step through.
+func mooerBankHint(m mooer.Model) string {
+	if !m.BankAddressed() {
+		return ""
 	}
-	return r.writeMooerOutput(m, p, outDir, argString(args, "note"), designedKnobNote)
+	return fmt.Sprintf("Bank hint: the %s files presets as %s and steps through them with its footswitches, so a song that needs several chains is a bank of presets - see mooer_design_bank.", m.Display, m.BankSpan())
 }
 
 func parseMooerFX(raw any) []mooer.FXSpec {
@@ -1658,6 +1714,114 @@ func sanitizeFileBase(name string) string {
 	return strings.ReplaceAll(name, "/", "-")
 }
 
+// mooerBankScene is one position of a bank: the address the device shows the
+// preset at, the design that goes there, and the note printed on its own card.
+type mooerBankScene struct {
+	address string
+	spec    mooer.Spec
+	note    string
+}
+
+// mooerDesignBank designs a song's variations into one bank of a device that
+// files presets as bank + position. The footswitches step through a bank's
+// positions, so several presets in one bank is how a Mooer device switches
+// chains mid-song - the job a Gigboard does with scenes.
+func (r *Registrar) mooerDesignBank(args map[string]any) (string, error) {
+	m, err := mooerModel(args)
+	if err != nil {
+		return "", err
+	}
+	if !m.BankAddressed() {
+		return "", fmt.Errorf("the %s has no bank addressing here (the devices this tool files as bank + position are the GE100 Pro and the GE150 Pro Li), so a song's variations cannot go into one bank; dial each tone with mooer_design", m.Display)
+	}
+	bank := argInt(args, "bank", 1)
+	scenes, err := mooerBankScenes(args["scenes"], m, bank)
+	if err != nil {
+		return "", err
+	}
+
+	// Design every scene before writing anything: a scene the device cannot hold
+	// must not leave half a bank on disk.
+	presets := make([]mooer.Preset, len(scenes))
+	for i, scene := range scenes {
+		p, err := m.BuildPreset(scene.spec)
+		if err != nil {
+			return "", fmt.Errorf("scene %s (%s): %w", scene.address, scene.spec.Name, err)
+		}
+		presets[i] = p
+	}
+
+	var b strings.Builder
+	fmt.Fprintf(&b, "Bank %02d of the %s: %s. The footswitches step through the bank, so the song switches chains without re-patching. A .mo does not carry its slot, so import each file into the position its name gives.\n",
+		bank, m.Display, mooerBankPositions(scenes))
+	for i, scene := range scenes {
+		note := mooerBankCardNote(m, bank, scene, scenes)
+		if scene.note != "" {
+			note = scene.note + "\n\n" + note
+		}
+		text, err := r.writeMooerOutput(m, mooerWrite{
+			preset:   presets[i],
+			outDir:   mooerOutputDir(args),
+			note:     note,
+			fileBase: scene.address + " " + presets[i].Name,
+		})
+		if err != nil {
+			return "", err
+		}
+		fmt.Fprintf(&b, "\nLoad into %s on the device:\n%s", scene.address, text)
+	}
+	return b.String(), nil
+}
+
+// mooerBankScenes reads the scenes of a bank: one design per position, in order.
+func mooerBankScenes(raw any, m mooer.Model, bank int) ([]mooerBankScene, error) {
+	arr, _ := raw.([]any)
+	if len(arr) < 2 || len(arr) > m.PositionsPerBank {
+		return nil, fmt.Errorf("a bank of the %s holds %d presets: give 2..%d scenes, one per position (got %d)",
+			m.Display, m.PositionsPerBank, m.PositionsPerBank, len(arr))
+	}
+	scenes := make([]mooerBankScene, 0, len(arr))
+	for i, item := range arr {
+		args, ok := item.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("scene %d is not an object", i+1)
+		}
+		address, err := m.PresetAddress(bank, i)
+		if err != nil {
+			return nil, err
+		}
+		spec := mooerSpec(args)
+		if spec.Name == "" {
+			return nil, fmt.Errorf("scene %s has no name; a position needs the name the player reads on the unit", address)
+		}
+		scenes = append(scenes, mooerBankScene{address: address, spec: spec, note: argString(args, "note")})
+	}
+	return scenes, nil
+}
+
+// mooerBankPositions names each position of a bank and the preset that sits in
+// it, for the report and the cards.
+func mooerBankPositions(scenes []mooerBankScene) string {
+	held := make([]string, 0, len(scenes))
+	for _, scene := range scenes {
+		held = append(held, fmt.Sprintf("%s %q", scene.address, scene.spec.Name))
+	}
+	return strings.Join(held, ", ")
+}
+
+// mooerBankCardNote closes one preset's card with the bank it belongs to, so a
+// printed card tells the player how the song's parts fit together.
+func mooerBankCardNote(m mooer.Model, bank int, scene mooerBankScene, scenes []mooerBankScene) string {
+	others := make([]string, 0, len(scenes)-1)
+	for _, other := range scenes {
+		if other.address != scene.address {
+			others = append(others, fmt.Sprintf("%s %q", other.address, other.spec.Name))
+		}
+	}
+	return fmt.Sprintf("Bank %02d of the %s: this is %s %q, alongside %s. The footswitches step through the bank, so the song switches chains without re-patching.",
+		bank, m.Display, scene.address, scene.spec.Name, strings.Join(others, " and "))
+}
+
 // Knob-value notes close a Mooer write with where the values came from: a design
 // applies the values it was given, where a preset mapped from another device
 // keeps the neutral 50s until someone dials it.
@@ -1666,14 +1830,30 @@ const (
 	mappedKnobNote   = "Parameter values are neutral defaults (raw 0-100, 50 = noon); source knob positions are not copied across devices."
 )
 
-// writeMooerOutput writes a .mo file (when the model supports file exchange)
-// and always writes a printable HTML setup card, then returns a text summary.
-func (r *Registrar) writeMooerOutput(m mooer.Model, p mooer.Preset, outDir, note, knobNote string) (string, error) {
-	base := sanitizeFileBase(p.Name)
+// mooerWrite is one Mooer file-writing request: the preset, where it lands, what
+// its card's note says, what the summary closes with, and - for a preset that
+// belongs to a bank - the file base that carries its position.
+type mooerWrite struct {
+	preset   mooer.Preset
+	outDir   string
+	note     string
+	fileBase string
+	closing  []string
+}
+
+// writeMooerOutput writes a .mo file (when the model supports file exchange) and
+// always writes a printable HTML setup card, then returns a text summary. A
+// fileBase names the files instead of the preset's own name.
+func (r *Registrar) writeMooerOutput(m mooer.Model, w mooerWrite) (string, error) {
+	p := w.preset
+	base := sanitizeFileBase(w.fileBase)
+	if w.fileBase == "" {
+		base = sanitizeFileBase(p.Name)
+	}
 	var b strings.Builder
 
 	if m.FileExchange {
-		path := filepath.Join(outDir, base+m.FileExt)
+		path := filepath.Join(w.outDir, base+m.FileExt)
 		if err := mooer.WriteMOFile(m, path, p); err != nil {
 			return "", err
 		}
@@ -1682,8 +1862,8 @@ func (r *Registrar) writeMooerOutput(m mooer.Model, p mooer.Preset, outDir, note
 		fmt.Fprintf(&b, "%s does not support preset file transfer; here is a printable setup card.\n", m.Display)
 	}
 
-	cardPath := filepath.Join(outDir, base+"."+m.Name+".html")
-	if err := os.WriteFile(cardPath, []byte(mooer.SetupCardHTML(m, p, note)), 0o600); err != nil {
+	cardPath := filepath.Join(w.outDir, base+"."+m.Name+".html")
+	if err := fileutil.WriteFile(cardPath, []byte(mooer.SetupCardHTML(m, p, w.note))); err != nil {
 		return "", err
 	}
 	fmt.Fprintf(&b, "Setup card: %s\n", cardPath)
@@ -1699,7 +1879,12 @@ func (r *Registrar) writeMooerOutput(m mooer.Model, p mooer.Preset, outDir, note
 		}
 		fmt.Fprintf(&b, "- %s: %s (%s)\n", d.Module, d.Effect, state)
 	}
-	fmt.Fprintf(&b, "%s\n", knobNote)
+	for _, line := range w.closing {
+		if line == "" {
+			continue
+		}
+		fmt.Fprintf(&b, "%s\n", line)
+	}
 	return b.String(), nil
 }
 
@@ -1806,7 +1991,7 @@ func gp200WriteOutput(p gp200.Preset, rejected []string, outDir, note string) (s
 
 	m := gp200.Default()
 	cardPath := filepath.Join(outDir, base+"."+m.Name+".html")
-	if err := os.WriteFile(cardPath, []byte(gp200.SetupCardHTML(m, p, note)), 0o600); err != nil {
+	if err := fileutil.WriteFile(cardPath, []byte(gp200.SetupCardHTML(m, p, note))); err != nil {
 		return "", err
 	}
 
@@ -2237,7 +2422,7 @@ func (r *Registrar) gp200SetupCard(args map[string]any) (string, error) {
 	}
 	m := gp200.Default()
 	cardPath := filepath.Join(outDir, sanitizeFileBase(p.PatchName)+"."+m.Name+".html")
-	if err := os.WriteFile(cardPath, []byte(gp200.SetupCardHTML(m, p, argString(args, "note"))), 0o600); err != nil {
+	if err := fileutil.WriteFile(cardPath, []byte(gp200.SetupCardHTML(m, p, argString(args, "note")))); err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("Wrote setup card to %s", cardPath), nil
@@ -2270,7 +2455,7 @@ func (r *Registrar) renderSetupCard(args map[string]any) (string, error) {
 		outDir = filepath.Dir(path)
 	}
 	cardPath := filepath.Join(outDir, sanitizeFileBase(p.Name)+"."+m.Name+".html")
-	if err := os.WriteFile(cardPath, []byte(mooer.SetupCardHTML(m, p, argString(args, "note"))), 0o600); err != nil {
+	if err := fileutil.WriteFile(cardPath, []byte(mooer.SetupCardHTML(m, p, argString(args, "note")))); err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("Wrote setup card to %s", cardPath), nil
@@ -2340,7 +2525,11 @@ func (r *Registrar) mapPreset(args map[string]any) (string, error) {
 		return "", err
 	}
 	m, _ := mooer.ModelByName("ge150pro")
-	return r.writeMooerOutput(m, p, outDir, "", mappedKnobNote)
+	return r.writeMooerOutput(m, mooerWrite{
+		preset:  p,
+		outDir:  outDir,
+		closing: []string{mappedKnobNote, mooerBankHint(m)},
+	})
 }
 
 func (r *Registrar) wazaListAmps() (string, error) {
@@ -2390,7 +2579,7 @@ func (r *Registrar) wazaSetupCard(args map[string]any) (string, error) {
 	}
 
 	path := filepath.Join(outDir, sanitizeFileBase(spec.Name)+"."+d.Name+".html")
-	if err := os.WriteFile(path, []byte(card), 0o600); err != nil {
+	if err := fileutil.WriteFile(path, []byte(card)); err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("Wrote Waza Air setup card to %s", path), nil
@@ -2852,7 +3041,7 @@ func (r *Registrar) qcRenderSetupCard(args map[string]any) (string, error) {
 	}
 	stem := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
 	cardPath := filepath.Join(outDir, stem+".html")
-	if err := os.WriteFile(cardPath, []byte(qc.SetupCardHTML(d.Catalog, preset, argString(args, "note"))), 0o600); err != nil {
+	if err := fileutil.WriteFile(cardPath, []byte(qc.SetupCardHTML(d.Catalog, preset, argString(args, "note")))); err != nil {
 		return "", fmt.Errorf("write setup card: %w", err)
 	}
 	view, err := qc.PresetJSON(d.Catalog, preset)
@@ -2860,7 +3049,7 @@ func (r *Registrar) qcRenderSetupCard(args map[string]any) (string, error) {
 		return "", err
 	}
 	jsonPath := filepath.Join(outDir, stem+".json")
-	if err := os.WriteFile(jsonPath, []byte(view), 0o600); err != nil {
+	if err := fileutil.WriteFile(jsonPath, []byte(view)); err != nil {
 		return "", fmt.Errorf("write preset JSON view: %w", err)
 	}
 	return marshal(map[string]any{"card": cardPath, "json": jsonPath, "name": preset.Name, "caveat": qc.Caveat})
@@ -3075,7 +3264,7 @@ func (r *Registrar) thrSetupCard(args map[string]any) (string, error) {
 		outDir = "."
 	}
 	path := filepath.Join(outDir, sanitizeFileBase(resolved.Name)+"."+d.Name+".html")
-	if err := os.WriteFile(path, []byte(d.SetupCardHTML(resolved)), 0o600); err != nil {
+	if err := fileutil.WriteFile(path, []byte(d.SetupCardHTML(resolved))); err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("Wrote %s setup card to %s", d.Display, path), nil

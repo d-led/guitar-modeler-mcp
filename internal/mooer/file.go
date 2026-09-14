@@ -3,6 +3,8 @@ package mooer
 import (
 	"fmt"
 	"os"
+
+	"github.com/d-led/guitar-modeler-mcp/internal/fileutil"
 )
 
 // MOFileSize is the size of a .mo single-preset file: a zeroed 0x200-byte
@@ -45,9 +47,10 @@ func UnmarshalMOAny(data []byte) (Preset, error) {
 	return parseMOFile(data)
 }
 
-// WriteMOFile writes a preset to a .mo file in the target model's layout.
+// WriteMOFile writes a preset to a .mo file in the target model's layout,
+// creating the directory when it does not exist yet.
 func WriteMOFile(m Model, path string, p Preset) error {
-	return os.WriteFile(path, MarshalMOFor(m, p), 0o600)
+	return fileutil.WriteFile(path, MarshalMOFor(m, p))
 }
 
 // ReadMOFile reads a preset from a .mo file in the target model's layout.

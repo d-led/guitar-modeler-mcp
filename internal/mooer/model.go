@@ -32,6 +32,12 @@ type Model struct {
 	FileExt string `json:"file_ext,omitempty"`
 	// ModuleOrder is the fixed signal-chain order of the modules.
 	ModuleOrder []string `json:"module_order"`
+	// Banks and PositionsPerBank are how the device and its editor address a
+	// preset: the GE100 Pro shows "01A" for the first preset of bank 1, and its
+	// footswitches step through the positions of one bank. A device that numbers
+	// its presets flat leaves both at zero.
+	Banks            int `json:"banks,omitempty"`
+	PositionsPerBank int `json:"positions_per_bank,omitempty"`
 	// Amps is the amp list in effect_type index order.
 	Amps []Item `json:"amps"`
 	// Cabs is the cabinet list in effect_type index order.
@@ -41,6 +47,44 @@ type Model struct {
 	// codec renders and reads this device's .mo files. It is set by the device's
 	// own constructor and is not part of the catalog data.
 	codec codec
+}
+
+// BankAddressed reports whether the device files its presets as a bank plus a
+// position ("01A") rather than numbering them flat. A bank is the device's own
+// way of holding a song's variations: its footswitches step through the
+// positions of one bank.
+func (m Model) BankAddressed() bool { return m.PositionsPerBank > 0 }
+
+// presetPositions labels the positions within a bank the way the device does.
+const presetPositions = "ABCD"
+
+// PresetAddress renders a preset's bank and position the way the device and its
+// editor show them, e.g. "01A" for the first preset of bank 1. It refuses an
+// address the device has not got, so a design cannot be filed outside its banks.
+func (m Model) PresetAddress(bank, position int) (string, error) {
+	if !m.BankAddressed() {
+		return "", fmt.Errorf("the %s has no bank addressing here: only a device that files presets as bank + position can hold a song's variations in a bank", m.Display)
+	}
+	if bank < 1 || bank > m.Banks {
+		return "", fmt.Errorf("the %s has %d banks (1..%d), not bank %d", m.Display, m.Banks, m.Banks, bank)
+	}
+	if position < 0 || position >= m.PositionsPerBank {
+		return "", fmt.Errorf("a bank of the %s holds %d presets (positions A..%c), not position %d",
+			m.Display, m.PositionsPerBank, presetPositions[m.PositionsPerBank-1], position+1)
+	}
+	return fmt.Sprintf("%02d%c", bank, presetPositions[position]), nil
+}
+
+// BankSpan describes the device's preset addressing the way a report reads it,
+// e.g. "50 banks of 3 (01A..50C)". It is empty for a device that numbers its
+// presets flat.
+func (m Model) BankSpan() string {
+	if m.Banks == 0 || m.PositionsPerBank == 0 {
+		return ""
+	}
+	first, _ := m.PresetAddress(1, 0)
+	last, _ := m.PresetAddress(m.Banks, m.PositionsPerBank-1) // both sit inside the banks checked by PresetAddress
+	return fmt.Sprintf("%d banks of %d (%s..%s)", m.Banks, m.PositionsPerBank, first, last)
 }
 
 // layout returns the codec this device's presets are read and written with. A

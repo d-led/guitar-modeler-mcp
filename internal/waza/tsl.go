@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/d-led/guitar-modeler-mcp/internal/fileutil"
 )
 
 // WazaAirDeviceID is the device identifier stored inside a Waza Air backup.
@@ -80,13 +82,14 @@ func (b *Backup) Marshal() ([]byte, error) {
 	return append(out, '\n'), nil
 }
 
-// WriteTSLFile writes the backup to disk.
+// WriteTSLFile writes the backup to disk, creating the directory when it does
+// not exist yet.
 func WriteTSLFile(path string, b *Backup) error {
 	data, err := b.Marshal()
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, data, 0o600)
+	return fileutil.WriteFile(path, data)
 }
 
 // NewBackup returns an empty Waza Air backup.

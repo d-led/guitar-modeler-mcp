@@ -3,11 +3,11 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
 
+	"github.com/d-led/guitar-modeler-mcp/internal/fileutil"
 	"github.com/d-led/guitar-modeler-mcp/internal/headrush/design"
 	"github.com/d-led/guitar-modeler-mcp/internal/headrush/htmlreport"
 	"github.com/d-led/guitar-modeler-mcp/internal/headrush/rig"
@@ -161,7 +161,7 @@ func writeDesignOutput(a *app, res *design.Result, f *designFlags) error {
 		return err
 	}
 	htmlPath := filepath.Join(f.out, file.Name()+".gigboard.html")
-	if err := os.WriteFile(htmlPath, []byte(html), 0o600); err != nil {
+	if err := fileutil.WriteFile(htmlPath, []byte(html)); err != nil {
 		return err
 	}
 

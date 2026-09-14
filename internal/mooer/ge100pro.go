@@ -11,10 +11,15 @@ func ge100pro() Model {
 		FileExchange: true,
 		FileExt:      ".mo",
 		ModuleOrder:  append([]string(nil), ModuleOrder...),
-		codec:        ge100ProCodec{},
-		Amps:         ge100ProAmpItems(),
-		Cabs:         ge100ProCabItems(),
-		Effects:      ge100ProEffectItems(),
+		// Mooer Studio lists the device's 150 presets as 50 banks of three
+		// (01A..50C), and the three footswitches step through the positions of a
+		// bank - so a bank is where a song's variations live.
+		Banks:            50,
+		PositionsPerBank: 3,
+		codec:            ge100ProCodec{},
+		Amps:             ge100ProAmpItems(),
+		Cabs:             ge100ProCabItems(),
+		Effects:          ge100ProEffectItems(),
 	}
 }
 

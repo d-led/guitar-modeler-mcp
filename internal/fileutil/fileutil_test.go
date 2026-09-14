@@ -1,6 +1,27 @@
 package fileutil
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
+
+// An output directory a caller names should not have to exist first: the writer
+// makes it, so a card can be written into a folder the tool has not used before.
+func TestWriteFileCreatesTheDirectoryItWritesInto(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "cards", "song", "tone.mo")
+
+	if err := WriteFile(path, []byte("preset")); err != nil {
+		t.Fatalf("WriteFile into a directory that does not exist yet: %v", err)
+	}
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading the file back: %v", err)
+	}
+	if string(got) != "preset" {
+		t.Fatalf("content = %q, want %q", got, "preset")
+	}
+}
 
 func TestSanitizeName(t *testing.T) {
 	cases := map[string]string{

@@ -11,10 +11,14 @@ func ge150pro() Model {
 		FileExchange: true,
 		FileExt:      ".mo",
 		ModuleOrder:  append([]string(nil), ModuleOrder...),
-		codec:        recordCodec{},
-		Amps:         buildItems(Amps, ampInspiredBy),
-		Cabs:         buildItems(Cabs, cabInspiredBy),
-		Effects:      buildEffects(Effects, fxInspiredBy),
+		// The GE150 Max / Max Li owner's manual addresses its 200 presets as 50
+		// banks of four (01A..50D).
+		Banks:            50,
+		PositionsPerBank: 4,
+		codec:            recordCodec{},
+		Amps:             buildItems(Amps, ampInspiredBy),
+		Cabs:             buildItems(Cabs, cabInspiredBy),
+		Effects:          buildEffects(Effects, fxInspiredBy),
 	}
 }
 
