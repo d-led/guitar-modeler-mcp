@@ -300,22 +300,9 @@ func resolveFootswitch(sw Footswitch, i int, modules []string) (Footswitch, erro
 		return Footswitch{}, fmt.Errorf("footswitch %d: %w", i+1, err)
 	}
 
-	module := strings.TrimSpace(sw.Module)
+	module := sceneAnchor(mode, scene, strings.TrimSpace(sw.Module))
 	if module == "" {
-		// A Scene switch recalls a multi-block snapshot, so it has no single
-		// module to control; its Module field is a display anchor. When the
-		// caller omits it, derive the anchor from the first block the scene
-		// affects.
-		if mode == "Scene" && scene != nil {
-			if len(scene.On) > 0 {
-				module = scene.On[0]
-			} else if len(scene.Off) > 0 {
-				module = scene.Off[0]
-			}
-		}
-		if module == "" {
-			return Footswitch{}, fmt.Errorf("footswitch %d: module is required", i+1)
-		}
+		return Footswitch{}, fmt.Errorf("footswitch %d: module is required", i+1)
 	}
 	name, ok := matchInstance(module, modules)
 	if !ok {
@@ -332,6 +319,21 @@ func resolveFootswitch(sw Footswitch, i int, modules []string) (Footswitch, erro
 		Label:     strings.TrimSpace(sw.Label),
 		Scene:     scene,
 	}, nil
+}
+
+// sceneAnchor returns the module a footswitch's Module field names: the
+// caller's own module, or — for a Scene switch that omits it — the first block
+// the scene turns on (falling back to the first block it turns off). A Scene
+// switch has no single module to control, so its Module is only a display
+// anchor.
+func sceneAnchor(mode string, scene *SceneSnapshot, module string) string {
+	if module != "" || mode != "Scene" || scene == nil {
+		return module
+	}
+	if len(scene.On) > 0 {
+		return scene.On[0]
+	}
+	return scene.Off[0]
 }
 
 func footswitchMode(mode string) (string, error) {

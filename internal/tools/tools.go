@@ -1156,24 +1156,36 @@ func parseFootswitches(raw any) []rig.Footswitch {
 			Operation: argString(m, "operation"),
 			Mode:      argString(m, "mode"),
 			Label:     argString(m, "label"),
+			Scene:     footswitchScene(m),
 		}
-		if scene, ok := m["scene"].(map[string]any); ok {
-			snap := &rig.SceneSnapshot{
-				On:  argStrings(scene["on"]),
-				Off: argStrings(scene["off"]),
-			}
-			if len(snap.On) > 0 || len(snap.Off) > 0 {
-				sw.Scene = snap
-			}
-		}
-		// A Scene switch recalls a multi-block snapshot rather than one module,
-		// so its module field is optional; keep it when it carries a snapshot
-		// even without a module (the resolver derives the on-screen anchor).
-		if sw.Module != "" || (strings.EqualFold(sw.Mode, "Scene") && sw.Scene != nil) {
+		if keepFootswitch(sw) {
 			out = append(out, sw)
 		}
 	}
 	return out
+}
+
+// footswitchScene reads a switch's scene snapshot, or nil when absent or empty.
+func footswitchScene(m map[string]any) *rig.SceneSnapshot {
+	scene, ok := m["scene"].(map[string]any)
+	if !ok {
+		return nil
+	}
+	snap := &rig.SceneSnapshot{
+		On:  argStrings(scene["on"]),
+		Off: argStrings(scene["off"]),
+	}
+	if len(snap.On) == 0 && len(snap.Off) == 0 {
+		return nil
+	}
+	return snap
+}
+
+// keepFootswitch reports whether a parsed switch should be kept: it either
+// names a module, or is a Scene switch carrying a snapshot (its module field is
+// optional — the resolver derives the on-screen anchor).
+func keepFootswitch(sw rig.Footswitch) bool {
+	return sw.Module != "" || (strings.EqualFold(sw.Mode, "Scene") && sw.Scene != nil)
 }
 
 // parsePedals reads the pedals array argument: one expression-pedal assignment

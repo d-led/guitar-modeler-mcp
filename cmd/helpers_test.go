@@ -47,19 +47,23 @@ func TestParseFXFlags(t *testing.T) {
 	if len(fx) != 1 || fx[0].Type != "Tape Echo" || !fx[0].Enabled {
 		t.Fatalf("parseFXFlags = %+v", fx)
 	}
-	// An omitted "enabled" means on, matching the MCP design_rig tool.
-	fx, err = parseFXFlags(`[{"type":"Tape Echo"}]`)
-	if err != nil {
-		t.Fatalf("parseFXFlags (no enabled): %v", err)
-	}
-	if len(fx) != 1 || !fx[0].Enabled {
-		t.Fatalf("parseFXFlags without enabled should default to on, got %+v", fx)
-	}
 	if fx, err := parseFXFlags(""); err != nil || fx != nil {
 		t.Fatalf("parseFXFlags(\"\") = %v, %v; want nil, nil", fx, err)
 	}
 	if _, err := parseFXFlags("not json"); err == nil {
 		t.Fatal("parseFXFlags accepted invalid JSON")
+	}
+}
+
+// TestParseFXFlagsDefaultsEnabled pins that an omitted "enabled" means on,
+// matching the MCP design_rig tool's argBool default.
+func TestParseFXFlagsDefaultsEnabled(t *testing.T) {
+	fx, err := parseFXFlags(`[{"type":"Tape Echo"}]`)
+	if err != nil {
+		t.Fatalf("parseFXFlags (no enabled): %v", err)
+	}
+	if len(fx) != 1 || !fx[0].Enabled {
+		t.Fatalf("parseFXFlags without enabled should default to on, got %+v", fx)
 	}
 }
 

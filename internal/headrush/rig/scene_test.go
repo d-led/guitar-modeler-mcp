@@ -230,7 +230,7 @@ func TestBuildEngagedSceneUsesLastSceneIndex(t *testing.T) {
 			{Type: "Tape Echo", Enabled: true},
 		},
 		Footswitches: []Footswitch{
-			{Module: "Tape Echo"},                                                                        // toggle on FS5
+			{Module: "Tape Echo"}, // toggle on FS5
 			{Module: "Green JRC-OD", Mode: "Scene", Scene: &SceneSnapshot{On: []string{"Green JRC-OD"}}}, // first scene on FS6
 			{Module: "Tape Echo", Mode: "Scene", Scene: &SceneSnapshot{On: []string{"Tape Echo"}}},       // second scene
 		},
