@@ -16,6 +16,7 @@ Available Commands:
   decode       Decode a .rig file into its signal chain and parameter values
   design       Dial in a tone and write a .rig patch plus an HTML report
   device       List the devices the tool can target
+  diff         Diff two .rig files field by field, keyed by JSON path
   fx-placement Show where each effect category goes in each chain layout
   help         Help about any command
   level        Estimate a rig's output level and recommend a RigVolume
@@ -302,6 +303,19 @@ Usage:
 
 Flags:
   -h, --help   help for decode
+      --raw    print the full raw document instead of the summarized chain
+```
+
+## `guitar-modeler-mcp diff`
+
+```text
+Diff two .rig files field by field, keyed by JSON path
+
+Usage:
+  guitar-modeler-mcp diff <a.rig> <b.rig> [flags]
+
+Flags:
+  -h, --help   help for diff
 ```
 
 ## `guitar-modeler-mcp level`

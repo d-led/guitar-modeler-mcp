@@ -220,9 +220,22 @@ func (r *Registrar) Register(s *mcp.Server) {
 		Description: "Decode an existing .rig file into its signal chain, parallel-path mixer (levels, pans, delay) and per-module parameter values, so you can analyze or verify a preset.",
 		InputSchema: objectSchema(map[string]any{
 			"rig_file": stringSchema("Path to the .rig file to decode."),
+			"raw":      boolSchema("When true, return the full raw document (FootSwitch/Pedal/Patch sections with every childorder/children pair) instead of the summarized chain."),
 		}),
 		Handler: func(_ context.Context, args map[string]any) (string, error) {
 			return r.decodeRig(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "rig_diff",
+		Description: "Diff two .rig files field by field, keyed by each changed field's JSON path. Use it to compare a generated rig against a device-saved rig and find exactly which fields differ.",
+		InputSchema: objectSchema(map[string]any{
+			"rig_file_a": stringSchema("Path to the first .rig file."),
+			"rig_file_b": stringSchema("Path to the second .rig file."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.diffRigs(args)
 		},
 	})
 
@@ -997,11 +1010,39 @@ func (r *Registrar) decodeRig(args map[string]any) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	if argBool(args, "raw", false) {
+		raw, err := file.RawContent()
+		if err != nil {
+			return "", err
+		}
+		return marshal(raw)
+	}
 	summary, err := rig.Describe(file)
 	if err != nil {
 		return "", err
 	}
 	return marshal(summary)
+}
+
+func (r *Registrar) diffRigs(args map[string]any) (string, error) {
+	a := argString(args, "rig_file_a")
+	b := argString(args, "rig_file_b")
+	if a == "" || b == "" {
+		return "", fmt.Errorf("rig_file_a and rig_file_b are required")
+	}
+	fa, err := readRigFile(a)
+	if err != nil {
+		return "", err
+	}
+	fb, err := readRigFile(b)
+	if err != nil {
+		return "", err
+	}
+	diff, err := rig.DiffRigs(fa, fb)
+	if err != nil {
+		return "", err
+	}
+	return marshal(diff)
 }
 
 func (r *Registrar) describeModule(typ string) (string, error) {

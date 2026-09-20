@@ -89,6 +89,7 @@ func newRootCmd() *cobra.Command {
 		newDesignCmd(),
 		newReportCmd(),
 		newDecodeCmd(),
+		newDiffCmd(),
 		newLevelCmd(),
 		newSetlistCmd(),
 		newMcpCmd(),

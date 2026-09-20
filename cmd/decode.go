@@ -7,7 +7,8 @@ import (
 )
 
 func newDecodeCmd() *cobra.Command {
-	return &cobra.Command{
+	var raw bool
+	cmd := &cobra.Command{
 		Use:   "decode <file.rig>",
 		Short: "Decode a .rig file into its signal chain and parameter values",
 		Args:  cobra.ExactArgs(1),
@@ -16,6 +17,13 @@ func newDecodeCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if raw {
+				content, err := file.RawContent()
+				if err != nil {
+					return err
+				}
+				return printJSON(content)
+			}
 			summary, err := rig.Describe(file)
 			if err != nil {
 				return err
@@ -23,4 +31,6 @@ func newDecodeCmd() *cobra.Command {
 			return printJSON(summary)
 		},
 	}
+	cmd.Flags().BoolVar(&raw, "raw", false, "print the full raw document instead of the summarized chain")
+	return cmd
 }

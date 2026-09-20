@@ -34,6 +34,7 @@ commands=(
   "design"
   "report"
   "decode"
+  "diff"
   "level"
   "setlist"
   "mcp"
