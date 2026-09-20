@@ -49,6 +49,7 @@ func HardwareAssignments(rf *RigFile) (Hardware, error) {
 	h := Hardware{}
 	patch := content.Data.Patch
 	children := namedChildren(decodeSection(content.FootSwitch), "FootSwitch")
+	lastScene := sceneIndex(children)
 	for i, n := range []string{"5", "6", "7", "8"} {
 		module := assignedName(childString(children, "Module"+n))
 		// Mode and label only belong to an assigned switch; the template may
@@ -59,11 +60,10 @@ func HardwareAssignments(rf *RigFile) (Hardware, error) {
 			label = childString(children, "UserFootSwitchText"+n)
 			operation = childString(children, "Operation"+n)
 			// A button starts dimmed when its target is inactive at load: a
-			// toggle whose module is bypassed, or a scene whose ModeN engaged
-			// flag is not set (scenes are mutually exclusive, so at most one
-			// is lit).
+			// toggle whose module is bypassed, or a scene other than the one
+			// LastScene marks engaged (scenes are mutually exclusive).
 			if mode == "Scene" {
-				off = !childState(children, "Mode"+n)
+				off = lastScene != i
 			} else if operation == "" || operation == "On" {
 				off = nodeStartsOff(patch, module)
 			}
@@ -105,15 +105,18 @@ func nodeStartsOff(patch Patch, name string) bool {
 	return ok && item.State != nil && !*item.State
 }
 
-// childState reads a type-1 boolean child (e.g. Mode5, a switch's engaged
-// state at load). A missing or differently-typed child reads as false.
-func childState(children map[string]any, key string) bool {
-	item, ok := children[key].(map[string]any)
+// sceneIndex returns the 0-based button index (0 = FS5 … 3 = FS8) of the scene
+// engaged at load, or -1 when none. The device stores it in LastScene.
+func sceneIndex(children map[string]any) int {
+	v, ok := children["LastScene"].(map[string]any)
 	if !ok {
-		return false
+		return -1
 	}
-	b, _ := item["state"].(bool)
-	return b
+	num, _ := v["value"].(float64)
+	if num >= 0 && num <= 3 {
+		return int(num)
+	}
+	return -1
 }
 
 // namedChildren unwraps the {data:{<name>:{children:{…}}}} wrapper used by the

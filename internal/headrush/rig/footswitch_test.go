@@ -338,8 +338,8 @@ func TestFootswitchSceneWithoutModuleDerivesAnchor(t *testing.T) {
 	children := footswitchChildren(t, file)
 	wantEq(t, "Module5", footswitchField(t, children, "Module5"), "Green JRC-OD")
 	wantEq(t, "ModeNew5", footswitchField(t, children, "ModeNew5"), "Scene")
-	mode5, ok := children["Mode5"].(map[string]any)
-	if !ok || mode5["state"] != true {
-		t.Fatalf("Mode5 = %v, want true (scene engaged at load)", mode5)
+	// The first Scene switch is engaged at load: LastScene = 0 (0-based FS5).
+	if got := children["LastScene"].(map[string]any)["value"]; got != float64(0) {
+		t.Fatalf("LastScene = %v, want 0 (scene engaged at load)", got)
 	}
 }

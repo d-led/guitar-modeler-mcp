@@ -154,7 +154,8 @@ func TestBuildRejectsUnknownPedalModule(t *testing.T) {
 }
 
 // TestBuildMarksFirstSceneActiveByDefault ensures a rig with scene switches
-// defines its starting point: the first Scene switch's Mode flag is engaged.
+// defines its starting point: LastScene points at the first Scene switch (0 =
+// FS5, the device's 0-based index).
 func TestBuildMarksFirstSceneActiveByDefault(t *testing.T) {
 	b := newTestBuilder(t)
 	file, err := b.Build(Spec{
@@ -178,21 +179,18 @@ func TestBuildMarksFirstSceneActiveByDefault(t *testing.T) {
 	}
 	fs := decodeSection(content.FootSwitch)
 	children := fs["data"].(map[string]any)["FootSwitch"].(map[string]any)["children"].(map[string]any)
-	// The first Scene switch is engaged at load: its Mode5 flag is set, and the
-	// rig carries no LastScene (never positive on a device-authored rig).
-	mode5, ok := children["Mode5"].(map[string]any)
-	engaged, _ := mode5["state"].(bool)
-	if !ok || !engaged {
-		t.Fatalf("Mode5 = %v, want true (first scene on FS5 engaged at load)", mode5)
+	// The first Scene switch is engaged at load: LastScene = 0 (0-based FS5),
+	// and the rig carries no ModeN (the device does not write it).
+	if got := children["LastScene"].(map[string]any)["value"]; got != float64(0) {
+		t.Fatalf("LastScene = %v, want 0 (first scene on FS5 engaged at load)", got)
 	}
-	if _, ok := children["LastScene"]; ok {
-		t.Fatalf("LastScene should not be written (never positive on-device), got %v", children["LastScene"])
+	if _, ok := children["Mode5"]; ok {
+		t.Fatalf("Mode5 should not be written (the device does not use it), got %v", children["Mode5"])
 	}
 }
 
 // TestBuildNoSceneWritesNoEngagedFlag ensures toggle-only rigs do not claim a
-// scene is engaged at load: every switch carries ModeN=False (as the device
-// writes it), but none is set.
+// scene is engaged at load: LastScene is -1 (none).
 func TestBuildNoSceneWritesNoEngagedFlag(t *testing.T) {
 	b := newTestBuilder(t)
 	file, err := b.Build(Spec{
@@ -213,19 +211,15 @@ func TestBuildNoSceneWritesNoEngagedFlag(t *testing.T) {
 	}
 	fs := decodeSection(content.FootSwitch)
 	children := fs["data"].(map[string]any)["FootSwitch"].(map[string]any)["children"].(map[string]any)
-	// Every switch carries an engaged flag, all False for a toggle-only rig.
-	for _, n := range []string{"5", "6", "7", "8"} {
-		modeN, ok := children["Mode"+n].(map[string]any)
-		if !ok || modeN["state"] != false {
-			t.Fatalf("Mode%s = %v, want false (no scene engaged)", n, modeN)
-		}
+	if got := children["LastScene"].(map[string]any)["value"]; got != float64(-1) {
+		t.Fatalf("LastScene = %v, want -1 (no scene engaged)", got)
 	}
 }
 
-// TestBuildEngagedFlagAcrossSwitchKinds pins the device's ModeN pattern: the
-// engaged scene is True, every other switch (scene, toggle, unassigned) is
-// False.
-func TestBuildEngagedFlagAcrossSwitchKinds(t *testing.T) {
+// TestBuildEngagedSceneUsesLastSceneIndex pins the device's engaged-scene
+// encoding: the first Scene switch is recorded as LastScene = 0 (0-based FS5),
+// and no ModeN flag is written.
+func TestBuildEngagedSceneUsesLastSceneIndex(t *testing.T) {
 	b := newTestBuilder(t)
 	file, err := b.Build(Spec{
 		Name: "Mixed Switches",
@@ -236,9 +230,9 @@ func TestBuildEngagedFlagAcrossSwitchKinds(t *testing.T) {
 			{Type: "Tape Echo", Enabled: true},
 		},
 		Footswitches: []Footswitch{
-			{Module: "Green JRC-OD", Mode: "Scene", Scene: &SceneSnapshot{On: []string{"Green JRC-OD"}}}, // engaged at load
-			{Module: "Tape Echo", Mode: "Scene", Scene: &SceneSnapshot{On: []string{"Tape Echo"}}},       // second scene: off
-			{Module: "Tape Echo"}, // toggle: off
+			{Module: "Tape Echo"},                                                                        // toggle on FS5
+			{Module: "Green JRC-OD", Mode: "Scene", Scene: &SceneSnapshot{On: []string{"Green JRC-OD"}}}, // first scene on FS6
+			{Module: "Tape Echo", Mode: "Scene", Scene: &SceneSnapshot{On: []string{"Tape Echo"}}},       // second scene
 		},
 	})
 	if err != nil {
@@ -251,11 +245,13 @@ func TestBuildEngagedFlagAcrossSwitchKinds(t *testing.T) {
 	fs := decodeSection(content.FootSwitch)
 	children := fs["data"].(map[string]any)["FootSwitch"].(map[string]any)["children"].(map[string]any)
 
-	want := map[string]bool{"5": true, "6": false, "7": false, "8": false}
-	for n, engaged := range want {
-		modeN, ok := children["Mode"+n].(map[string]any)
-		if !ok || modeN["state"] != engaged {
-			t.Fatalf("Mode%s = %v, want %v", n, modeN, engaged)
+	// The first Scene switch sits on FS6 (0-based index 1).
+	if got := children["LastScene"].(map[string]any)["value"]; got != float64(1) {
+		t.Fatalf("LastScene = %v, want 1 (first scene is on FS6)", got)
+	}
+	for _, n := range []string{"5", "6", "7", "8"} {
+		if _, ok := children["Mode"+n]; ok {
+			t.Fatalf("Mode%s should not be written (the device does not use it)", n)
 		}
 	}
 }

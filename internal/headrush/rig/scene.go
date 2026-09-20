@@ -75,10 +75,10 @@ func footSwitchFor(template []byte, moduleNames []string, switches []Footswitch)
 	}
 
 	resetFootSwitchChildren(children, moduleNames)
-	active := firstSceneIndex(switches)
 	for i, sw := range switches {
-		assignFootSwitch(children, moduleNames, 5+i, sw, i == active)
+		assignFootSwitch(children, moduleNames, 5+i, sw)
 	}
+	setLastScene(children, switches)
 
 	return fs, nil
 }
@@ -93,15 +93,12 @@ func resetFootSwitchChildren(children map[string]any, moduleNames []string) {
 	for _, n := range []string{"5", "6", "7", "8"} {
 		children["Module"+n] = map[string]any{"string": "Unassigned", "type": 8}
 		children["Operation"+n] = map[string]any{"string": "", "type": 8}
-		// The device writes ModeN for every switch: False for toggles and
-		// unassigned buttons, True only for the scene engaged at load.
-		children["Mode"+n] = map[string]any{"state": false, "type": 1}
 	}
 }
 
-// assignFootSwitch writes one stomp switch's module, operation, mode, label,
-// engaged state and (for Scene switches) block snapshot into the children map.
-func assignFootSwitch(children map[string]any, moduleNames []string, n int, sw Footswitch, sceneActive bool) {
+// assignFootSwitch writes one stomp switch's module, operation, mode, label and
+// (for Scene switches) block snapshot into the children map.
+func assignFootSwitch(children map[string]any, moduleNames []string, n int, sw Footswitch) {
 	key := fmt.Sprintf("%d", n)
 	children["Module"+key] = map[string]any{"string": sw.Module, "type": 8}
 	children["Operation"+key] = map[string]any{"string": sw.Operation, "type": 8}
@@ -112,29 +109,26 @@ func assignFootSwitch(children map[string]any, moduleNames []string, n int, sw F
 	if sw.Label != "" {
 		children["UserFootSwitchText"+key] = map[string]any{"string": sw.Label, "type": 8}
 	}
-	if sw.Mode == "Scene" {
-		// Scenes are mutually exclusive and, once engaged, cannot be toggled
-		// off; exactly one scene is engaged when the preset loads. ModeN is the
-		// per-switch engaged flag the device reads (resetFootSwitchChildren
-		// already wrote False for every switch; only the engaged scene is set
-		// True).
-		children["Mode"+key] = map[string]any{"state": sceneActive, "type": 1}
-		if sw.Scene != nil {
-			children["Scene"+key] = map[string]any{"state": sceneBlob(moduleNames, sceneHeaders(moduleNames, sw.Scene)), "type": 24}
-		}
+	if sw.Mode == "Scene" && sw.Scene != nil {
+		children["Scene"+key] = map[string]any{"state": sceneBlob(moduleNames, sceneHeaders(moduleNames, sw.Scene)), "type": 24}
 	}
 }
 
-// firstSceneIndex returns the 0-based index of the first Scene-mode switch, or
-// -1 when the rig has none. The first scene is the one engaged at load, since
-// scenes are mutually exclusive and cannot be toggled off once active.
-func firstSceneIndex(switches []Footswitch) int {
+// setLastScene records the scene engaged at load. The device stores it in
+// LastScene as a 0-based footswitch index (0 = FS5 … 3 = FS8; -1 = none) —
+// exactly what the device writes back when a scene is saved engaged. Earlier
+// revisions wrote 5+i (1-based FS number) and then ModeN; both were wrong and
+// the device loaded with no scene engaged.
+func setLastScene(children map[string]any, switches []Footswitch) {
+	lastScene := -1
 	for i, sw := range switches {
 		if sw.Mode == "Scene" {
-			return i
+			lastScene = i
+			break
 		}
 	}
-	return -1
+	children["LastScene"] = map[string]any{"type": 10, "value": lastScene}
+	children["LastSceneState"] = map[string]any{"type": 10, "value": 0}
 }
 
 // pedalFor rewires a template expression pedal (Pedal1/Pedal2) to the given
