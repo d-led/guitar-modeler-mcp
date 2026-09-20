@@ -261,8 +261,9 @@ never the first step.
   switch a sound *per scene*, toggle whole blocks (two IRs, two boosts, a
   corrective EQ). Scenes are mutually exclusive and cannot be toggled off once
   engaged; the **first** scene switch is the one engaged at load. The device
-  marks it with `ModeN.state = true` (all other switches get `ModeN.state =
-  false`) — `LastScene` is never a positive value on-device and is not written.
+  records the engaged scene in `LastScene` (0-based: 0 = FS5 … 3 = FS8) and
+  does **not** write the legacy `ModeN` flag — `ModeN` only survives in older
+  rigs and is ignored on load because it is missing from `childorder`.
 - **A custom IR (`IR`/`IR (1024)`) replaces the cabinet** — pass it in `fx` and
   the designer drops the cab. Selector: `[directory](<folder>)[name](<file>)`,
   root = `[IR ROOT]`; `IR (1024)` is half the DSP.
@@ -376,7 +377,10 @@ clean amp? is that pedal really on the song?). Ready-to-use search URLs
    ≈ −6 dB net — healthy, not hot; raise `Master` (or `output_level`) to get
    louder. For more **drive** raise the amp `Gain` (or the drive pedal's
    `Drive`) — raising `Master`/`output_level` only makes it louder, not more
-   overdriven.
+   overdriven. A block a **scene turns on** is still counted (flagged
+   "engaged by a scene"), so the net level reflects the *loudest* scene — use
+   that to keep the USB output from clipping, and level-match the scene-engaged
+   drive to the clean scene.
 
    **The estimate is a relative hint, not a measurement.** It sums the *known*
    stages — input gain, amp preamp gain (the louder of `GainA`/`GainB`) plus
@@ -463,7 +467,10 @@ Distortion effects also carry a `gain` character — `boost` → `overdrive` →
 default to `Green JRC-OD`: it is a low-gain TS-808 **overdrive**, and a
 singing/high-gain lead usually wants a **distortion** (`Black OP` Pro Co Rat,
 `DC Distort`, `D1 Dist`, `MX Dist`) or a drive→distortion stack. Match the
-pedal's `gain` to the part exactly as you match the amp's.
+pedal's `gain` to the part exactly as you match the amp's. For a **fat bass
+distortion** the body lives in the low mids, not the bass knob: raise `LoMids`
+(≈ 5) and lower `LoMidFreq` (≈ 415 Hz) so the grit keeps weight instead of
+thinning out (device-verified on `B Dist 7000`).
 
 Delay and reverb effects carry a `character` the same way, shown by the same
 three tools: delay `clean` (`Dyn Delay`), `atmospheric` (`AIR Delay`),
@@ -611,12 +618,15 @@ editor writes — so a scene can flip any combination of blocks in the chain.
 **A scene never changes a level, so level-match by block, not by knob.** If the
 dirty scene is louder or quieter than the clean one, that is the *block's* own
 output at fault, not the scene: set the drive/boost block's output level (its
-`Level`/`Volume`/`Master`, neutral ≈ 50 = unity) so engaged ≈ bypassed, and
-only then fine-tune with a scene-exclusive post-cab EQ `Gain` if a small trim
-is still needed. Do **not** pile a large `Gain` cut onto the dirt scene to
-"match" a level you have not measured — the estimate already counts drive
-output knobs and EQ output trims, so run `estimate_rig_level` and compare the
-two scenes' numbers instead of guessing.
+`Level`/`Volume`/`Master`) so engaged ≈ bypassed. The unity point of a drive's
+output knob is **not** fixed at 50: a drive with `Drive`/`DistLev` set high
+adds its own gain, so its `Master` must drop below noon to stay level —
+device-verified on `B Dist 7000` at Drive 70 / DistLev 70, where `Master` 30
+(not 50) matched the clean scene. Fine-tune with a scene-exclusive post-cab EQ
+`Gain` only after the block's own output is matched. Do **not** pile a large
+`Gain` cut onto the dirt scene to "match" a level you have not measured — the
+estimate now counts scene-engaged blocks, so run `estimate_rig_level` and
+compare the two scenes' numbers instead of guessing.
 
 **Order matters: put the most important switches first.** The first two entries
 land on buttons 1 and 2 (FS5/FS6), which stay dedicated to the patch in every

@@ -44,7 +44,11 @@ func EstimateLevel(file *RigFile, targetDB float64) (LevelEstimate, error) {
 	if err != nil {
 		return LevelEstimate{}, err
 	}
-	est := estimateLevel(catalog.New(), content.Data.Patch)
+	sceneOn, sceneNote := sceneAudibleBlocks(content)
+	est := estimateLevelWithScenes(catalog.New(), content.Data.Patch, sceneOn)
+	if sceneNote != "" {
+		est.Notes = append(est.Notes, sceneNote)
+	}
 	est.TargetDB = targetDB
 	est.RecommendedRigVolume = round1(clamp(est.OutputRigVolume+(targetDB-est.EstimatedLevelDB), -10, 20))
 	return est, nil
@@ -54,6 +58,15 @@ func EstimateLevel(file *RigFile, targetDB float64) (LevelEstimate, error) {
 // output level. It is shared by EstimateLevel and the build-time plausibility
 // check so both agree on the numbers.
 func estimateLevel(cat *catalog.Catalog, patch Patch) LevelEstimate {
+	return estimateLevelWithScenes(cat, patch, nil)
+}
+
+// estimateLevelWithScenes is estimateLevel plus the set of blocks a scene
+// snapshot turns on (sceneOn), so a drive bypassed in the patch but engaged by
+// a scene is still counted in the net level. For a parallel rig the two paths
+// are estimated separately (each block brings its own level), and the louder
+// path carries the net.
+func estimateLevelWithScenes(cat *catalog.Catalog, patch Patch, sceneOn map[string]bool) LevelEstimate {
 	est := LevelEstimate{
 		Routing: nodeString(patch.Children["Chain"], "Routing"),
 	}
@@ -68,35 +81,19 @@ func estimateLevel(cat *catalog.Catalog, patch Patch) LevelEstimate {
 		add("input gain", nodeNumber(in, "InputGain"), "")
 	}
 
-	sawAmp := addTypeStages(patch, "Amp", add, func(name string, node *Node) (string, float64, string) {
-		master := nodeNumber(node, "Master")
-		return "amp master (" + name + ")", percentToDB(master), fmt.Sprintf("master %s", percent(master))
-	})
-	addTypeStages(patch, "Amp", add, func(name string, node *Node) (string, float64, string) {
-		gain := math.Max(nodeNumber(node, "GainA"), nodeNumber(node, "GainB"))
-		return "amp preamp gain (" + name + ")", percentToDB(gain), fmt.Sprintf("gain %s (louder of GainA/GainB)", percent(gain))
-	})
-	addTypeStages(patch, "Cab", add, func(name string, node *Node) (string, float64, string) {
-		return "cab out gain (" + name + ")", nodeNumber(node, "OutGain"), ""
-	})
-	addTypeStages(patch, "IR", add, func(name string, node *Node) (string, float64, string) {
-		level, note := irStage(node)
-		return "IR (" + name + ")", level, note
-	})
-	addTypeStages(patch, "Volume", add, func(name string, node *Node) (string, float64, string) {
-		v := nodeNumber(node, "Volume")
-		return "volume pedal (" + name + ")", percentToDB(v), fmt.Sprintf("position %s", percent(v))
-	})
-
-	for _, s := range fxLevelStagesForPatch(cat, patch) {
-		add(s.Stage, s.DB, s.Note)
-	}
-
-	if est.Routing != "" && est.Routing != "S" {
+	shared, pathA, pathB := parallelSections(patch)
+	if len(pathA) == 0 && len(pathB) == 0 {
+		addBlocks(cat, patch, blockNames(patch), sceneOn, add)
+	} else {
 		chain := patch.Children["Chain"]
-		p1 := nodeNumber(chain, "Para1Level")
-		p2 := nodeNumber(chain, "Para2Level")
-		add("parallel paths (louder)", math.Max(p1, p2), fmt.Sprintf("path A %s, path B %s", dB(p1), dB(p2)))
+		addBlocks(cat, patch, shared, sceneOn, add)
+		aStages := blocksLevelStages(cat, patch, pathA, sceneOn)
+		bStages := blocksLevelStages(cat, patch, pathB, sceneOn)
+		aDB := stageDB(aStages) + nodeNumber(chain, "Para1Level")
+		bDB := stageDB(bStages) + nodeNumber(chain, "Para2Level")
+		showPath(&est, "path A", pathA, aStages, nodeNumber(chain, "Para1Level"))
+		showPath(&est, "path B", pathB, bStages, nodeNumber(chain, "Para2Level"))
+		add("parallel paths (louder)", math.Max(aDB, bDB), fmt.Sprintf("path A %s, path B %s", dB(aDB), dB(bDB)))
 	}
 
 	if out, ok := patch.Children["Output"]; ok {
@@ -104,7 +101,7 @@ func estimateLevel(cat *catalog.Catalog, patch Patch) LevelEstimate {
 		add("output rig volume", est.OutputRigVolume, "")
 	}
 
-	if sawAmp {
+	if hasBlockType(patch, "AMP") {
 		est.Notes = append(est.Notes,
 			"the estimate sums each block's output-level and EQ-gain knobs (drive Level, compressor makeup, EQ bands) plus the amp's preamp gain and Master; it still omits wet/dry Mix and a drive's saturation, so a pushed amp or heavy drive plays louder than the sum suggests.")
 	}
@@ -113,45 +110,214 @@ func estimateLevel(cat *catalog.Catalog, patch Patch) LevelEstimate {
 	return est
 }
 
-// addTypeStages appends one stage per instance of base in the patch child order
-// and reports whether any instance was found.
-func addTypeStages(patch Patch, base string, add func(string, float64, string), measure func(string, *Node) (string, float64, string)) bool {
-	found := false
+// blockNames returns the movable signal blocks of the patch in child order,
+// excluding the Chain/Rig/Input/Output/Mix bookkeeping nodes.
+func blockNames(patch Patch) []string {
+	var names []string
 	for _, name := range patch.ChildOrder {
-		if !isInstanceOf(name, base) {
-			continue
+		if !structuralBlock(name) {
+			names = append(names, name)
 		}
-		found = true
-		label, db, note := measure(name, patch.Children[name])
-		add(label, db, note)
 	}
-	return found
+	return names
 }
 
-// levelSpecialModules are the patch sections that are already accounted for by
-// the dedicated stages (or that carry no level), so the generic effect loop
-// skips them.
-var levelSpecialModules = map[string]bool{
-	"CHAIN": true, "RIG": true, "INPUT": true, "OUTPUT": true, "MIX": true,
-	"AMP": true, "CAB": true, "IR": true, "IR (1024)": true, "VOLUME": true,
+// structuralBlock reports whether a patch child is a bookkeeping node rather
+// than a signal block.
+func structuralBlock(name string) bool {
+	switch baseType(name) {
+	case "CHAIN", "RIG", "INPUT", "OUTPUT", "MIX":
+		return true
+	}
+	return false
 }
 
-// fxLevelStagesForPatch sums the level contribution of every effect module in
-// the patch: a drive's output Level, a compressor's makeup gain and an EQ's
-// band boosts. Bypassed blocks contribute nothing.
-func fxLevelStagesForPatch(cat *catalog.Catalog, patch Patch) []LevelStage {
-	var stages []LevelStage
-	for _, name := range patch.ChildOrder {
-		if levelSpecialModules[baseType(name)] {
-			continue
+// hasBlockType reports whether any signal block in the patch has the given
+// uppercase base type.
+func hasBlockType(patch Patch, base string) bool {
+	for _, name := range blockNames(patch) {
+		if baseType(name) == base {
+			return true
 		}
-		node := patch.Children[name]
-		if node == nil || !nodeBool(node, "On") {
-			continue
+	}
+	return false
+}
+
+// addBlocks appends the named blocks' level stages to the running total.
+func addBlocks(cat *catalog.Catalog, patch Patch, names []string, sceneOn map[string]bool, add func(string, float64, string)) {
+	for _, name := range names {
+		for _, s := range blockStages(cat, patch, name, sceneOn) {
+			add(s.Stage, s.DB, s.Note)
 		}
-		stages = append(stages, fxLevelStages(cat, name, node)...)
+	}
+}
+
+// blockStages returns the level stages a single block contributes: amp preamp
+// gain and master, cab out gain, IR gain, volume-pedal position, or an effect's
+// level knobs. A bypassed effect contributes nothing unless a scene turns it on
+// (sceneOn); structural blocks (amp/cab/IR/volume) are always counted.
+func blockStages(cat *catalog.Catalog, patch Patch, name string, sceneOn map[string]bool) []LevelStage {
+	node := patch.Children[name]
+	if node == nil {
+		return nil
+	}
+	base := baseType(name)
+	on := nodeBool(node, "On")
+	engaged := sceneEngaged(name, sceneOn) && !on
+	if isFXType(base) && !on && !engaged {
+		return nil
+	}
+	stages := blockStageLevels(cat, name, node, base)
+	if engaged {
+		markEngaged(stages)
 	}
 	return stages
+}
+
+// blockStageLevels maps one block to its level stages by device type.
+func blockStageLevels(cat *catalog.Catalog, name string, node *Node, base string) []LevelStage {
+	switch base {
+	case "AMP":
+		return ampStages(name, node)
+	case "CAB":
+		return cabStages(name, node)
+	case "IR", "IR (1024)":
+		level, note := irStage(node)
+		return []LevelStage{{Stage: "IR (" + name + ")", DB: level, Note: note}}
+	case "VOLUME":
+		v := nodeNumber(node, "Volume")
+		return []LevelStage{{Stage: "volume pedal (" + name + ")", DB: percentToDB(v), Note: fmt.Sprintf("position %s", percent(v))}}
+	default:
+		return fxLevelStages(cat, name, node)
+	}
+}
+
+// ampStages returns an amp's level stages: power-amp Master and the louder of
+// the two preamp gains.
+func ampStages(name string, node *Node) []LevelStage {
+	master := nodeNumber(node, "Master")
+	gain := math.Max(nodeNumber(node, "GainA"), nodeNumber(node, "GainB"))
+	return []LevelStage{
+		{Stage: "amp master (" + name + ")", DB: percentToDB(master), Note: fmt.Sprintf("master %s", percent(master))},
+		{Stage: "amp preamp gain (" + name + ")", DB: percentToDB(gain), Note: fmt.Sprintf("gain %s (louder of GainA/GainB)", percent(gain))},
+	}
+}
+
+// cabStages returns a cab's level stage: its OutGain.
+func cabStages(name string, node *Node) []LevelStage {
+	return []LevelStage{{Stage: "cab out gain (" + name + ")", DB: nodeNumber(node, "OutGain"), Note: ""}}
+}
+
+// isFXType reports whether a base type is a movable effect (distortion,
+// dynamics, eq, delay, …) rather than a structural block.
+func isFXType(base string) bool {
+	switch base {
+	case "AMP", "CAB", "IR", "IR (1024)", "VOLUME":
+		return false
+	}
+	return true
+}
+
+// sceneEngaged reports whether a scene switch turns the named block on.
+func sceneEngaged(name string, sceneOn map[string]bool) bool {
+	return sceneOn != nil && sceneOn[name]
+}
+
+// markEngaged annotates a block's stages with the scene that engages it.
+func markEngaged(stages []LevelStage) {
+	for i := range stages {
+		stages[i].Note += " (engaged by a scene)"
+	}
+}
+
+// blocksLevelStages concatenates the level stages of the named blocks.
+func blocksLevelStages(cat *catalog.Catalog, patch Patch, names []string, sceneOn map[string]bool) []LevelStage {
+	var stages []LevelStage
+	for _, name := range names {
+		stages = append(stages, blockStages(cat, patch, name, sceneOn)...)
+	}
+	return stages
+}
+
+// stageDB sums the dB of a set of level stages.
+func stageDB(stages []LevelStage) float64 {
+	total := 0.0
+	for _, s := range stages {
+		total += s.DB
+	}
+	return total
+}
+
+// showPath appends one parallel path's block stages and mixer level for display
+// only: the "parallel paths (louder)" stage already carries the louder path
+// into the total, so these must not be counted twice.
+func showPath(est *LevelEstimate, label string, names []string, stages []LevelStage, mixer float64) {
+	for _, s := range stages {
+		est.Stages = append(est.Stages, LevelStage{Stage: label + " " + s.Stage, DB: round1(s.DB), Note: s.Note})
+	}
+	est.Stages = append(est.Stages, LevelStage{Stage: label + " mixer level", DB: round1(mixer), Note: fmt.Sprintf("blocks %s", strings.Join(names, ", "))})
+}
+
+// parallelSections returns the blocks on each side of a parallel split and the
+// shared (prefix + suffix) blocks, read from the Chain node's ModuleType1..11
+// slots with the same slot budgets the builder lays out. A serial chain returns
+// empty paths. The slot ranges are the device's fixed layout, not a heuristic.
+func parallelSections(patch Patch) (shared, pathA, pathB []string) {
+	chain := patch.Children["Chain"]
+	if chain == nil {
+		return nil, nil, nil
+	}
+	slots := make([]string, 11)
+	for i := 0; i < 11; i++ {
+		slots[i] = nodeString(chain, fmt.Sprintf("ModuleType%d", i+1))
+	}
+	section := func(from, to int) []string {
+		var out []string
+		for i := from; i <= to; i++ {
+			if slots[i] != "" && slots[i] != "Empty Slot" {
+				out = append(out, slots[i])
+			}
+		}
+		return out
+	}
+	// 0-based slot ranges mirror the builder's budgets (rig.go): SPS-1 = 3
+	// prefix + 3 path A + 3 path B + 2 suffix; PS-1 = 3 path A + 5 path B + 3
+	// suffix.
+	switch nodeString(chain, "Routing") {
+	case "SPS-1":
+		shared = append(section(0, 2), section(9, 10)...)
+		pathA = section(3, 5)
+		pathB = section(6, 8)
+	case "PS-1":
+		shared = section(8, 10)
+		pathA = section(0, 2)
+		pathB = section(3, 7)
+	}
+	return shared, pathA, pathB
+}
+
+// sceneAudibleBlocks returns the blocks a Scene-mode switch turns on, plus a
+// note naming which switch engages which block. A block bypassed in the patch
+// but turned on by a scene would otherwise be invisible to the level estimate.
+func sceneAudibleBlocks(content *Content) (map[string]bool, string) {
+	on := make(map[string]bool)
+	var parts []string
+	for _, fs := range footswitchAssignments(content) {
+		if fs.Scene == nil {
+			continue
+		}
+		for _, name := range fs.Scene.On {
+			if on[name] {
+				continue
+			}
+			on[name] = true
+			parts = append(parts, fmt.Sprintf("%s engages %s", fs.Switch, name))
+		}
+	}
+	if len(parts) == 0 {
+		return nil, ""
+	}
+	return on, strings.Join(parts, "; ")
 }
 
 // fxLevelStages returns one level stage per level-relevant knob of an effect
@@ -283,15 +449,6 @@ func validatePlausible(cat *catalog.Catalog, patch Patch) error {
 		return nil
 	}
 	return fmt.Errorf("rig refused by the plausibility check:\n  - %s", strings.Join(problems, "\n  - "))
-}
-
-// isInstanceOf reports whether a node name is the base name or one of its
-// numbered instances ("Amp", "Amp 2", ...).
-func isInstanceOf(name, base string) bool {
-	if name == base {
-		return true
-	}
-	return strings.HasPrefix(name, base+" ")
 }
 
 func nodeNumber(node *Node, key string) float64 {

@@ -126,6 +126,50 @@ func TestEstimateLevelParallelRig(t *testing.T) {
 	}
 }
 
+// TestEstimateLevelParallelRecognizesPathDifference ensures a parallel rig is
+// estimated from the louder of the two paths — each path's own blocks, not a
+// serial sum of both — and that each path's stages are labelled.
+func TestEstimateLevelParallelRecognizesPathDifference(t *testing.T) {
+	b := newTestBuilder(t)
+	file, err := b.Build(Spec{
+		Name:    "Level",
+		Routing: RoutingSPS,
+		PathA: []Block{
+			{Type: "Amp", Enabled: true, Params: map[string]any{"Type": "67 Black Duo", "Master": 30.0}},
+			cabBlock("1x12 Black Panel Lux"),
+		},
+		PathB: []Block{
+			{Type: "Amp", Enabled: true, Params: map[string]any{"Type": "85 M-2 Lead", "Master": 80.0}},
+			cabBlock("4x12 Green 25W"),
+		},
+	})
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	est, err := EstimateLevel(file, 0)
+	if err != nil {
+		t.Fatalf("EstimateLevel: %v", err)
+	}
+	// Louder path B: amp master 80% (−1.9) + preamp 50% (−6.0) + mixer −6 ≈
+	// −14.0 dB. A serial sum of both paths would read ≈ −22 dB, so the estimate
+	// must reflect the louder path, not a flat sum.
+	if est.EstimatedLevelDB < -15 || est.EstimatedLevelDB > -13 {
+		t.Fatalf("estimated = %v, want ≈ -14 (louder path B dominates)", est.EstimatedLevelDB)
+	}
+	if !hasPathPrefix(est, "path A") || !hasPathPrefix(est, "path B") {
+		t.Fatalf("expected per-path stages, got %v", est.Stages)
+	}
+}
+
+func hasPathPrefix(est LevelEstimate, prefix string) bool {
+	for _, s := range est.Stages {
+		if strings.HasPrefix(s.Stage, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
 func TestEstimateLevelIncludesPreampGain(t *testing.T) {
 	build := func(gain float64) (LevelEstimate, error) {
 		b := newTestBuilder(t)
@@ -317,6 +361,40 @@ func TestEstimateLevelIgnoresBypassedFX(t *testing.T) {
 	if hasStage(est, "Bass EQ Level") {
 		t.Fatalf("bypassed EQ should not add a stage, got %v", est.Stages)
 	}
+}
+
+// TestEstimateLevelCountsSceneEngagedDrive ensures a drive bypassed in the
+// patch but turned on by a scene is still counted (and flagged), so the engaged
+// scene's loudness is not invisible to the estimate.
+func TestEstimateLevelCountsSceneEngagedDrive(t *testing.T) {
+	b := newTestBuilder(t)
+	file, err := b.Build(Spec{
+		Name: "Scene Drive",
+		Blocks: []Block{
+			{Type: "Green JRC-OD", Enabled: false, Params: map[string]any{"Level": 50.0}},
+			{Type: "Amp", Params: map[string]any{"Type": "65 Black SR"}},
+			{Type: "Cab", Params: map[string]any{"CabType": "1x12 Black Panel Lux"}},
+		},
+		Footswitches: []Footswitch{
+			{Module: "Green JRC-OD", Mode: "Scene", Scene: &SceneSnapshot{On: []string{"Green JRC-OD"}}},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	est, err := EstimateLevel(file, 0)
+	if err != nil {
+		t.Fatalf("EstimateLevel: %v", err)
+	}
+	if !hasStage(est, "Green JRC-OD Level") {
+		t.Fatalf("scene-engaged drive should add a stage, got %v", est.Stages)
+	}
+	for _, s := range est.Stages {
+		if s.Stage == "Green JRC-OD Level" && strings.Contains(s.Note, "scene") {
+			return
+		}
+	}
+	t.Fatalf("scene-engaged drive stage missing the scene note: %v", est.Stages)
 }
 
 func TestEstimateLevelCountsEQTrimNotBands(t *testing.T) {
