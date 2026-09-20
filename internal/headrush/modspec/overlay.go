@@ -15,26 +15,18 @@ func fp(v float64) *float64 { return &v }
 
 // applyOverlay mutates the loaded module specs with the corrections below.
 func applyOverlay() {
-	fixTypos()
 	markSyncParams()
 	addAmpTremSpeed2()
 	fixEditorRangeBugs()
 	addMissingSetValues()
 }
 
-// fixTypos renames parameter keys that the editor spec misspells.
-func fixTypos() {
-	renameParam("FilterThreshhold", "FilterThreshold")
-}
-
-func renameParam(from, to string) {
-	for _, params := range modules {
-		if p, ok := params[from]; ok {
-			delete(params, from)
-			params[to] = p
-		}
-	}
-}
+// We deliberately do NOT "fix" the gate's FilterThreshhold spelling: the device
+// itself spells the gate module's filter-threshold knob "FilterThreshhold" (two
+// h's) and enumerates node fields from childorder, so renaming it to the
+// correctly-spelled "FilterThreshold" writes an orphan key the device silently
+// ignores. The Input node's FilterThreshold is a different, correctly-spelled
+// knob and stays as-is in nodes.go.
 
 // markSyncParams converts time/rate params to the "sync" kind in every module
 // that has a Sync (or TremSync) toggle: those params accept either a number or

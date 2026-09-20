@@ -38,7 +38,7 @@ var capabilityParams = map[string][]string{
 	"ThresholdComp": {"compressor"}, "ThresholdExp": {"expander"},
 	"Attack": {"compressor"}, "Release": {"compressor"}, "MakeUp": {"compressor"},
 	"Sustain": {"compressor"}, "Sensitivity": {"dynamics"},
-	"Hi_Thresh": {"noise gate"}, "Lo_Thresh": {"noise gate"}, "FilterThreshold": {"noise gate"},
+	"Hi_Thresh": {"noise gate"}, "Lo_Thresh": {"noise gate"}, "FilterThreshhold": {"noise gate"},
 	// Drive / distortion
 	"Drive": {"drive"}, "Distortion": {"distortion"}, "Dist": {"distortion"},
 	"DistLev": {"distortion"}, "Fuzz": {"fuzz"},

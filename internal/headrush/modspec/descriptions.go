@@ -57,16 +57,16 @@ var paramDescriptions = map[string]string{
 	"Linear":     "Linear (vs logarithmic) response.",
 
 	// Dynamics / compression / gate
-	"Threshold":       "Level above or below which the processor kicks in.",
-	"ThresholdComp":   "Compression threshold.",
-	"ThresholdExp":    "Expander threshold.",
-	"Attack":          "How fast the effect responds to transients.",
-	"Release":         "How fast the effect lets go after the signal drops.",
-	"Ratio":           "Compression ratio.",
-	"Knee":            "Softness of the compression curve at the threshold.",
-	"Hi_Thresh":       "High-band noise threshold.",
-	"Lo_Thresh":       "Low-band noise threshold.",
-	"FilterThreshold": "Signal level below which the noise filter closes.",
+	"Threshold":        "Level above or below which the processor kicks in.",
+	"ThresholdComp":    "Compression threshold.",
+	"ThresholdExp":     "Expander threshold.",
+	"Attack":           "How fast the effect responds to transients.",
+	"Release":          "How fast the effect lets go after the signal drops.",
+	"Ratio":            "Compression ratio.",
+	"Knee":             "Softness of the compression curve at the threshold.",
+	"Hi_Thresh":        "High-band noise threshold.",
+	"Lo_Thresh":        "Low-band noise threshold.",
+	"FilterThreshhold": "Signal level below which the noise filter closes.",
 
 	// Delay / reverb
 	"Delay":        "Delay time.",
