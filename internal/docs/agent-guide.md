@@ -262,8 +262,7 @@ never the first step.
   corrective EQ). Scenes are mutually exclusive and cannot be toggled off once
   engaged; the **first** scene switch is the one engaged at load. The device
   records the engaged scene in `LastScene` (0-based: 0 = FS5 … 3 = FS8) and
-  does **not** write the legacy `ModeN` flag — `ModeN` only survives in older
-  rigs and is ignored on load because it is missing from `childorder`.
+  writes no `ModeN` flag — author `LastScene`, never `ModeN`.
 - **A custom IR (`IR`/`IR (1024)`) replaces the cabinet** — pass it in `fx` and
   the designer drops the cab. Selector: `[directory](<folder>)[name](<file>)`,
   root = `[IR ROOT]`; `IR (1024)` is half the DSP.
