@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"sort"
 )
 
 // Scene blobs (the "state" field with type 24) are the device's serialized view
@@ -69,7 +70,11 @@ func footSwitchFor(template []byte, moduleNames []string, switches []Footswitch)
 	if err != nil {
 		return nil, fmt.Errorf("parse FootSwitch template: %w", err)
 	}
-	children, err := objectField(fs, "data", "FootSwitch", "children")
+	fsobj, err := objectField(fs, "data", "FootSwitch")
+	if err != nil {
+		return nil, err
+	}
+	children, err := objectField(fsobj, "children")
 	if err != nil {
 		return nil, err
 	}
@@ -79,6 +84,7 @@ func footSwitchFor(template []byte, moduleNames []string, switches []Footswitch)
 		assignFootSwitch(children, moduleNames, 5+i, sw)
 	}
 	setLastScene(children, switches)
+	syncChildOrder(fsobj, children)
 
 	return fs, nil
 }
@@ -159,6 +165,34 @@ func setLastScene(children map[string]any, switches []Footswitch) {
 	}
 	children["LastScene"] = map[string]any{"type": 10, "value": lastScene}
 	children["LastSceneState"] = map[string]any{"type": 10, "value": 0}
+}
+
+// syncChildOrder rewrites the FootSwitch childorder to list exactly the fields
+// present in children, preserving the template's order for surviving fields and
+// appending new fields in sorted order. The device saves childorder and
+// children in lockstep; a field missing from childorder is ignored on load —
+// which is exactly how the engaged-scene LastScene field was being lost.
+func syncChildOrder(fsobj, children map[string]any) {
+	order := make([]string, 0, len(children))
+	seen := make(map[string]bool, len(children))
+	if raw, ok := fsobj["childorder"].([]any); ok {
+		for _, k := range raw {
+			name, _ := k.(string)
+			if _, exists := children[name]; exists {
+				order = append(order, name)
+				seen[name] = true
+			}
+		}
+	}
+	var extra []string
+	for name := range children {
+		if !seen[name] {
+			extra = append(extra, name)
+		}
+	}
+	sort.Strings(extra)
+	order = append(order, extra...)
+	fsobj["childorder"] = order
 }
 
 // pedalFor rewires a template expression pedal (Pedal1/Pedal2) to the given

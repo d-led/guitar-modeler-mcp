@@ -295,6 +295,77 @@ func TestBuildModernSceneFields(t *testing.T) {
 	}
 }
 
+// TestBuildSyncsChildOrder ensures the FootSwitch childorder lists exactly the
+// written children. The device ignores a field missing from childorder, which
+// is how the engaged-scene LastScene field was lost, so childorder and children
+// must agree on every key.
+func TestBuildSyncsChildOrder(t *testing.T) {
+	b := newTestBuilder(t)
+	file, err := b.Build(Spec{
+		Name: "Scene Rig",
+		Blocks: []Block{
+			{Type: "Green JRC-OD", Enabled: true},
+			{Type: "Amp", Params: map[string]any{"Type": "65 Black SR"}},
+			{Type: "Cab", Params: map[string]any{"CabType": "1x12 Black Panel Lux"}},
+		},
+		Footswitches: []Footswitch{
+			{Module: "Green JRC-OD", Mode: "Scene", Scene: &SceneSnapshot{On: []string{"Green JRC-OD"}}},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	content, err := file.Decode()
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	fs := decodeSection(content.FootSwitch)
+	fsobj := fs["data"].(map[string]any)["FootSwitch"].(map[string]any)
+	children := fsobj["children"].(map[string]any)
+	inOrder := footSwitchOrder(t, fs)
+
+	if len(inOrder) != len(children) {
+		t.Fatalf("childorder has %d entries but children has %d", len(inOrder), len(children))
+	}
+	for name := range children {
+		if !inOrder[name] {
+			t.Fatalf("childorder is missing %q (the device ignores fields not listed)", name)
+		}
+	}
+	if !inOrder["LastScene"] {
+		t.Fatal("LastScene must be listed in childorder or the scene is not engaged at load")
+	}
+	assertNoLegacySceneFields(t, inOrder)
+}
+
+// footSwitchOrder returns the FootSwitch childorder names as a set.
+func footSwitchOrder(t *testing.T, fs map[string]any) map[string]bool {
+	t.Helper()
+	fsobj := fs["data"].(map[string]any)["FootSwitch"].(map[string]any)
+	raw, ok := fsobj["childorder"].([]any)
+	if !ok {
+		t.Fatal("childorder is missing or not an array")
+	}
+	order := make(map[string]bool, len(raw))
+	for _, k := range raw {
+		order[k.(string)] = true
+	}
+	return order
+}
+
+// assertNoLegacySceneFields fails if the device-retired scene fields resurface
+// in the childorder.
+func assertNoLegacySceneFields(t *testing.T, inOrder map[string]bool) {
+	t.Helper()
+	for _, n := range []string{"5", "6", "7", "8"} {
+		for _, p := range []string{"Mode", "SceneState", "State2ExtAmp"} {
+			if inOrder[p+n] {
+				t.Fatalf("legacy field %s%s leaked into childorder", p, n)
+			}
+		}
+	}
+}
+
 // assertModernSwitchFields checks one footswitch's scene bookkeeping matches the
 // device's current save format.
 func assertModernSwitchFields(t *testing.T, children map[string]any, n string) {
