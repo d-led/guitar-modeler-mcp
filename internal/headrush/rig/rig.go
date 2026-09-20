@@ -291,9 +291,31 @@ func resolveFootswitches(spec []Footswitch, modules []string) ([]Footswitch, err
 }
 
 func resolveFootswitch(sw Footswitch, i int, modules []string) (Footswitch, error) {
+	mode, err := footswitchMode(sw.Mode)
+	if err != nil {
+		return Footswitch{}, fmt.Errorf("footswitch %d: %w", i+1, err)
+	}
+	scene, err := resolveScene(sw.Scene, modules)
+	if err != nil {
+		return Footswitch{}, fmt.Errorf("footswitch %d: %w", i+1, err)
+	}
+
 	module := strings.TrimSpace(sw.Module)
 	if module == "" {
-		return Footswitch{}, fmt.Errorf("footswitch %d: module is required", i+1)
+		// A Scene switch recalls a multi-block snapshot, so it has no single
+		// module to control; its Module field is a display anchor. When the
+		// caller omits it, derive the anchor from the first block the scene
+		// affects.
+		if mode == "Scene" && scene != nil {
+			if len(scene.On) > 0 {
+				module = scene.On[0]
+			} else if len(scene.Off) > 0 {
+				module = scene.Off[0]
+			}
+		}
+		if module == "" {
+			return Footswitch{}, fmt.Errorf("footswitch %d: module is required", i+1)
+		}
 	}
 	name, ok := matchInstance(module, modules)
 	if !ok {
@@ -302,14 +324,6 @@ func resolveFootswitch(sw Footswitch, i int, modules []string) (Footswitch, erro
 	operation := strings.TrimSpace(sw.Operation)
 	if operation == "" {
 		operation = "On"
-	}
-	mode, err := footswitchMode(sw.Mode)
-	if err != nil {
-		return Footswitch{}, fmt.Errorf("footswitch %d: %w", i+1, err)
-	}
-	scene, err := resolveScene(sw.Scene, modules)
-	if err != nil {
-		return Footswitch{}, fmt.Errorf("footswitch %d: %w", i+1, err)
 	}
 	return Footswitch{
 		Module:    name,

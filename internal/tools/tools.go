@@ -1166,7 +1166,10 @@ func parseFootswitches(raw any) []rig.Footswitch {
 				sw.Scene = snap
 			}
 		}
-		if sw.Module != "" {
+		// A Scene switch recalls a multi-block snapshot rather than one module,
+		// so its module field is optional; keep it when it carries a snapshot
+		// even without a module (the resolver derives the on-screen anchor).
+		if sw.Module != "" || (strings.EqualFold(sw.Mode, "Scene") && sw.Scene != nil) {
 			out = append(out, sw)
 		}
 	}
@@ -1494,9 +1497,9 @@ func fxItemSchema() map[string]any {
 
 func footswitchItemSchema() map[string]any {
 	return objectSchema(map[string]any{
-		"module":    stringSchema("Module instance name to control, e.g. \"Wham\" or \"Amp 2\"."),
+		"module":    stringSchema("Module instance name to control, e.g. \"Wham\" or \"Amp 2\". Optional for a Scene switch: a scene recalls a multi-block snapshot, so the module is only the on-screen anchor (defaults to the first block the scene turns on)."),
 		"operation": stringSchema("What the switch controls; \"On\" toggles the module on/off (default)."),
-		"mode":      stringSchema("Switch type: \"Toggle\" (default) or \"Scene\" (recalls a multi-block on/off snapshot)."),
+		"mode":      stringSchema("Switch type: \"Toggle\" (default) or \"Scene\" (recalls a multi-block on/off snapshot). Scene switches are mutually exclusive and cannot be toggled off; the first Scene switch is the one engaged when the preset loads."),
 		"label":     stringSchema("Optional on-screen text for the switch, e.g. \"DRIVE\"."),
 		"scene": objectSchema(map[string]any{
 			"on":  arraySchema("Modules the scene turns ON (instance names).", stringSchema("Module instance name.")),

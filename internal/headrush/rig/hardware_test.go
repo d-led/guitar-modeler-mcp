@@ -144,7 +144,7 @@ func TestHardwareAssignmentsDimInactiveScenes(t *testing.T) {
 		t.Fatalf("HardwareAssignments: %v", err)
 	}
 
-	// Only the first scene is active at load (LastScene=0); the second dims.
+	// Only the first scene is engaged at load (Mode5 set); the second dims.
 	if hw.Buttons[0].Off {
 		t.Fatalf("first scene should be lit at load: %+v", hw.Buttons[0])
 	}

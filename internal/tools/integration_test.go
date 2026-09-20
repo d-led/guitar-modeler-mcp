@@ -793,6 +793,49 @@ func TestIntegrationDesignFootswitches(t *testing.T) {
 	}
 }
 
+func TestIntegrationDesignScene(t *testing.T) {
+	s := newIntegrationServer(t)
+	dir := t.TempDir()
+
+	out := resultText(t, rpc(t, s, 1, "tools/call", map[string]any{
+		"name": "design_rig",
+		"arguments": map[string]any{
+			"name":       "Scene Rig",
+			"amp":        "65 Black SR",
+			"output_dir": dir,
+			"fx": []any{
+				map[string]any{"type": "Green JRC-OD", "enabled": true},
+			},
+			"footswitches": []any{
+				map[string]any{
+					"label": "DRIVE",
+					"mode":  "Scene",
+					"scene": map[string]any{"on": []any{"Green JRC-OD"}},
+				},
+			},
+		},
+	}))
+	if !strings.Contains(out, "Footswitches: FS5=DRIVE (Scene on [Green JRC-OD]") {
+		t.Fatalf("design_rig output missing scene summary: %s", out)
+	}
+
+	rigs, err := filepath.Glob(filepath.Join(dir, "*.rig"))
+	if err != nil || len(rigs) != 1 {
+		t.Fatalf("expected one .rig, got %v (%v)", rigs, err)
+	}
+
+	decoded := resultText(t, rpc(t, s, 2, "tools/call", map[string]any{
+		"name":      "rig_decode",
+		"arguments": map[string]any{"rig_file": rigs[0]},
+	}))
+	if !strings.Contains(decoded, `"mode": "Scene"`) {
+		t.Fatalf("rig_decode missing scene mode: %s", decoded)
+	}
+	if !strings.Contains(decoded, `"on": [`) {
+		t.Fatalf("rig_decode missing scene snapshot: %s", decoded)
+	}
+}
+
 func TestIntegrationDesignReportsUnassignedFootswitches(t *testing.T) {
 	s := newIntegrationServer(t)
 	dir := t.TempDir()

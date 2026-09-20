@@ -319,6 +319,69 @@ func TestEstimateLevelIgnoresBypassedFX(t *testing.T) {
 	}
 }
 
+func TestEstimateLevelCountsEQTrimNotBands(t *testing.T) {
+	b := newTestBuilder(t)
+	file, err := b.Build(Spec{
+		Name: "Level",
+		Blocks: []Block{
+			{Type: "Amp", Params: map[string]any{"Type": "65 Black SR"}},
+			{Type: "Cab", Params: map[string]any{"CabType": "1x12 Black Panel Lux"}},
+			{Type: "Graphic EQ", Enabled: true, Params: map[string]any{
+				"Gain": 0.0, "LoGain": 1.0, "LoMidGain": 1.0, "MidGain": 3.0, "HiMidGain": 2.0, "HiGain": 1.0,
+			}},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	est, err := EstimateLevel(file, 0)
+	if err != nil {
+		t.Fatalf("EstimateLevel: %v", err)
+	}
+	// Five band boosts (+8 dB in total) reshape tone at different frequencies
+	// and must not sum to broadband level; only the EQ's Gain trim (0 dB)
+	// counts, so the amp's -12 dB stands.
+	if est.EstimatedLevelDB != -12 {
+		t.Fatalf("estimated = %v, want -12 (EQ bands ignored, Gain trim 0)", est.EstimatedLevelDB)
+	}
+	if hasStage(est, "Graphic EQ MidGain") || hasStage(est, "Graphic EQ HiMidGain") || hasStage(est, "Graphic EQ LoGain") {
+		t.Fatalf("EQ band knobs should not add level stages, got %v", est.Stages)
+	}
+	if !hasStage(est, "Graphic EQ Gain") {
+		t.Fatalf("expected the Graphic EQ Gain trim stage, got %v", est.Stages)
+	}
+}
+
+func TestEstimateLevelCountsDriveMasterAndDistLev(t *testing.T) {
+	b := newTestBuilder(t)
+	file, err := b.Build(Spec{
+		Name: "Level",
+		Blocks: []Block{
+			{Type: "B Dist 7000", Enabled: true, Params: map[string]any{"Master": 50.0, "DistLev": 50.0, "Drive": 50.0}},
+			{Type: "Amp", Params: map[string]any{"Type": "65 Black SR"}},
+			{Type: "Cab", Params: map[string]any{"CabType": "1x12 Black Panel Lux"}},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	est, err := EstimateLevel(file, 0)
+	if err != nil {
+		t.Fatalf("EstimateLevel: %v", err)
+	}
+	// amp -12.04 + drive Master -6.02 + drive DistLev -6.02 ≈ -24.1 dB; Drive
+	// is the amount of distortion, not level.
+	if est.EstimatedLevelDB != -24.1 {
+		t.Fatalf("estimated = %v, want -24.1", est.EstimatedLevelDB)
+	}
+	if !hasStage(est, "B Dist 7000 Master") || !hasStage(est, "B Dist 7000 DistLev") {
+		t.Fatalf("expected Master and DistLev stages, got %v", est.Stages)
+	}
+	if hasStage(est, "B Dist 7000 Drive") {
+		t.Fatalf("Drive is the drive amount, not level; got %v", est.Stages)
+	}
+}
+
 func hasStage(est LevelEstimate, substr string) bool {
 	for _, s := range est.Stages {
 		if strings.Contains(s.Stage, substr) {

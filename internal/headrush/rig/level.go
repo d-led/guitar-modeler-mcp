@@ -187,14 +187,28 @@ func fxLevelStages(cat *catalog.Catalog, name string, node *Node) []LevelStage {
 	return stages
 }
 
-// eqLevelStages adds every dB knob of an EQ as a band or trim gain stage.
+// eqLevelStages adds an EQ's overall output-trim knob as a level stage. The
+// frequency-band knobs (LoGain, MidGain, HiGain, …) reshape tone at their
+// centre frequencies and do not sum to a broadband level change, so they are
+// deliberately not counted.
 func eqLevelStages(spec modspec.Module, node *Node, add func(string, float64, string)) {
 	for key, p := range spec {
-		if p.Kind == "range" && strings.TrimSpace(p.Unit) == "dB" {
+		if p.Kind == "range" && strings.TrimSpace(p.Unit) == "dB" && isEQTrimKey(key) {
 			v := nodeNumber(node, key)
 			add(key, v, dB(v))
 		}
 	}
+}
+
+// isEQTrimKey reports whether an EQ knob name is the module's overall output
+// trim (plain Gain/Level/Output/Volume) rather than a frequency band, whose
+// names carry a band prefix (Lo, LoMid, Mid, HiMid, Hi).
+func isEQTrimKey(key string) bool {
+	switch key {
+	case "Gain", "Level", "Output", "Volume":
+		return true
+	}
+	return false
 }
 
 // dynamicsLevelStages adds a compressor's output Level (a percent makeup
@@ -219,15 +233,25 @@ func dynamicsLevelStages(spec modspec.Module, node *Node, add func(string, float
 	}
 }
 
-// distortionLevelStages adds a drive's output Level/Volume/Output; Gain and
-// Drive are the drive amount, not level.
+// distortionLevelStages adds a drive's output-level knobs (Level, Volume,
+// Output, Master, DistLev); Gain and Drive are the drive amount, not level.
 func distortionLevelStages(spec modspec.Module, node *Node, add func(string, float64, string)) {
 	for key, p := range spec {
-		if p.Kind == "range" && strings.TrimSpace(p.Unit) == "%" && (key == "Level" || key == "Volume" || key == "Output") {
+		if p.Kind == "range" && strings.TrimSpace(p.Unit) == "%" && isDriveLevelKey(key) {
 			v := nodeNumber(node, key)
 			add(key, percentToDB(v), percent(v))
 		}
 	}
+}
+
+// isDriveLevelKey reports whether a drive's percent knob is an output-level
+// knob rather than a drive/sustain control (Drive, Gain, Sustain).
+func isDriveLevelKey(key string) bool {
+	switch key {
+	case "Level", "Volume", "Output", "Master", "DistLev":
+		return true
+	}
+	return false
 }
 
 // Plausibility thresholds: a rig whose estimated net level exceeds these is

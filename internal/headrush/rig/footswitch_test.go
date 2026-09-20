@@ -309,3 +309,37 @@ func TestFootswitchSceneRejectsUnknownBlock(t *testing.T) {
 		t.Fatal("expected an error for a scene block not in the chain")
 	}
 }
+
+// TestFootswitchSceneWithoutModuleDerivesAnchor ensures a Scene switch with no
+// explicit module still resolves: the on-screen anchor is the first block the
+// snapshot turns on, and the switch is engaged at load.
+func TestFootswitchSceneWithoutModuleDerivesAnchor(t *testing.T) {
+	b, err := NewBuilder(catalog.New())
+	if err != nil {
+		t.Fatalf("NewBuilder: %v", err)
+	}
+	file, err := b.Build(Spec{
+		Name: "Scene No Module",
+		Blocks: []Block{
+			{Type: "Green JRC-OD", Enabled: true},
+			{Type: "Amp", Params: map[string]any{"Type": "65 Black SR"}},
+			{Type: "Cab", Params: map[string]any{"CabType": "1x12 Black Panel Lux"}},
+		},
+		Footswitches: []Footswitch{{
+			Mode:  "Scene",
+			Label: "DRIVE",
+			Scene: &SceneSnapshot{On: []string{"Green JRC-OD"}},
+		}},
+	})
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+
+	children := footswitchChildren(t, file)
+	wantEq(t, "Module5", footswitchField(t, children, "Module5"), "Green JRC-OD")
+	wantEq(t, "ModeNew5", footswitchField(t, children, "ModeNew5"), "Scene")
+	mode5, ok := children["Mode5"].(map[string]any)
+	if !ok || mode5["state"] != true {
+		t.Fatalf("Mode5 = %v, want true (scene engaged at load)", mode5)
+	}
+}

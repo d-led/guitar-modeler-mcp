@@ -4,6 +4,7 @@
 package design
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -28,6 +29,19 @@ type FXBlock struct {
 	// volume pedal at the very front of the chain. Takes precedence over
 	// Position.
 	Slot *int `json:"slot,omitempty"`
+}
+
+// UnmarshalJSON defaults Enabled to true, so a JSON entry that omits
+// "enabled" means "on" (matching the MCP tool's argBool default) rather than
+// the bool zero value, which would silently bypass the effect.
+func (f *FXBlock) UnmarshalJSON(data []byte) error {
+	type plain FXBlock
+	aux := plain{Enabled: true}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	*f = FXBlock(aux)
+	return nil
 }
 
 // Request is the input to the designer.

@@ -3,6 +3,7 @@ package rig
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/d-led/guitar-modeler-mcp/internal/headrush/assets"
@@ -66,16 +67,18 @@ func buildFXNode(name string, enabled bool, params map[string]any) (*Node, error
 
 // baseType maps a module instance name ("Amp 2", "IR (1024)", "Tape Echo")
 // back to its device module type name as used by the embedded block catalog:
-// the instance number is stripped and the name uppercased.
+// the instance number is stripped and the name uppercased. Only a small
+// trailing integer — a chain-slot instance index — is stripped, so model names
+// that end in a larger number ("B Dist 7000") are preserved.
 func baseType(name string) string {
-	if i := strings.LastIndex(name, " "); i > 0 && isNumber(name[i+1:]) {
+	if i := strings.LastIndex(name, " "); i > 0 && isInstanceNumber(name[i+1:]) {
 		name = name[:i]
 	}
 	return strings.ToUpper(name)
 }
 
-// isNumber reports whether s is a non-empty sequence of digits.
-func isNumber(s string) bool {
+// isInstanceNumber reports whether s is a chain-slot instance index (1..11).
+func isInstanceNumber(s string) bool {
 	if s == "" {
 		return false
 	}
@@ -84,7 +87,8 @@ func isNumber(s string) bool {
 			return false
 		}
 	}
-	return true
+	n, err := strconv.Atoi(s)
+	return err == nil && n >= 1 && n <= 11
 }
 
 // Defaults returns the factory default parameter values a module instance

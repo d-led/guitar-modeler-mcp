@@ -154,7 +154,7 @@ func TestBuildRejectsUnknownPedalModule(t *testing.T) {
 }
 
 // TestBuildMarksFirstSceneActiveByDefault ensures a rig with scene switches
-// defines its starting point: LastScene points at the first Scene-mode switch.
+// defines its starting point: the first Scene switch's Mode flag is engaged.
 func TestBuildMarksFirstSceneActiveByDefault(t *testing.T) {
 	b := newTestBuilder(t)
 	file, err := b.Build(Spec{
@@ -178,17 +178,21 @@ func TestBuildMarksFirstSceneActiveByDefault(t *testing.T) {
 	}
 	fs := decodeSection(content.FootSwitch)
 	children := fs["data"].(map[string]any)["FootSwitch"].(map[string]any)["children"].(map[string]any)
-	if got := children["LastScene"].(map[string]any)["value"]; got != float64(5) {
-		t.Fatalf("LastScene = %v, want 5 (first scene on FS5 active)", got)
+	// The first Scene switch is engaged at load: its Mode5 flag is set, and the
+	// rig carries no LastScene (never positive on a device-authored rig).
+	mode5, ok := children["Mode5"].(map[string]any)
+	engaged, _ := mode5["state"].(bool)
+	if !ok || !engaged {
+		t.Fatalf("Mode5 = %v, want true (first scene on FS5 engaged at load)", mode5)
 	}
-	if got := children["LastSceneState"].(map[string]any)["value"]; got != float64(0) {
-		t.Fatalf("LastSceneState = %v, want 0", got)
+	if _, ok := children["LastScene"]; ok {
+		t.Fatalf("LastScene should not be written (never positive on-device), got %v", children["LastScene"])
 	}
 }
 
-// TestBuildNoSceneLeavesLastSceneInactive ensures toggle-only rigs do not
-// claim a scene is active.
-func TestBuildNoSceneLeavesLastSceneInactive(t *testing.T) {
+// TestBuildNoSceneWritesNoEngagedFlag ensures toggle-only rigs do not claim a
+// scene is engaged at load.
+func TestBuildNoSceneWritesNoEngagedFlag(t *testing.T) {
 	b := newTestBuilder(t)
 	file, err := b.Build(Spec{
 		Name: "Toggle Rig",
@@ -208,7 +212,7 @@ func TestBuildNoSceneLeavesLastSceneInactive(t *testing.T) {
 	}
 	fs := decodeSection(content.FootSwitch)
 	children := fs["data"].(map[string]any)["FootSwitch"].(map[string]any)["children"].(map[string]any)
-	if got := children["LastScene"].(map[string]any)["value"]; got != float64(-1) {
-		t.Fatalf("LastScene = %v, want -1 (no scene active)", got)
+	if _, ok := children["Mode5"]; ok {
+		t.Fatalf("Mode5 should not be written for a toggle-only rig, got %v", children["Mode5"])
 	}
 }
