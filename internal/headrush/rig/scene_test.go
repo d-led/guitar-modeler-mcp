@@ -255,3 +255,60 @@ func TestBuildEngagedSceneUsesLastSceneIndex(t *testing.T) {
 		}
 	}
 }
+
+// TestBuildModernSceneFields ensures the writer emits the scene bookkeeping the
+// device's current firmware writes back, not the legacy template fields.
+func TestBuildModernSceneFields(t *testing.T) {
+	b := newTestBuilder(t)
+	file, err := b.Build(Spec{
+		Name: "Scene Rig",
+		Blocks: []Block{
+			{Type: "Green JRC-OD", Enabled: true},
+			{Type: "Amp", Params: map[string]any{"Type": "65 Black SR"}},
+			{Type: "Cab", Params: map[string]any{"CabType": "1x12 Black Panel Lux"}},
+		},
+		Footswitches: []Footswitch{
+			{Module: "Green JRC-OD", Mode: "Scene", Scene: &SceneSnapshot{On: []string{"Green JRC-OD"}}},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	content, err := file.Decode()
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	fs := decodeSection(content.FootSwitch)
+	children := fs["data"].(map[string]any)["FootSwitch"].(map[string]any)["children"].(map[string]any)
+
+	for _, n := range []string{"5", "6", "7", "8"} {
+		assertModernSwitchFields(t, children, n)
+	}
+	if got := childString(children, "TapTempoColour"); got != "Green" {
+		t.Fatalf("TapTempoColour = %q, want \"Green\"", got)
+	}
+	if _, ok := children["Scene1Slot5Preset"]; ok {
+		t.Fatal("Scene1Slot5Preset should not be written (legacy numbering)")
+	}
+	if got := childString(children, "Scene5Slot1Preset"); got != "No Preset" {
+		t.Fatalf("Scene5Slot1Preset = %q, want \"No Preset\"", got)
+	}
+}
+
+// assertModernSwitchFields checks one footswitch's scene bookkeeping matches the
+// device's current save format.
+func assertModernSwitchFields(t *testing.T, children map[string]any, n string) {
+	t.Helper()
+	if _, ok := children["SceneState"+n]; ok {
+		t.Fatalf("SceneState%s should not be written (legacy field), got %v", n, children["SceneState"+n])
+	}
+	if _, ok := children["State2ExtAmp"+n]; ok {
+		t.Fatalf("State2ExtAmp%s should not be written (renamed State2SceneExtAmp), got %v", n, children["State2ExtAmp"+n])
+	}
+	if got := childString(children, "State2SceneExtAmp"+n); got != "No Change" {
+		t.Fatalf("State2SceneExtAmp%s = %q, want \"No Change\"", n, got)
+	}
+	if got := childString(children, "State2MacroColour"+n); got != "Green" {
+		t.Fatalf("State2MacroColour%s = %q, want \"Green\"", n, got)
+	}
+}
