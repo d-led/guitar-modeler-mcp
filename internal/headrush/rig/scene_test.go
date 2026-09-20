@@ -302,6 +302,9 @@ func assertModernSwitchFields(t *testing.T, children map[string]any, n string) {
 	if _, ok := children["SceneState"+n]; ok {
 		t.Fatalf("SceneState%s should not be written (legacy field), got %v", n, children["SceneState"+n])
 	}
+	if _, ok := children["Mode"+n]; ok {
+		t.Fatalf("Mode%s should not be written (legacy field), got %v", n, children["Mode"+n])
+	}
 	if _, ok := children["State2ExtAmp"+n]; ok {
 		t.Fatalf("State2ExtAmp%s should not be written (renamed State2SceneExtAmp), got %v", n, children["State2ExtAmp"+n])
 	}

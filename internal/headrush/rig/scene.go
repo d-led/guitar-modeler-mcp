@@ -101,13 +101,14 @@ func resetFootSwitchChildren(children map[string]any, moduleNames []string) {
 
 // modernizeSceneFields rewrites the legacy FootSwitch fields the embedded
 // template carries into the set the device's current firmware writes back when
-// a rig is saved: no SceneState (the engaged scene is LastScene),
+// a rig is saved: no SceneState or ModeN (the engaged scene is LastScene),
 // State2SceneExtAmp instead of State2ExtAmp, a Green State2MacroColour, a Green
 // TapTempoColour, and per-scene slot presets named Scene5..8Slot1..11Preset
 // instead of Scene1..4Slot5..15Preset.
 func modernizeSceneFields(children map[string]any) {
 	for _, n := range []string{"5", "6", "7", "8"} {
 		delete(children, "SceneState"+n)
+		delete(children, "Mode"+n)
 		delete(children, "State2ExtAmp"+n)
 		children["State2SceneExtAmp"+n] = map[string]any{"string": "No Change", "type": 4}
 		children["State2MacroColour"+n] = map[string]any{"string": "Green", "type": 4}
