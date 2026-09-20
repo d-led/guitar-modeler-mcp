@@ -93,6 +93,9 @@ func resetFootSwitchChildren(children map[string]any, moduleNames []string) {
 	for _, n := range []string{"5", "6", "7", "8"} {
 		children["Module"+n] = map[string]any{"string": "Unassigned", "type": 8}
 		children["Operation"+n] = map[string]any{"string": "", "type": 8}
+		// The device writes ModeN for every switch: False for toggles and
+		// unassigned buttons, True only for the scene engaged at load.
+		children["Mode"+n] = map[string]any{"state": false, "type": 1}
 	}
 }
 
@@ -112,8 +115,9 @@ func assignFootSwitch(children map[string]any, moduleNames []string, n int, sw F
 	if sw.Mode == "Scene" {
 		// Scenes are mutually exclusive and, once engaged, cannot be toggled
 		// off; exactly one scene is engaged when the preset loads. ModeN is the
-		// per-switch engaged flag the device reads (LastScene is never a
-		// positive value on a device-authored rig).
+		// per-switch engaged flag the device reads (resetFootSwitchChildren
+		// already wrote False for every switch; only the engaged scene is set
+		// True).
 		children["Mode"+key] = map[string]any{"state": sceneActive, "type": 1}
 		if sw.Scene != nil {
 			children["Scene"+key] = map[string]any{"state": sceneBlob(moduleNames, sceneHeaders(moduleNames, sw.Scene)), "type": 24}

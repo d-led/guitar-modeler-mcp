@@ -191,7 +191,8 @@ func TestBuildMarksFirstSceneActiveByDefault(t *testing.T) {
 }
 
 // TestBuildNoSceneWritesNoEngagedFlag ensures toggle-only rigs do not claim a
-// scene is engaged at load.
+// scene is engaged at load: every switch carries ModeN=False (as the device
+// writes it), but none is set.
 func TestBuildNoSceneWritesNoEngagedFlag(t *testing.T) {
 	b := newTestBuilder(t)
 	file, err := b.Build(Spec{
@@ -212,7 +213,49 @@ func TestBuildNoSceneWritesNoEngagedFlag(t *testing.T) {
 	}
 	fs := decodeSection(content.FootSwitch)
 	children := fs["data"].(map[string]any)["FootSwitch"].(map[string]any)["children"].(map[string]any)
-	if _, ok := children["Mode5"]; ok {
-		t.Fatalf("Mode5 should not be written for a toggle-only rig, got %v", children["Mode5"])
+	// Every switch carries an engaged flag, all False for a toggle-only rig.
+	for _, n := range []string{"5", "6", "7", "8"} {
+		modeN, ok := children["Mode"+n].(map[string]any)
+		if !ok || modeN["state"] != false {
+			t.Fatalf("Mode%s = %v, want false (no scene engaged)", n, modeN)
+		}
+	}
+}
+
+// TestBuildEngagedFlagAcrossSwitchKinds pins the device's ModeN pattern: the
+// engaged scene is True, every other switch (scene, toggle, unassigned) is
+// False.
+func TestBuildEngagedFlagAcrossSwitchKinds(t *testing.T) {
+	b := newTestBuilder(t)
+	file, err := b.Build(Spec{
+		Name: "Mixed Switches",
+		Blocks: []Block{
+			{Type: "Green JRC-OD", Enabled: true},
+			{Type: "Amp", Params: map[string]any{"Type": "65 Black SR"}},
+			{Type: "Cab", Params: map[string]any{"CabType": "1x12 Black Panel Lux"}},
+			{Type: "Tape Echo", Enabled: true},
+		},
+		Footswitches: []Footswitch{
+			{Module: "Green JRC-OD", Mode: "Scene", Scene: &SceneSnapshot{On: []string{"Green JRC-OD"}}}, // engaged at load
+			{Module: "Tape Echo", Mode: "Scene", Scene: &SceneSnapshot{On: []string{"Tape Echo"}}},       // second scene: off
+			{Module: "Tape Echo"}, // toggle: off
+		},
+	})
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	content, err := file.Decode()
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	fs := decodeSection(content.FootSwitch)
+	children := fs["data"].(map[string]any)["FootSwitch"].(map[string]any)["children"].(map[string]any)
+
+	want := map[string]bool{"5": true, "6": false, "7": false, "8": false}
+	for n, engaged := range want {
+		modeN, ok := children["Mode"+n].(map[string]any)
+		if !ok || modeN["state"] != engaged {
+			t.Fatalf("Mode%s = %v, want %v", n, modeN, engaged)
+		}
 	}
 }

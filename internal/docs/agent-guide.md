@@ -259,7 +259,10 @@ never the first step.
   A wah/whammy needs a pedal (sweep) **and** a footswitch (on/off).
 - **Scenes flip blocks on/off only — they never change a parameter value.** To
   switch a sound *per scene*, toggle whole blocks (two IRs, two boosts, a
-  corrective EQ). `LastScene` marks the scene active at load (the first one).
+  corrective EQ). Scenes are mutually exclusive and cannot be toggled off once
+  engaged; the **first** scene switch is the one engaged at load. The device
+  marks it with `ModeN.state = true` (all other switches get `ModeN.state =
+  false`) — `LastScene` is never a positive value on-device and is not written.
 - **A custom IR (`IR`/`IR (1024)`) replaces the cabinet** — pass it in `fx` and
   the designer drops the cab. Selector: `[directory](<folder>)[name](<file>)`,
   root = `[IR ROOT]`; `IR (1024)` is half the DSP.
@@ -586,16 +589,16 @@ A **Scene** switch is how you **turn several blocks on and off at once** with a
 single stomp: one press recalls a saved snapshot of which of the 11 chain slots
 are on and off. Set `"mode": "scene"`, give it a `label` for the screen, and
 list the blocks the scene turns `on` and `off` (any block not listed keeps its
-current state). The `module` field still names a module in the chain — it
-anchors the switch and its on-screen colour, but the *behaviour* comes from the
-`scene.on`/`scene.off` lists, which can reference any blocks in the chain, not
-just that one module:
+current state). The `module` field is **optional** for a scene — it only names
+the on-screen anchor (defaults to the first block the scene turns on). The
+**first** scene switch in the `footswitches` array is the one engaged when the
+preset loads, so put the default sound's scene first:
 
 ```json
 "footswitches": [
-  {"module": "Green JRC-OD", "mode": "scene", "label": "LEAD",
+  {"mode": "scene", "label": "LEAD",
    "scene": {"on": ["Green JRC-OD", "Tape Echo"], "off": ["Chorus"]}},
-  {"module": "Green JRC-OD", "mode": "scene", "label": "CLEAN",
+  {"mode": "scene", "label": "CLEAN",
    "scene": {"on": ["Chorus"], "off": ["Green JRC-OD", "Tape Echo"]}}
 ]
 ```
@@ -604,6 +607,16 @@ Here `LEAD` switches the drive *and* the delay on and the chorus off in one
 press; `CLEAN` does the inverse. Every scene turns on (1), turns off (2), or
 leaves alone (0) each of the 11 chain slots — exactly what the device's scene
 editor writes — so a scene can flip any combination of blocks in the chain.
+
+**A scene never changes a level, so level-match by block, not by knob.** If the
+dirty scene is louder or quieter than the clean one, that is the *block's* own
+output at fault, not the scene: set the drive/boost block's output level (its
+`Level`/`Volume`/`Master`, neutral ≈ 50 = unity) so engaged ≈ bypassed, and
+only then fine-tune with a scene-exclusive post-cab EQ `Gain` if a small trim
+is still needed. Do **not** pile a large `Gain` cut onto the dirt scene to
+"match" a level you have not measured — the estimate already counts drive
+output knobs and EQ output trims, so run `estimate_rig_level` and compare the
+two scenes' numbers instead of guessing.
 
 **Order matters: put the most important switches first.** The first two entries
 land on buttons 1 and 2 (FS5/FS6), which stay dedicated to the patch in every
