@@ -12,6 +12,12 @@ are supported:
   — write a `.mo` file; the classic **GE150 is card-only** (no `.mo`, just the
   printable HTML **setup card**).
 
+  **GE150 ≠ GE150 Pro Li — never conflate them.** "GE150" alone means the
+  classic, card-only GE150 (`model: "ge150"`); the file-capable device is
+  `model: "ge150pro"`. When the user says "ge150", pass `model: "ge150"` — do
+  NOT turn it into `ge150pro`. The tools default to `ge150pro` only when the
+  user names no device at all; if they name one, use exactly that one.
+
   **Each Mooer device has its own `.mo` layout, and the tools write the right
   one.** The GE150 Pro Li writes a 0x200-byte record; the GE200 writes its own
   record with a checksum; the **GE100 Pro writes a dump of the device's USB

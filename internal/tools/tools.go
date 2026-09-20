@@ -275,7 +275,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 		Name:        "mooer_catalog_list_amps",
 		Description: "List amp models for a Mooer device (ge150pro, ge200, ge150, ge100pro). Returns the effect_type index, screen name and the real amp it emulates (inspired_by).",
 		InputSchema: objectSchema(map[string]any{
-			"model": stringSchema("Mooer model: ge150pro, ge200, ge150 or ge100pro (default ge150pro)."),
+			"model": stringSchema("Mooer model: ge150pro, ge200, ge150 or ge100pro. 'ge150' (classic, card-only) and 'ge150pro' (Pro Li, writes .mo) are different devices — use the exact one the user asked for; default ge150pro only when they name none."),
 			"query": stringSchema("Optional case-insensitive filter over name or inspired_by."),
 		}),
 		Handler: func(_ context.Context, args map[string]any) (string, error) {
@@ -287,7 +287,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 		Name:        "mooer_catalog_list_cabs",
 		Description: "List cabinet models for a Mooer device, with the real cabinet each emulates.",
 		InputSchema: objectSchema(map[string]any{
-			"model": stringSchema("Mooer model: ge150pro, ge200, ge150 or ge100pro (default ge150pro)."),
+			"model": stringSchema("Mooer model: ge150pro, ge200, ge150 or ge100pro. 'ge150' (classic, card-only) and 'ge150pro' (Pro Li, writes .mo) are different devices — use the exact one the user asked for; default ge150pro only when they name none."),
 			"query": stringSchema("Optional case-insensitive filter over name or inspired_by."),
 		}),
 		Handler: func(_ context.Context, args map[string]any) (string, error) {
@@ -299,7 +299,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 		Name:        "mooer_catalog_list_fx",
 		Description: "List effect modules for a Mooer device, per module (fx, od, mod, delay, reverb, ns, eq).",
 		InputSchema: objectSchema(map[string]any{
-			"model":  stringSchema("Mooer model: ge150pro, ge200, ge150 or ge100pro (default ge150pro)."),
+			"model":  stringSchema("Mooer model: ge150pro, ge200, ge150 or ge100pro. 'ge150' (classic, card-only) and 'ge150pro' (Pro Li, writes .mo) are different devices — use the exact one the user asked for; default ge150pro only when they name none."),
 			"module": stringSchema("Optional module filter: fx, od, mod, delay, reverb, ns or eq."),
 			"query":  stringSchema("Optional case-insensitive filter over name or inspired_by."),
 		}),
@@ -312,7 +312,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 		Name:        "mooer_design",
 		Description: "Dial in a tone for a Mooer device: resolve the amp/cab/effects to model indices, then write a .mo file (file-capable models) and a printable HTML setup card. A device that files presets as bank + position can hold a song's variations in one bank (see mooer_design_bank).",
 		InputSchema: objectSchema(map[string]any{
-			"model":      stringSchema("Mooer model: ge150pro, ge200, ge150 or ge100pro (default ge150pro)."),
+			"model":      stringSchema("Mooer model: ge150pro, ge200, ge150 or ge100pro. 'ge150' (classic, card-only) and 'ge150pro' (Pro Li, writes .mo) are different devices — use the exact one the user asked for; default ge150pro only when they name none."),
 			"name":       stringSchema("Preset name."),
 			"note":       noteSchema(),
 			"amp":        stringSchema("Amp: device model name or a real-hardware description, e.g. \"Marshall JCM800\"."),
@@ -331,7 +331,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 		Name:        "mooer_design_bank",
 		Description: "Design a song's variations as the presets of one bank on a Mooer device that files presets as bank + position (the GE100 Pro's 50 banks of 3, the GE150 Pro Li's 50 of 4). Its footswitches step through a bank, so a bank is how a Mooer device switches chains mid-song the way a Gigboard switches scenes. Each scene is a whole design; each is written as its own .mo named for its position (e.g. \"01A RHYTHM.mo\") with a setup card carrying the bank plan.",
 		InputSchema: objectSchema(map[string]any{
-			"model": stringSchema("Mooer model: ge150pro, ge200, ge150 or ge100pro (default ge150pro)."),
+			"model": stringSchema("Mooer model: ge150pro, ge200, ge150 or ge100pro. 'ge150' (classic, card-only) and 'ge150pro' (Pro Li, writes .mo) are different devices — use the exact one the user asked for; default ge150pro only when they name none."),
 			"bank":  numberSchema("Bank number to design into (1..the device's banks, default 1)."),
 			"scenes": arraySchema("One design per bank position, in order: the first becomes position A. Give 2..the device's positions (3 on the GE100 Pro, 4 on the GE150 Pro Li).", objectSchema(map[string]any{
 				"name":       stringSchema("Preset name shown on the device (up to 16 characters)."),
