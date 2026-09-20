@@ -751,6 +751,13 @@ Once you have decoded a rig, improve it in this order:
      same loudness without overdrive, put a clean/bass amp's Master around
      70–80% and a high-gain amp's around 50–60% — the high-gain amp's preamp
      gain makes it naturally much hotter.
+   - **A clean channel reads quieter than a driven one at equal peak levels.**
+     Distortion compresses the signal (low crest factor), so a clean scene at
+     the same peak meter sounds quieter. Level-match by ear and give the clean
+     scene a small boost on a clean-scene-only block — the delay's `InputGain`,
+     the chorus's `Level`, or a clean-only EQ — never `RigVolume`, which moves
+     both scenes. (Device-verified: a clean Twin at GainA 30 matched a Recto
+     drive channel only after the shared BBD Delay's `InputGain` went 50 → 69.)
    - **Leave RigVolume near unity as the final trim.** Crank `output_level`
      only for the last dB or two; a rig that needs +15 dB of RigVolume has a
      gain-staging problem (usually a quiet clean amp), not a trim problem.
