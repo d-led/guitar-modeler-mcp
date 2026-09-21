@@ -31,6 +31,7 @@ var moLayouts = []struct {
 }{
 	{ge200Codec{}, "ge200", "the GE200's checked header: 2048 bytes with the 08/01 magic"},
 	{ge100ProCodec{}, "ge100pro", "a GE100 Pro frame dump"},
+	{ge150JSONCodec{}, "ge150", "a JSON document with the GE150 Edit \"GE150 Preset\" schema"},
 	{recordCodec{}, "ge150pro", "the GE150 Pro Li's zeroed 512-byte header and 512-byte preset record"},
 }
 

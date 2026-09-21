@@ -407,28 +407,43 @@ func TestIntegrationMooerDesignBankRefusesADeviceWithoutBanks(t *testing.T) {
 	mustContain(t, out, "has no bank addressing")
 }
 
-func TestIntegrationMooerCardOnlyDevice(t *testing.T) {
+func TestIntegrationMooerGE150JSONDesign(t *testing.T) {
 	s := newIntegrationServer(t)
 	dir := t.TempDir()
 
-	// ge150 is card-only: no .mo is written, only the HTML card.
+	// The classic GE150 writes a JSON .mo (the GE150 Edit schema) plus a card.
 	out := resultText(t, rpc(t, s, 1, "tools/call", map[string]any{
 		"name": "mooer_design",
 		"arguments": map[string]any{
 			"model":      "ge150",
-			"name":       "Card Only",
+			"name":       "GE150 Tone",
 			"amp":        "65 US TW",
 			"output_dir": dir,
 		},
 	}))
-	if !strings.Contains(out, "does not support preset file transfer") {
-		t.Fatalf("ge150 design should say card-only: %s", out)
+	mustContain(t, out, "Wrote Mooer GE150 preset to")
+
+	mos := singleGlob(t, filepath.Join(dir, "*.mo"))
+	body, err := os.ReadFile(mos[0])
+	if err != nil {
+		t.Fatalf("read .mo: %v", err)
 	}
-	if mos, _ := filepath.Glob(filepath.Join(dir, "*.mo")); len(mos) != 0 {
-		t.Fatalf("ge150 should not write a .mo file, got %v", mos)
+	mustContain(t, string(body), `"schema": "GE150 Preset"`, `"device": "MOOER GE150"`)
+
+	cards := singleGlob(t, filepath.Join(dir, "*.html"))
+	wantEq(t, "setup card filename", filepath.Base(cards[0]), "GE150 Tone.ge150.html")
+
+	// The JSON .mo reads back through the ge150 codec with the chosen amp.
+	m, ok := mooer.ModelByName("ge150")
+	if !ok {
+		t.Fatal("ge150 model not registered")
 	}
-	if cards, _ := filepath.Glob(filepath.Join(dir, "*.html")); len(cards) != 1 {
-		t.Fatalf("ge150 should write one setup card, got %v", cards)
+	p, err := mooer.UnmarshalMOFor(m, body)
+	if err != nil {
+		t.Fatalf("unmarshal the written .mo: %v", err)
+	}
+	if !p.Amp.Enabled || p.Amp.Type != 1 { // "65 US TW" is amp index 1
+		t.Fatalf("amp = %+v, want enabled type 1", p.Amp)
 	}
 }
 

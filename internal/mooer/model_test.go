@@ -52,9 +52,9 @@ func TestGE200CatalogShape(t *testing.T) {
 	}
 }
 
-// TestFileExchangeMatrix pins the GE150 Pro vs classic GE150 distinction: the
-// .mo preset format belongs to the file-capable models only. The classic
-// GE150 has no USB preset transfer, so only a setup card may be written for it.
+// TestFileExchangeMatrix pins each model's preset exchange: the .mo formats
+// belong to the file-capable models, and the classic GE150 exchanges its own
+// JSON .mo (the GE150 Edit schema) rather than a binary record.
 func TestFileExchangeMatrix(t *testing.T) {
 	for _, tc := range []struct {
 		name string
@@ -62,7 +62,7 @@ func TestFileExchangeMatrix(t *testing.T) {
 	}{
 		{"ge150pro", true},
 		{"ge200", true},
-		{"ge150", false},
+		{"ge150", true},
 		{"ge100pro", true},
 	} {
 		m, ok := ModelByName(tc.name)
@@ -95,13 +95,18 @@ func TestGE200AmpLookup(t *testing.T) {
 	}
 }
 
-func TestGE150IsCardOnly(t *testing.T) {
+// The classic GE150 exchanges presets as JSON .mo files (the GE150 Edit
+// schema), distinct from the GE150 Pro Li's binary record layout.
+func TestGE150UsesJSONCodec(t *testing.T) {
 	m, ok := ModelByName("ge150")
 	if !ok {
 		t.Fatal("ge150 not registered")
 	}
-	if m.FileExchange {
-		t.Fatal("ge150 should not support file exchange (card only)")
+	if !m.FileExchange || m.FileExt != ".mo" {
+		t.Fatalf("ge150 FileExchange/FileExt = %v/%q, want true/.mo", m.FileExchange, m.FileExt)
+	}
+	if _, ok := m.codec.(ge150JSONCodec); !ok {
+		t.Fatalf("ge150 codec = %T, want ge150JSONCodec", m.codec)
 	}
 }
 

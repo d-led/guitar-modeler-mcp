@@ -9,15 +9,15 @@ are supported:
   (FX → DS/OD → AMP → CAB → NS → EQ → MOD → DELAY → REVERB). The GE200 stores
   the chain order per preset (reorderable, default NS first). List devices with
   `device_list`, browse models with `mooer_catalog_list_*`, and design with
-  `mooer_design`. Only the file-capable models — GE150 Pro Li, GE200, GE100 Pro
-  — write a `.mo` file; the classic **GE150 is card-only** (no `.mo`, just the
-  printable HTML **setup card**).
+  `mooer_design`. Every file-capable model — GE150 Pro Li, GE200, GE150,
+  GE100 Pro — writes a `.mo` file; the classic **GE150** writes a JSON `.mo`
+  (the GE150 Edit schema), distinct from the GE150 Pro Li's binary record.
 
   **GE150 ≠ GE150 Pro Li — never conflate them.** "GE150" alone means the
-  classic, card-only GE150 (`model: "ge150"`); the file-capable device is
-  `model: "ge150pro"`. When the user says "ge150", pass `model: "ge150"` — do
-  NOT turn it into `ge150pro`. The tools default to `ge150pro` only when the
-  user names no device at all; if they name one, use exactly that one.
+  classic GE150 (`model: "ge150"`); the Pro Li device is `model: "ge150pro"`.
+  When the user says "ge150", pass `model: "ge150"` — do NOT turn it into
+  `ge150pro`. The tools default to `ge150pro` only when the user names no
+  device at all; if they name one, use exactly that one.
 
   **Each Mooer device has its own `.mo` layout, and the tools write the right
   one.** The GE150 Pro Li writes a 0x200-byte record; the GE200 writes its own
@@ -840,7 +840,7 @@ devices file their presets as bank + position and step through the positions
 with their footswitches: the **GE100 Pro** holds 50 banks of 3 (`01A`–`50C`, 150
 presets) and the **GE150 Pro Li / GE150 Max** 50 banks of 4 (`01A`–`50D`, 200).
 No bank addressing is modelled for the **GE200** (whose manual switches presets
-with ▼/▲, with no bank letters) or the classic **GE150** (card-only here). So
+with ▼/▲, with no bank letters) or the classic **GE150**. So
 when a song needs
 several chains (clean, drive, solo), design them as **one bank**:
 `mooer_design_bank` takes 2–4 whole designs, writes each as its own `.mo` named

@@ -62,7 +62,7 @@ finer details (CLI, tool list, internals) for anyone who wants them.
 |---|---|---|---|
 | HeadRush Gigboard | — | `.rig` (read & write) | HTML report |
 | Mooer | GE150 Pro Li, GE200, GE100 Pro | `.mo` (read & write, each model's own layout) | printable setup card |
-| Mooer GE150 | GE150 | — | card only (no `.mo` for this model) |
+| Mooer GE150 | GE150 | `.mo` (read & write, JSON) | printable setup card |
 | BOSS Waza Air | — | `.tsl` (read & write) | printable setup card |
 | Yamaha THR | THR-II, THR10, THR10C, THR10X | `.thrl6p` (read & write; THR-II only) | printable setup card |
 | Neural DSP Quad Cortex | — | — (see [Quad Cortex](quad-cortex.md)) | setup card + `.pb` reference archive |
@@ -86,7 +86,7 @@ sponsored by HeadRush or any of the referenced brands.
 Designs and writes presets for the HeadRush Gigboard (`.rig` read/write,
 parallel routing, footswitch scenes, setlists), Mooer GE150 Pro Li / GE200 /
 GE100 Pro (`.mo` read/write in each device's own layout, plus a setup card; the
-classic GE150 is card-only),
+classic GE150 writes a JSON `.mo`),
 BOSS Waza Air (`.tsl` read/write, setup card, XSONIC AIRSTEP BW footswitch
 modes), Yamaha THR (`.thrl6p` read/write for the THR-II, setup cards) and Neural DSP Quad Cortex (catalog,
 translation, per-model parameters, a setup card plus a `.pb` reference archive,
@@ -383,7 +383,7 @@ supplies its own catalog, file format and card. Roughly, in order:
    (knob / switch / combo), min/max/step, enum options and default.
 3. **File codec** — read and write the device's preset format (`.rig`, `.mo`,
    `.tsl`, `.prst`, …). For read-only or card-only devices, produce the setup
-   card only (see the classic GE150 and the legacy THR10/THR10C/THR10X).
+   card only (see the legacy THR10/THR10C/THR10X).
 4. **Translation + search** — register the catalog in the fuzzy search and the
    translate tools so "JCM800" finds "82 Lead 800 100W" in both directions.
 5. **Capabilities** — add any new parameter names to `internal/params` so

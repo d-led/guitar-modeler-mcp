@@ -97,7 +97,7 @@ func TestSupportedDevices(t *testing.T) {
 	}{
 		{"gigboard", true, ".rig", ""},
 		{"ge200", true, ".mo", ""},
-		{"ge150", false, "", ""},
+		{"ge150", true, ".mo", ""},
 		{"ge100pro", true, ".mo", ""},
 		{"wazaair", true, ".tsl", "BOSS Waza Air"},
 		{"thr", true, ".thrl6p", "Yamaha THR-II"},
