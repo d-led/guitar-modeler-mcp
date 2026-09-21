@@ -63,26 +63,22 @@ var (
 		[2]string{"Spring", ""},
 		[2]string{"Room", ""},
 	)
-	// thrCabs is the THR-II cabinet list, in the app's selector order.
-	thrCabs = device.Items(
-		[2]string{"Brown 4x12", ""},
-		[2]string{"American 4x12", ""},
-		[2]string{"Vintage 4x12", ""},
-		[2]string{"Boutique 2x12", ""},
-		[2]string{"British 4x12", ""},
-		[2]string{"California 1x12", ""},
-		[2]string{"Boutique 1x12", ""},
-		[2]string{"American 1x12", ""},
-		[2]string{"American 2x12", ""},
-		[2]string{"American 4x10", ""},
-		[2]string{"British 2x12", ""},
-		[2]string{"Yamaha 2x12", ""},
-		[2]string{"Juicy 4x12", ""},
-		[2]string{"Fuel 4x12", ""},
-		[2]string{"Mods 4x12", ""},
-		[2]string{"British Blues 2x12", ""},
-	)
+	// thrCabs is the THR-II cabinet list, ordered by the SpkSimType index the
+	// preset stores (see cabSpkSimType in thrl6p.go), so a cabinet's position
+	// here always matches the index the writer encodes. The list and the file
+	// index share one source of truth and cannot drift apart.
+	thrCabs = cabsByIndex()
 )
+
+// cabsByIndex returns the THR-II cabinets in SpkSimType order. The file index
+// is the authoritative encoding; this slice is its display.
+func cabsByIndex() []Item {
+	out := make([]Item, len(cabSpkSimType))
+	for name, id := range cabSpkSimType {
+		out[id] = Item{Name: name}
+	}
+	return out
+}
 
 // ampGrid builds THR-II amp cells: name, type, mode, description, inspired-by.
 func ampGrid(rows ...[5]string) []AmpCell {
@@ -102,9 +98,9 @@ func ampItems(rows ...[2]string) []AmpCell {
 }
 
 // thrII is the current generation (THR10II, THR30II, THR10II Wireless). The
-// amp selector has eight groups, each with a CLASSIC/BOUTIQUE/MODERN variant
-// (FLAT has no variant). Presets exchange as .thrl6p JSON files (the L6Preset
-// schema the THR Remote app reads and writes).
+// amp selector has eight groups, each with a CLASSIC/BOUTIQUE/MODERN variant.
+// Presets exchange as .thrl6p JSON files (the L6Preset schema the THR Remote
+// app reads and writes).
 func thrII() Device {
 	return Device{
 		Name:         "thr",

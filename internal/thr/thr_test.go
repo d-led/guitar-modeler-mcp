@@ -28,6 +28,41 @@ func wantEq[T comparable](t *testing.T, name string, got, want T) {
 	}
 }
 
+// Every selector's display list must agree with its file encoding. An amp or
+// effect whose name has no @asset would silently fall back to a default in
+// marshalThrl6pTone, so a valid name would load the wrong model without any
+// error. The cab list has its own order test (TestCabDisplayOrderMatchesSpkSimTypeIndex).
+func TestCatalogAgreesWithFileEncoding(t *testing.T) {
+	d := Default()
+	if len(d.Amps) != len(ampAsset) {
+		t.Fatalf("amp cells %d != ampAsset %d", len(d.Amps), len(ampAsset))
+	}
+	for _, a := range d.Amps {
+		if _, ok := ampAsset[a.Name]; !ok {
+			t.Fatalf("amp %q has no @asset key", a.Name)
+		}
+	}
+	checks := []struct {
+		items []Item
+		asset map[string]string
+		label string
+	}{
+		{d.Modulation, modAsset, "mod"},
+		{d.Echo, echoAsset, "echo"},
+		{d.Reverb, reverbAsset, "reverb"},
+	}
+	for _, c := range checks {
+		if len(c.items) != len(c.asset) {
+			t.Fatalf("%s items %d != asset map %d", c.label, len(c.items), len(c.asset))
+		}
+		for _, it := range c.items {
+			if _, ok := c.asset[it.Name]; !ok {
+				t.Fatalf("%s %q has no @asset key", c.label, it.Name)
+			}
+		}
+	}
+}
+
 func TestResolveAmpByNameTypeAndInspiredBy(t *testing.T) {
 	d := Default()
 

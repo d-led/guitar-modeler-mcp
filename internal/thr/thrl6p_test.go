@@ -116,3 +116,21 @@ func TestThrl6pRoundTrip(t *testing.T) {
 		}
 	}
 }
+
+// The cabinet list is ordered by the SpkSimType index the preset stores, so a
+// cabinet's position in the catalog always matches the index the writer
+// encodes — the display list and the file encoding share one source of truth.
+func TestCabDisplayOrderMatchesSpkSimTypeIndex(t *testing.T) {
+	if len(thrCabs) != len(cabSpkSimType) {
+		t.Fatalf("thrCabs has %d entries, cabSpkSimType has %d", len(thrCabs), len(cabSpkSimType))
+	}
+	for i, c := range thrCabs {
+		id, ok := cabSpkSimType[c.Name]
+		if !ok {
+			t.Fatalf("cab %q is missing from cabSpkSimType", c.Name)
+		}
+		if id != i {
+			t.Fatalf("cab %q sits at display position %d but its SpkSimType is %d", c.Name, i, id)
+		}
+	}
+}
