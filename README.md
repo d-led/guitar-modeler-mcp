@@ -113,20 +113,104 @@ The design core (translation, effect ordering, hardware-control assignment,
 level estimation, report rendering, the agent workflow) is device-agnostic. A
 per-device backend supplies the model catalog and preset file format:
 
-- **Gigboard backend** — `internal/catalog` (amps/cabs/mics/FX + the translation
-  layer from [Gigboard Hints](https://boguz.github.io/gigboardhints/)), and
-  `internal/rig` (the exact on-disk `.rig` format: outer JSON envelope whose
-  `content` field is a second JSON document describing the signal chain).
-- **Mooer backend** — `internal/mooer` (per-model catalogs, the 2048-byte
-  `.mo` format and setup cards) and `internal/presetmap` (Gigboard ↔ Mooer
-  model mapping).
+- **Gigboard backend** — `internal/headrush/catalog` (amps/cabs/mics/FX + the
+  translation layer from [Gigboard Hints](https://boguz.github.io/gigboardhints/)),
+  `internal/headrush/rig` (the exact on-disk `.rig` format: outer JSON envelope
+  whose `content` field is a second JSON document describing the signal chain),
+  `internal/headrush/modspec` (parameter ranges/enums extracted from the
+  editor), `internal/headrush/design` (effect ordering + placement),
+  `internal/headrush/htmlreport` (report rendering) and
+  `internal/headrush/setlist` (`.setlist` files).
+- **Mooer backend** — `internal/mooer` (per-model catalogs, the `.mo` format
+  and setup cards) and `internal/presetmap` (Gigboard ↔ Mooer model mapping).
 - **Waza Air backend** — `internal/waza` (amp/effect catalogs, the BOSS TONE
   STUDIO `.tsl` backup format and setup cards).
-- `internal/assets/data/blocks` — factory block definitions captured from the
-  device backup, used as defaults for every effect module.
+- **THR backend** — `internal/thr` (amp/effect catalogs and setup cards; the
+  THR has no preset file format, so the card is the only output).
+- **Quad Cortex backend** — `internal/qc` (catalogs, the `.pb` reference
+  archive, decode and setup cards) and `internal/qcctl` (live USB via the
+  external `qcctl` helper).
+- **GP-200 backend** — `internal/gp200` (catalogs, the `.prst` preset file and
+  setup cards).
+- Shared pieces: `internal/device` (catalog model + name resolution),
+  `internal/params` (capability keywords derived from parameter names),
+  `internal/cookbook` (cross-device ingredient mapping),
+  `internal/cardchain` (HTML setup-card templates) and
+  `internal/headrush/assets/data/blocks` (factory block definitions captured
+  from the device backup, used as defaults for every effect module).
 - `internal/docs/agent-guide.md` — the agent-facing guide (signal-chain topology,
   parallel routing constraints, effect categories, workflow). It is embedded in
   the binary and exposed to agents through the `get_guide` MCP tool.
+
+## Architecture
+
+### Components
+
+```mermaid
+flowchart TB
+    CLI["cmd/ — Cobra CLI"] --> TOOLS
+    MCP["internal/mcp — stdio JSON-RPC server"] --> TOOLS
+    TOOLS["internal/tools — tool registrar<br/>one function per MCP tool / CLI command"]
+
+    TOOLS --> CORE
+    TOOLS --> BACKENDS
+
+    subgraph CORE["Device-agnostic core"]
+        DESIGN["internal/headrush/design<br/>ordering · placement · footswitches · level"]
+        PARAMS["internal/params<br/>capability keywords from parameter names"]
+        COOKBOOK["internal/cookbook<br/>cross-device ingredient mapping"]
+        PRESETMAP["internal/presetmap<br/>Gigboard ↔ Mooer model tables"]
+        DEVICE["internal/device<br/>shared catalog model + name resolution"]
+        CARDCHAIN["internal/cardchain<br/>HTML setup-card templates"]
+    end
+
+    subgraph BACKENDS["Per-device backends — catalog + file codec + setup card"]
+        HR["internal/headrush — Gigboard · .rig"]
+        MOOER["internal/mooer — GE150 Pro Li · GE200 · GE150 · GE100 Pro · .mo"]
+        WAZA["internal/waza — BOSS Waza Air · .tsl"]
+        THR["internal/thr — Yamaha THR · card only"]
+        QC["internal/qc — Quad Cortex · .pb archive"]
+        GP200["internal/gp200 — Valeton GP-200 · .prst"]
+    end
+
+    GUIDE["internal/docs/agent-guide.md — served by get_guide"] -.-> MCP
+```
+
+### Data flow
+
+```mermaid
+flowchart LR
+    A["tone description<br/>Master of Puppets rhythm for a GE200"] --> B
+    B["translate · search · catalog_list_*<br/>real hardware → device models"] --> C
+    C["design · design_rig · mooer_design · qc_design …"] --> D
+    D["order effects · place pre/post amp"] --> E
+    E["validate every parameter<br/>name · range · enum · unit"] --> F
+    F["estimate output level<br/>per block · per parallel path"] --> G
+    G["write preset file<br/>.rig · .mo · .tsl · .prst · .pb"] --> H
+    H["render HTML report / setup card"] --> I
+    I["decode · rig_decode · qc_decode_preset<br/>verify against the device format"] -->|"tweak"| C
+```
+
+### Agent workflow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U as User
+    participant A as AI assistant
+    participant M as guitar-modeler-mcp
+
+    U->>A: "Master of Puppets rhythm for a Mooer GE200"
+    A->>M: get_guide()
+    M-->>A: agent guide (topology, routing, categories, workflow)
+    A->>M: translate_amp("Mesa Mark IIC+")
+    M-->>A: closest GE200 amp model
+    A->>M: mooer_design(amp, cab, fx, …)
+    M-->>A: .mo path + setup-card path + summary
+    A->>M: decode / read-back
+    M-->>A: chain + parameter values
+    A-->>U: "Here is the preset and the setup card."
+```
 
 ## Build
 
@@ -153,58 +237,30 @@ git push origin v1.0.0   # goreleaser publishes the release
 
 ## CLI
 
+The CLI mirrors the MCP tools. Everything except `map` and `device` targets the
+**HeadRush Gigboard** — `catalog`, `translate`, `search`, `fx-placement`,
+`design`, `report`, `decode`, `diff`, `level`, `setlist`. `map` converts a
+preset between the Gigboard and a Mooer; `device list` shows every supported
+device. The other devices (Mooer, Waza Air, THR, Quad Cortex, GP-200) are
+reached through the MCP tools. A few representative calls:
+
 ```sh
-# What models exist?
-guitar-modeler-mcp catalog amps
-guitar-modeler-mcp catalog cabs
-guitar-modeler-mcp catalog mics
-guitar-modeler-mcp catalog fx
-guitar-modeler-mcp catalog fx --category delay
-guitar-modeler-mcp catalog fx-categories
-guitar-modeler-mcp catalog presets "Tape Echo"
-guitar-modeler-mcp catalog params "Tape Echo"   # ranges, units, options
-
-# Translate real hardware into device models
+# Translate real hardware into a Gigboard model
 guitar-modeler-mcp translate amp "Marshall JCM800"
-guitar-modeler-mcp translate cab "greenback 4x12"
-guitar-modeler-mcp translate mic "SM57"
 
-# Fuzzy-search amps, cabs, mics and effects (by name or the real hardware)
-guitar-modeler-mcp search "JCM800"
+# Search the Gigboard catalog
 guitar-modeler-mcp search "tube screamer" --kind fx
 
-# Where each effect category goes in each chain layout
-guitar-modeler-mcp fx-placement
+# Dial in a tone and write the .rig + HTML report
+guitar-modeler-mcp design --name "Brown Sound" --amp "Marshall JCM800" --out ./rigs
 
-# Which devices are supported, and whether each one exchanges preset files
-guitar-modeler-mcp device list
-
-# Cross-device conversion: Gigboard .rig <-> Mooer .mo
-guitar-modeler-mcp map "001 HOW DOES IT FEEL.rig"
-
-# Dial in a tone and write the patch + HTML report
-guitar-modeler-mcp design \
-  --name "Brown Sound" --song "Van Halen - Panama" \
-  --amp "Marshall JCM800" \
-  --fx '[{"type":"Green JRC-OD","enabled":true},{"type":"Tape Echo","enabled":true}]' \
-  --output-level 6 \
-  --out ./rigs
-
-# Decode an existing rig for analysis
+# Decode / diff / estimate an existing .rig
 guitar-modeler-mcp decode "001 HOW DOES IT FEEL.rig"
-
-# Estimate a rig's output level and the RigVolume to reach 0 dB
+guitar-modeler-mcp diff BEFORE.rig AFTER.rig
 guitar-modeler-mcp level "001 HOW DOES IT FEEL.rig"
 
-# Render an HTML report for an existing rig
-guitar-modeler-mcp report --rig "001 HOW DOES IT FEEL.rig"
-
-# Install the MCP server in a client (default: VS Code user profile = global)
+# Install the MCP server in a client
 guitar-modeler-mcp mcp install
-guitar-modeler-mcp mcp install --target workspace   # .vscode/mcp.json here
-guitar-modeler-mcp mcp install --target claude      # Claude Desktop
-guitar-modeler-mcp mcp install --print              # show the config only
-guitar-modeler-mcp mcp uninstall --target vscode
 ```
 
 The complete `--help` output for every command is in [cli.md](cli.md),
@@ -266,6 +322,13 @@ guitar-modeler-mcp serve
 | `waza_read_tsl` | Read a Waza Air `.tsl` and report the first patch's tone |
 | `waza_setup_card` | Write a printable HTML setup card for a Waza Air tone |
 | `waza_catalog_list_modes` | List the four AIRSTEP BW footswitch modes (channel memories + effect toggles) |
+| `thr_catalog_list_amps` / `_fx` | List a Yamaha THR model's amp-selector positions (type × mode) and its effects/cabinets |
+| `thr_setup_card` | Write a printable HTML setup card for a Yamaha THR tone (the THR has no preset file format, so the card is the only output) |
+| `gp200_catalog_list_amps` / `_cabs` / `_fx` | List the Valeton GP-200 amps, cabs and effects (with the real hardware each is based on) |
+| `gp200_list_model_params` | Describe one GP-200 model's parameters (name, kind, range/step or options, default) |
+| `gp200_design` | Build a GP-200 patch across its 11 fixed-function blocks and write a `.prst` preset file |
+| `gp200_read_prst` | Decode a GP-200 `.prst` and report each block's effect model and parameter values |
+| `gp200_setup_card` | Render a printable setup card from an existing GP-200 `.prst` |
 | `qc_catalog_list_amps` / `_cabs` / `_fx` | List the Quad Cortex amps, cabs and effects (with wire ids and the real hardware each is based on) |
 | `qc_translate_amp` / `qc_translate_cab` | Real hardware → the exact Quad Cortex model |
 | `qc_list_model_params` | Describe one Quad Cortex model's parameters (min/max/default/steps, so values are set on the screen's own line) |
@@ -370,6 +433,46 @@ Amp/cab/mic model lists come from the device backup and the community-maintained
 [Gigboard Hints](https://boguz.github.io/gigboardhints/) translation table.
 Where the emulated amplifier is not publicly documented, the brand is left empty
 rather than guessed.
+
+## Adding a device line
+
+The recipe for supporting another modeler — or another model in an existing
+line — is the same everywhere. A new backend reuses the device-agnostic core
+(translation, effect ordering, capability search, setup-card shell) and only
+supplies its own catalog, file format and card. Roughly, in order:
+
+1. **Catalog** — enumerate the device's amps, cabs, mics and effects with the
+   real hardware each emulates (`inspired_by`). Where the emulation is
+   undocumented, leave the brand empty rather than guess.
+2. **Parameter spec** — for every model, the knob list with its **unit and
+   range on the device's own screen** (e.g. GP-200 `Rate` is 0.1–10 Hz; a
+   Mooer GE100 Pro EQ band is −16…+16 dB wired as 0…32 with 16 = flat). Kind
+   (knob / switch / combo), min/max/step, enum options and default.
+3. **File codec** — read and write the device's preset format (`.rig`, `.mo`,
+   `.tsl`, `.prst`, …). For read-only or card-only devices, produce the setup
+   card only (see the classic GE150 and the THR).
+4. **Translation + search** — register the catalog in the fuzzy search and the
+   translate tools so "JCM800" finds "82 Lead 800 100W" in both directions.
+5. **Capabilities** — add any new parameter names to `internal/params` so
+   capability search (`pitch shift`, `reverb`, …) keeps working.
+6. **Cross-device mapping** — add the model's blocks to `internal/cookbook`
+   (ingredient tags) and, where a shared "inspired by" table exists,
+   `internal/presetmap`, so `map_ingredients` / `map_preset` cover it.
+7. **Setup card / report** — a template under the backend plus the shared
+   `internal/cardchain` HTML shell.
+8. **Wire-up** — one MCP tool per capability (list / translate / design /
+   decode) in `internal/tools`, one CLI subcommand in `cmd/`, and a
+   `device_list` entry that says whether the device exchanges preset files.
+9. **Validation & guards** — the builder must reject unknown parameter names,
+   out-of-range values and invalid enums, and never write a file the device
+   can't parse. Keep the plausibility guard (never write a muted or
+   ear-splitting preset) for any device with a level model.
+10. **Tests** — round-trip the file codec, golden-snapshot the catalog and the
+    exact bytes written, and exercise one end-to-end `design → decode → card`
+    trip through the MCP server.
+11. **Docs** — update this README's hardware table,
+    `internal/docs/agent-guide.md` (the single source of agent-facing
+    knowledge) and [roadmap.md](roadmap.md).
 
 ## Testing
 

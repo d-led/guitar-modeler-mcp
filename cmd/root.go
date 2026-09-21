@@ -74,7 +74,7 @@ func newRootCmd() *cobra.Command {
 	root := &cobra.Command{
 		Use:                        "guitar-modeler-mcp",
 		Short:                      "Design and write guitar-modeler presets",
-		Long:                       "guitar-modeler-mcp exposes an MCP server and CLI for designing guitar presets: translate real-world hardware into device models and write preset files. The first supported device is the HeadRush Gigboard.",
+		Long:                       "guitar-modeler-mcp exposes an MCP server and CLI for designing guitar presets: translate real-world hardware into device models and write preset files for the HeadRush Gigboard, Mooer, BOSS Waza Air, Yamaha THR, Neural DSP Quad Cortex and Valeton GP-200.",
 		Version:                    versionDetails(),
 		SilenceUsage:               true,
 		SilenceErrors:              true,

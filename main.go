@@ -1,7 +1,8 @@
 // Command guitar-modeler-mcp designs and writes guitar-modeler presets for
-// multiple hardware modelers. It exposes an MCP server (serve) and a CLI for
-// cataloguing device models, translating real hardware into device models, and
-// generating presets. The first supported device is the HeadRush Gigboard.
+// multiple hardware modelers — HeadRush Gigboard, Mooer, BOSS Waza Air,
+// Yamaha THR, Neural DSP Quad Cortex and Valeton GP-200. It exposes an MCP
+// server (serve) and a CLI for cataloguing device models, translating real
+// hardware into device models, and generating presets.
 package main
 
 import (
