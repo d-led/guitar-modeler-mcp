@@ -9,8 +9,8 @@
 
 ## In Short
 
-> Tired of tweaking parameters by hand hoping to land a sound? This MCP gives
-> AI assistants can do their best with the device catalogs and preset formats and set up the sound you seek.
+> Tired of tweaking parameters by hand hoping to land a sound? This MCP lets
+> AI assistants use the device catalogs and preset formats to dial in the sound you seek.
 
 **What it does:** designs guitar presets for real modelers — HeadRush Gigboard,
 Mooer GE150 Pro / GE200 / GE100 Pro, BOSS Waza Air, Yamaha THR and Neural DSP
@@ -52,7 +52,7 @@ ask for a tone. No programming needed.
    printable setup card.
 
 That's it. The rest of this document lists the supported hardware and the
-finer details (CLI, tool list, architecture) for anyone who wants them.
+finer details (CLI, tool list, internals) for anyone who wants them.
 
 ## Supported hardware
 
@@ -142,76 +142,6 @@ per-device backend supplies the model catalog and preset file format:
   parallel routing constraints, effect categories, workflow). It is embedded in
   the binary and exposed to agents through the `get_guide` MCP tool.
 
-## Architecture
-
-### Components
-
-```mermaid
-flowchart TB
-    CLI["cmd/ — Cobra CLI"] --> TOOLS
-    MCP["internal/mcp — stdio JSON-RPC server"] --> TOOLS
-    TOOLS["internal/tools — tool registrar<br/>one function per MCP tool / CLI command"]
-
-    TOOLS --> CORE
-    TOOLS --> BACKENDS
-
-    subgraph CORE["Device-agnostic core"]
-        DESIGN["internal/headrush/design<br/>ordering · placement · footswitches · level"]
-        PARAMS["internal/params<br/>capability keywords from parameter names"]
-        COOKBOOK["internal/cookbook<br/>cross-device ingredient mapping"]
-        PRESETMAP["internal/presetmap<br/>Gigboard ↔ Mooer model tables"]
-        DEVICE["internal/device<br/>shared catalog model + name resolution"]
-        CARDCHAIN["internal/cardchain<br/>HTML setup-card templates"]
-    end
-
-    subgraph BACKENDS["Per-device backends — catalog + file codec + setup card"]
-        HR["internal/headrush — Gigboard · .rig"]
-        MOOER["internal/mooer — GE150 Pro Li · GE200 · GE150 · GE100 Pro · .mo"]
-        WAZA["internal/waza — BOSS Waza Air · .tsl"]
-        THR["internal/thr — Yamaha THR · card only"]
-        QC["internal/qc — Quad Cortex · .pb archive"]
-        GP200["internal/gp200 — Valeton GP-200 · .prst"]
-    end
-
-    GUIDE["internal/docs/agent-guide.md — served by get_guide"] -.-> MCP
-```
-
-### Data flow
-
-```mermaid
-flowchart LR
-    A["tone description<br/>Master of Puppets rhythm for a GE200"] --> B
-    B["translate · search · catalog_list_*<br/>real hardware → device models"] --> C
-    C["design · design_rig · mooer_design · qc_design …"] --> D
-    D["order effects · place pre/post amp"] --> E
-    E["validate every parameter<br/>name · range · enum · unit"] --> F
-    F["estimate output level<br/>per block · per parallel path"] --> G
-    G["write preset file<br/>.rig · .mo · .tsl · .prst · .pb"] --> H
-    H["render HTML report / setup card"] --> I
-    I["decode · rig_decode · qc_decode_preset<br/>verify against the device format"] -->|"tweak"| C
-```
-
-### Agent workflow
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant U as User
-    participant A as AI assistant
-    participant M as guitar-modeler-mcp
-
-    U->>A: "Master of Puppets rhythm for a Mooer GE200"
-    A->>M: get_guide()
-    M-->>A: agent guide (topology, routing, categories, workflow)
-    A->>M: translate_amp("Mesa Mark IIC+")
-    M-->>A: closest GE200 amp model
-    A->>M: mooer_design(amp, cab, fx, …)
-    M-->>A: .mo path + setup-card path + summary
-    A->>M: decode / read-back
-    M-->>A: chain + parameter values
-    A-->>U: "Here is the preset and the setup card."
-```
-
 ## Build
 
 ```sh
@@ -237,12 +167,13 @@ git push origin v1.0.0   # goreleaser publishes the release
 
 ## CLI
 
-The CLI mirrors the MCP tools. Everything except `map` and `device` targets the
-**HeadRush Gigboard** — `catalog`, `translate`, `search`, `fx-placement`,
-`design`, `report`, `decode`, `diff`, `level`, `setlist`. `map` converts a
-preset between the Gigboard and a Mooer; `device list` shows every supported
-device. The other devices (Mooer, Waza Air, THR, Quad Cortex, GP-200) are
-reached through the MCP tools. A few representative calls:
+The CLI mirrors the MCP tools. The Gigboard-facing commands are `catalog`,
+`translate`, `search`, `fx-placement`, `design`, `report`, `decode`, `diff`,
+`level` and `setlist`; `map` converts a preset between the Gigboard and a
+Mooer, `serve` runs the MCP server, `mcp install` registers it, and
+`device list` shows every supported device. The other devices (Mooer, Waza Air,
+THR, Quad Cortex, GP-200) are reached through the MCP tools. A few
+representative calls:
 
 ```sh
 # Translate real hardware into a Gigboard model
@@ -350,7 +281,7 @@ is being used.
 The full agent-facing guide lives in `internal/docs/agent-guide.md` and is
 embedded in the binary — agents read it via the `get_guide` tool. In short, the
 Gigboard's 11 chain slots can split into **two parallel paths**; the `Routing`
-field takes exactly three values across the 293 device backups:
+field takes exactly three values in the device backups:
 
 | `Routing` | Topology | Slot layout (1–11) |
 | --- | --- | --- |
@@ -405,7 +336,7 @@ guitar-modeler-mcp design --name "Song Drive" --amp "68 Plexiglas 50W" --out <ca
 guitar-modeler-mcp setlist --name "Song" --out <card>/Setlists <card>/Rigs/*.rig
 ```
 
-Copy `Rigs/` and `Setlists/` onto the Gigboard's SD card and the whole song
+Copy `Rigs/` and `Setlists/` onto the Gigboard over USB and the whole song
 travels as one bank. Scenes (one rig, blocks toggled) suit variations of the
 *same* chain; setlists suit chains that must be rebuilt. On the Mooer devices
 that file presets as bank + position — the GE100 Pro (50 banks of 3, `01A`–`50C`)
