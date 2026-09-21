@@ -24,7 +24,17 @@ const (
 	thrl6pDeviceVer = 22020194
 	thrl6pCabBypass = 16
 	thrl6pTempo     = 110 // the default tempo every real export carries
-	thrl6pGateUnset = -50
+	thrl6pGateUnset = -50.0
+)
+
+// The app must resolve every effect group to a known model, even when the
+// effect is off, so an unselected effect writes the app's own default asset
+// with @enabled false (the empty @asset string we used to write is rejected).
+const (
+	thrl6pModDefault    = "StereoSquareChorus"
+	thrl6pEchoDefault   = "TapeEcho"
+	thrl6pReverbDefault = "StandardSpring"
+	thrl6pAmpDefault    = "THR10C_Deluxe"
 )
 
 // thrl6pDoc is a .thrl6p file.
@@ -112,13 +122,16 @@ type thrl6pReverb struct {
 	WetDry   float64 `json:"@wetDry"`
 	Decay    float64 `json:"Decay"`
 	PreDelay float64 `json:"PreDelay"`
-	Tone     float64 `json:"Tone"`
+	// Time is the spring reverb's length knob; the hall/plate/room models carry
+	// Decay/PreDelay instead.
+	Time float64 `json:"Time"`
+	Tone float64 `json:"Tone"`
 }
 
 type thrl6pGate struct {
 	Asset   string  `json:"@asset"`
 	Enabled bool    `json:"@enabled"`
-	Thresh  int     `json:"Thresh"`
+	Thresh  float64 `json:"Thresh"`
 	Decay   float64 `json:"Decay"`
 }
 
@@ -128,22 +141,23 @@ type thrl6pGlobal struct {
 
 // ampAsset maps a THR-II amp cell name (the amp-selector position, e.g.
 // "CLEAN CLASSIC") to the engine @asset key the app stores. The mapping is
-// cross-checked against the community format documentation and the real
-// exports (THR10_Aco_Dynamic1, THR10_Bass_Mesa, THR10X_Brown1, THR10C_Mini).
+// taken from the app's own amps.models resource (bundled with THR Remote), so
+// it is authoritative; the community sheet swaps a few "Classic"/"Modern"
+// labels and is not trusted here.
 var ampAsset = map[string]string{
 	"CLEAN CLASSIC":     "THR10C_Deluxe",
 	"CLEAN BOUTIQUE":    "THR10C_BJunior2",
 	"CLEAN MODERN":      "THR30_Carmen",
 	"CRUNCH CLASSIC":    "THR10C_DC30",
-	"CRUNCH BOUTIQUE":   "THR10C_Mini",
-	"CRUNCH MODERN":     "THR30_SR101",
+	"CRUNCH BOUTIQUE":   "THR30_SR101",
+	"CRUNCH MODERN":     "THR10C_Mini",
 	"LEAD CLASSIC":      "THR10_Lead",
 	"LEAD BOUTIQUE":     "THR30_Blondie",
-	"LEAD MODERN":       "THR10_Brit",
+	"LEAD MODERN":       "THR10X_Brown1",
 	"HI GAIN CLASSIC":   "THR10_Modern",
 	"HI GAIN BOUTIQUE":  "THR30_FLead",
 	"HI GAIN MODERN":    "THR10X_Brown2",
-	"SPECIAL CLASSIC":   "THR10X_Brown1",
+	"SPECIAL CLASSIC":   "THR10_Brit",
 	"SPECIAL BOUTIQUE":  "THR10X_South",
 	"SPECIAL MODERN":    "THR30_Stealth",
 	"BASS CLASSIC":      "THR10_Bass_Eden_Marcus",
@@ -230,17 +244,25 @@ func unitToMs(f float64) int {
 }
 
 // gateThresh maps a 0-100 UI gate threshold to the decibel value the app
-// stores: dB = (ui - 100) * 0.96, truncated like the editor does.
-func gateThresh(ui int) int {
+// stores: dB = (ui - 100) * 0.96, kept as a float.
+func gateThresh(ui int) float64 {
 	if ui < 0 {
 		return thrl6pGateUnset
 	}
-	return int(float64(ui-100) * 0.96)
+	return float64(ui-100) * 0.96
 }
 
-// ungateThresh maps a stored decibel threshold back to the 0-100 UI scale.
-func ungateThresh(dB int) int {
-	return int(100 + float64(dB)/0.96)
+// ungateThresh maps a stored decibel threshold back to the 0-100 UI scale,
+// flooring so a truncated export (e.g. -32) reads back as the same knob.
+func ungateThresh(dB float64) int {
+	ui := int(math.Floor(100 + dB/0.96))
+	if ui < 0 {
+		return 0
+	}
+	if ui > 100 {
+		return 100
+	}
+	return ui
 }
 
 // MarshalThrl6p renders a resolved Spec as a .thrl6p JSON document.
@@ -265,9 +287,26 @@ func MarshalThrl6p(s Spec) []byte {
 }
 
 func marshalThrl6pTone(s Spec) thrl6pTone {
+	ampKey := ampAsset[s.Amp]
+	if ampKey == "" {
+		ampKey = thrl6pAmpDefault
+	}
+	modKey := modAsset[s.Mod]
+	if modKey == "" {
+		modKey = thrl6pModDefault
+	}
+	echoKey := echoAsset[s.Echo]
+	if echoKey == "" {
+		echoKey = thrl6pEchoDefault
+	}
+	reverbKey := reverbAsset[s.Reverb]
+	if reverbKey == "" {
+		reverbKey = thrl6pReverbDefault
+	}
+
 	tone := thrl6pTone{
 		Amp: thrl6pAmp{
-			Asset:  ampAsset[s.Amp],
+			Asset:  ampKey,
 			Drive:  scaleKnob(s.AmpParams.Gain),
 			Bass:   scaleKnob(s.AmpParams.Bass),
 			Mid:    scaleKnob(s.AmpParams.Mid),
@@ -285,17 +324,17 @@ func marshalThrl6pTone(s Spec) thrl6pTone {
 			Level:   scaleKnob(s.CompParams.Level),
 		},
 		Mod: thrl6pMod{
-			Asset:    modAsset[s.Mod],
+			Asset:    modKey,
 			Enabled:  s.Mod != "",
 			WetDry:   scaleKnob(s.ModParams.Mix),
 			Depth:    scaleKnob(s.ModParams.Depth),
 			Feedback: scaleKnob(s.ModParams.Feedback),
 			Freq:     scaleKnob(s.ModParams.Speed),
-			Pre:      msToUnit(s.ModParams.PreDelay),
+			Pre:      scaleKnob(s.ModParams.PreDelay),
 			Speed:    scaleKnob(s.ModParams.Speed),
 		},
 		Echo: thrl6pEcho{
-			Asset:    echoAsset[s.Echo],
+			Asset:    echoKey,
 			Enabled:  s.Echo != "",
 			WetDry:   scaleKnob(s.EchoParams.Mix),
 			Time:     msToUnit(s.EchoParams.Time),
@@ -304,12 +343,10 @@ func marshalThrl6pTone(s Spec) thrl6pTone {
 			Feedback: scaleKnob(s.EchoParams.Feedback),
 		},
 		Reverb: thrl6pReverb{
-			Asset:    reverbAsset[s.Reverb],
-			Enabled:  s.Reverb != "",
-			WetDry:   scaleKnob(s.ReverbParams.Mix),
-			Decay:    scaleKnob(s.ReverbParams.Decay),
-			PreDelay: msToUnit(s.ReverbParams.PreDelay),
-			Tone:     scaleKnob(s.ReverbParams.Tone),
+			Asset:   reverbKey,
+			Enabled: s.Reverb != "",
+			WetDry:  scaleKnob(s.ReverbParams.Mix),
+			Tone:    scaleKnob(s.ReverbParams.Tone),
 		},
 		Gate: thrl6pGate{
 			Asset:   "noiseGate",
@@ -318,6 +355,14 @@ func marshalThrl6pTone(s Spec) thrl6pTone {
 			Decay:   scaleKnob(s.GateParams.Decay),
 		},
 		Global: thrl6pGlobal{Tempo: thrl6pTempo},
+	}
+	// The spring reverb carries Time/Tone; the hall, plate and room models carry
+	// Decay/PreDelay/Tone.
+	if reverbKey == "StandardSpring" {
+		tone.Reverb.Time = scaleKnob(s.ReverbParams.Decay)
+	} else {
+		tone.Reverb.Decay = scaleKnob(s.ReverbParams.Decay)
+		tone.Reverb.PreDelay = msToUnit(s.ReverbParams.PreDelay)
 	}
 	if id, ok := cabSpkSimType[s.Cab]; ok {
 		tone.Cab.SpkSimType = id
@@ -355,15 +400,21 @@ func UnmarshalThrl6p(data []byte) (Spec, error) {
 		Sustain: unscaleKnob(t.Compressor.Sustain),
 		Level:   unscaleKnob(t.Compressor.Level),
 	}
-	s.Mod = modByAsset(t.Mod.Asset)
+	s.Mod = ""
+	if t.Mod.Enabled {
+		s.Mod = modByAsset(t.Mod.Asset)
+	}
 	s.ModParams = ModParams{
 		Speed:    unscaleKnob(t.Mod.Freq),
 		Depth:    unscaleKnob(t.Mod.Depth),
-		PreDelay: unitToMs(t.Mod.Pre),
+		PreDelay: unscaleKnob(t.Mod.Pre),
 		Feedback: unscaleKnob(t.Mod.Feedback),
 		Mix:      unscaleKnob(t.Mod.WetDry),
 	}
-	s.Echo = echoByAsset(t.Echo.Asset)
+	s.Echo = ""
+	if t.Echo.Enabled {
+		s.Echo = echoByAsset(t.Echo.Asset)
+	}
 	s.EchoParams = EchoParams{
 		Time:     unitToMs(t.Echo.Time),
 		Feedback: unscaleKnob(t.Echo.Feedback),
@@ -371,12 +422,20 @@ func UnmarshalThrl6p(data []byte) (Spec, error) {
 		Treble:   unscaleKnob(t.Echo.Treble),
 		Mix:      unscaleKnob(t.Echo.WetDry),
 	}
-	s.Reverb = reverbByAsset(t.Reverb.Asset)
+	s.Reverb = ""
+	if t.Reverb.Enabled {
+		s.Reverb = reverbByAsset(t.Reverb.Asset)
+	}
 	s.ReverbParams = ReverbParams{
-		Decay:    unscaleKnob(t.Reverb.Decay),
-		PreDelay: unitToMs(t.Reverb.PreDelay),
-		Tone:     unscaleKnob(t.Reverb.Tone),
-		Mix:      unscaleKnob(t.Reverb.WetDry),
+		Tone: unscaleKnob(t.Reverb.Tone),
+		Mix:  unscaleKnob(t.Reverb.WetDry),
+	}
+	// The spring reverb's length knob is Time; the others use Decay/PreDelay.
+	if t.Reverb.Asset == "StandardSpring" {
+		s.ReverbParams.Decay = unscaleKnob(t.Reverb.Time)
+	} else {
+		s.ReverbParams.Decay = unscaleKnob(t.Reverb.Decay)
+		s.ReverbParams.PreDelay = unitToMs(t.Reverb.PreDelay)
 	}
 	s.NoiseGate = t.Gate.Enabled
 	s.GateParams = GateParams{

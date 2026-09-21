@@ -170,8 +170,13 @@ func TestGE200WriteLayout(t *testing.T) {
 	if got := binary.LittleEndian.Uint16(raw[ge200ChecksumOff:]); got != uint16(sum&0xFFFF) {
 		t.Fatalf("checksum = %#x, want %#x", got, uint16(sum&0xFFFF))
 	}
-	// The flag after the checksum: every device-accepted export carries 0x01
-	// here, and the device refuses a preset that carries 0x00.
+}
+
+// The flag after the checksum: every device-accepted export carries 0x01 here,
+// and the device refuses a preset that carries 0x00 ("File error!").
+func TestGE200WritesHeaderFlag(t *testing.T) {
+	m, _ := ModelByName("ge200")
+	raw := MarshalMOFor(m, New())
 	if raw[ge200HeaderOff] != 0x01 {
 		t.Fatalf("header flag @0x1FE = %#x, want 0x01", raw[ge200HeaderOff])
 	}

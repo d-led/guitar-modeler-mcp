@@ -27,8 +27,8 @@ func TestUnmarshalThrl6pResolvesRealExports(t *testing.T) {
 	}{
 		{"kj1.thrl6p", "kj1", "ACOUSTIC MODERN", "THR10_Aco_Dynamic1", "", 66},
 		{"bassd dled.thrl6p", "bassd dled", "BASS BOUTIQUE", "THR10_Bass_Mesa", "", 66},
-		{"dled heavy 3.thrl6p", "dled heavy 3", "SPECIAL CLASSIC", "THR10X_Brown1", "Vintage 4x12", 65},
-		{"dled crunch 4.3.thrl6p", "dled crunch 4.3", "CRUNCH BOUTIQUE", "THR10C_Mini", "California 1x12", 60},
+		{"dled heavy 3.thrl6p", "dled heavy 3", "LEAD MODERN", "THR10X_Brown1", "Vintage 4x12", 65},
+		{"dled crunch 4.3.thrl6p", "dled crunch 4.3", "CRUNCH MODERN", "THR10C_Mini", "California 1x12", 60},
 	}
 	for _, tc := range cases {
 		s, err := UnmarshalThrl6p(readFixture(t, tc.fixture))
@@ -54,17 +54,22 @@ func TestUnmarshalThrl6pResolvesRealExports(t *testing.T) {
 }
 
 // The gate threshold is the one knob stored in decibels: dB = (ui - 100) * 0.96.
+// The editor truncates the dB on export, so both the full float and the
+// truncated integer must read back to the same 0-100 knob.
 func TestGateThresholdDecibelMapping(t *testing.T) {
-	for ui, want := range map[int]int{
+	for ui, truncated := range map[int]int{
 		66: -32,
 		65: -33,
 		60: -38,
 	} {
-		if got := gateThresh(ui); got != want {
-			t.Fatalf("gateThresh(%d) = %d, want %d", ui, got, want)
+		if got := gateThresh(ui); got != float64(ui-100)*0.96 {
+			t.Fatalf("gateThresh(%d) = %v, want %v", ui, got, float64(ui-100)*0.96)
 		}
-		if got := ungateThresh(want); got != ui {
-			t.Fatalf("ungateThresh(%d) = %d, want %d", want, got, ui)
+		if got := ungateThresh(gateThresh(ui)); got != ui {
+			t.Fatalf("ungateThresh(gateThresh(%d)) = %d, want %d", ui, got, ui)
+		}
+		if got := ungateThresh(float64(truncated)); got != ui {
+			t.Fatalf("ungateThresh(%d) = %d, want %d", truncated, got, ui)
 		}
 	}
 }

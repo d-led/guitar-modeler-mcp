@@ -67,8 +67,8 @@ func TestResolveEffects(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Resolve: %v", err)
 	}
-	if s.Amp != "SPECIAL CLASSIC" {
-		t.Fatalf("amp = %q, want SPECIAL CLASSIC (BROWN → CLASSIC)", s.Amp)
+	if s.Amp != "LEAD MODERN" {
+		t.Fatalf("amp = %q, want LEAD MODERN (BROWN → EVH 5150-III)", s.Amp)
 	}
 	if s.Cab != "Brown 4x12" {
 		t.Fatalf("cab = %q, want Brown 4x12", s.Cab)
