@@ -64,7 +64,7 @@ finer details (CLI, tool list, internals) for anyone who wants them.
 | Mooer | GE150 Pro Li, GE200, GE100 Pro | `.mo` (read & write, each model's own layout) | printable setup card |
 | Mooer GE150 | GE150 | — | card only (no `.mo` for this model) |
 | BOSS Waza Air | — | `.tsl` (read & write) | printable setup card |
-| Yamaha THR | THR-II, THR10, THR10C, THR10X | — | card only |
+| Yamaha THR | THR-II, THR10, THR10C, THR10X | `.thrl6p` (read & write; THR-II only) | printable setup card |
 | Neural DSP Quad Cortex | — | — (see [Quad Cortex](quad-cortex.md)) | setup card + `.pb` reference archive |
 
 ### Accessories
@@ -88,7 +88,7 @@ parallel routing, footswitch scenes, setlists), Mooer GE150 Pro Li / GE200 /
 GE100 Pro (`.mo` read/write in each device's own layout, plus a setup card; the
 classic GE150 is card-only),
 BOSS Waza Air (`.tsl` read/write, setup card, XSONIC AIRSTEP BW footswitch
-modes), Yamaha THR (setup cards) and Neural DSP Quad Cortex (catalog,
+modes), Yamaha THR (`.thrl6p` read/write for the THR-II, setup cards) and Neural DSP Quad Cortex (catalog,
 translation, per-model parameters, a setup card plus a `.pb` reference archive,
 and `qcctl` live USB). See [Quad Cortex](quad-cortex.md) for exactly what the
 Quad Cortex workflow can and cannot do; planned work lives in
@@ -101,7 +101,7 @@ Give it a song and a tone description, and it will:
 1. translate real-world hardware (amps, cabs, mics) into the models the device
    emulates,
 2. order the effects into a musically sensible signal chain,
-3. write the device's preset file (`.rig` / `.mo` / `.tsl`) or, for the Quad
+3. write the device's preset file (`.rig` / `.mo` / `.tsl` / `.thrl6p`) or, for the Quad
    Cortex, a setup card plus a `.pb` reference archive — the `.pb` is not a
    file the unit imports,
 4. produce a human-readable HTML page of the settings used,
@@ -125,8 +125,8 @@ per-device backend supplies the model catalog and preset file format:
   and setup cards) and `internal/presetmap` (Gigboard ↔ Mooer model mapping).
 - **Waza Air backend** — `internal/waza` (amp/effect catalogs, the BOSS TONE
   STUDIO `.tsl` backup format and setup cards).
-- **THR backend** — `internal/thr` (amp/effect catalogs and setup cards; the
-  THR has no preset file format, so the card is the only output).
+- **THR backend** — `internal/thr` (amp/effect catalogs, the THR-II `.thrl6p`
+  preset format the THR Remote app reads and writes, and setup cards).
 - **Quad Cortex backend** — `internal/qc` (catalogs, the `.pb` reference
   archive, decode and setup cards) and `internal/qcctl` (live USB via the
   external `qcctl` helper).
@@ -255,7 +255,8 @@ guitar-modeler-mcp serve
 | `waza_setup_card` | Write a printable HTML setup card for a Waza Air tone |
 | `waza_catalog_list_modes` | List the four AIRSTEP BW footswitch modes (channel memories + effect toggles) |
 | `thr_catalog_list_amps` / `_fx` | List a Yamaha THR model's amp-selector positions (type × mode) and its effects/cabinets |
-| `thr_setup_card` | Write a printable HTML setup card for a Yamaha THR tone (the THR has no preset file format, so the card is the only output) |
+| `thr_setup_card` | Write a printable HTML setup card for a Yamaha THR tone, plus a `.thrl6p` preset file for the THR-II |
+| `thr_read_preset` | Decode a Yamaha THR-II `.thrl6p` preset into its amp, cab, effects and knob values |
 | `gp200_catalog_list_amps` / `_cabs` / `_fx` | List the Valeton GP-200 amps, cabs and effects (with the real hardware each is based on) |
 | `gp200_list_model_params` | Describe one GP-200 model's parameters (name, kind, range/step or options, default) |
 | `gp200_design` | Build a GP-200 patch across its 11 fixed-function blocks and write a `.prst` preset file |
@@ -382,7 +383,7 @@ supplies its own catalog, file format and card. Roughly, in order:
    (knob / switch / combo), min/max/step, enum options and default.
 3. **File codec** — read and write the device's preset format (`.rig`, `.mo`,
    `.tsl`, `.prst`, …). For read-only or card-only devices, produce the setup
-   card only (see the classic GE150 and the THR).
+   card only (see the classic GE150 and the legacy THR10/THR10C/THR10X).
 4. **Translation + search** — register the catalog in the fuzzy search and the
    translate tools so "JCM800" finds "82 Lead 800 100W" in both directions.
 5. **Capabilities** — add any new parameter names to `internal/params` so

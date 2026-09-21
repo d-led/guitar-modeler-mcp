@@ -121,8 +121,10 @@ are supported:
   channel memories (CH 1–6, the Waza Air's "scenes") and the effect blocks into
   hands-free footswitches; list its four layouts with `waza_catalog_list_modes`
   and print one on the card with `waza_setup_card`'s `airstep_mode` (1–4).
-- **Yamaha THR** (THR-II, THR10, THR10C, THR10X) — a desktop practice amp with
-  no preset file format, so the only output is a printable setup card. The
+- **Yamaha THR** (THR-II, THR10, THR10C, THR10X) — a desktop practice amp. The
+  THR-II exchanges presets as `.thrl6p` JSON files (the format THR Remote reads
+  and writes); the legacy THR10/THR10C/THR10X have no preset file format, so
+  their only output is a printable setup card. The
   THR-II amp selector is a grid of eight types (CLEAN, CRUNCH, LEAD, HI GAIN,
   SPECIAL, BASS, ACOUSTIC, FLAT) × three modes (CLASSIC, BOUTIQUE, MODERN) —
   24 positions, each with Yamaha's official description plus a
@@ -131,7 +133,8 @@ are supported:
   (CHORUS, FLANGER, PHASER, TREMOLO), two ECHO delay types (Tape, Digital
   Delay) and four REVERB types (Plate, Hall, Spring, Room), plus app-only
   COMPRESSOR and NOISE GATE. Browse with `thr_catalog_list_*` and design with
-  `thr_setup_card`. The legacy
+  `thr_setup_card` (which writes the `.thrl6p` for the THR-II); decode an
+  existing `.thrl6p` with `thr_read_preset`. The legacy
   THR10/THR10C/THR10X amp lists are partial (community reference) and have no
   cabinet list.
 - **Neural DSP Quad Cortex** — full catalog, with the setup card as the real

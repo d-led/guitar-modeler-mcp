@@ -9,7 +9,8 @@ func TestDefaultDeviceShape(t *testing.T) {
 	d := Default()
 	wantEq(t, "name", d.Name, "thr")
 	wantEq(t, "display", d.Display, "Yamaha THR-II")
-	wantEq(t, "file exchange", d.FileExchange, false)
+	wantEq(t, "file exchange", d.FileExchange, true)
+	wantEq(t, "file ext", d.FileExt, ".thrl6p")
 	wantEq(t, "amp types", len(d.AmpTypes), 8)
 	wantEq(t, "amp modes", len(d.AmpModes), 3)
 	// 8 types × 3 modes = 24 cells, including three FLAT positions.

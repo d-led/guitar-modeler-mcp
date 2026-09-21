@@ -100,7 +100,7 @@ func TestSupportedDevices(t *testing.T) {
 		{"ge150", false, "", ""},
 		{"ge100pro", true, ".mo", ""},
 		{"wazaair", true, ".tsl", "BOSS Waza Air"},
-		{"thr", false, "", "Yamaha THR-II"},
+		{"thr", true, ".thrl6p", "Yamaha THR-II"},
 		{"quad-cortex", false, "", "Neural DSP Quad Cortex"},
 		{"gp200", true, ".prst", "Valeton GP-200"},
 		{"gp200lt", true, ".prst", "Valeton GP-200 LT"},

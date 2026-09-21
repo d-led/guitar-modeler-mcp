@@ -131,7 +131,7 @@ func TestIntegrationInitializeAndToolList(t *testing.T) {
 		"mooer_design", "render_setup_card", "mooer_detect", "map_preset", "map_ingredients",
 		"waza_catalog_list_amps", "waza_catalog_list_fx", "waza_setup_card", "waza_write_tsl", "waza_read_tsl",
 		"waza_catalog_list_modes",
-		"thr_catalog_list_amps", "thr_catalog_list_fx", "thr_setup_card",
+		"thr_catalog_list_amps", "thr_catalog_list_fx", "thr_setup_card", "thr_read_preset",
 		"gp200_catalog_list_amps", "gp200_catalog_list_cabs", "gp200_catalog_list_fx",
 		"gp200_design", "gp200_read_prst", "gp200_list_model_params", "gp200_setup_card",
 		"qc_catalog_list_amps", "qc_catalog_list_cabs", "qc_catalog_list_fx",
@@ -653,7 +653,7 @@ func TestIntegrationThrSetupCard(t *testing.T) {
 	s := newIntegrationServer(t)
 	dir := t.TempDir()
 
-	// THR is card-only, listed alongside the other devices.
+	// THR-II is file-capable (.thrl6p); the legacy models are card-only.
 	devices := resultText(t, rpc(t, s, 1, "tools/call", map[string]any{
 		"name":      "device_list",
 		"arguments": map[string]any{},
@@ -667,7 +667,7 @@ func TestIntegrationThrSetupCard(t *testing.T) {
 	}))
 	mustContain(t, amps, "CLEAN CLASSIC", "Fender Twin Reverb")
 
-	// The setup card resolves a description to an amp and writes the file.
+	// The setup card resolves a description to an amp and writes both files.
 	card := resultText(t, rpc(t, s, 3, "tools/call", map[string]any{
 		"name": "thr_setup_card",
 		"arguments": map[string]any{
@@ -692,7 +692,7 @@ func TestIntegrationThrSetupCard(t *testing.T) {
 			"output_dir":    dir,
 		},
 	}))
-	mustContain(t, card, ".thr.html")
+	mustContain(t, card, ".thr.html", ".thrl6p")
 	cards := singleGlob(t, filepath.Join(dir, "*.html"))
 	body, err := os.ReadFile(cards[0])
 	if err != nil {
@@ -706,6 +706,34 @@ func TestIntegrationThrSetupCard(t *testing.T) {
 		"arguments": map[string]any{},
 	}))
 	mustContain(t, fx, "Brown 4x12", "Digital Delay", "Spring")
+}
+
+// The THR-II .thrl6p written by thr_setup_card reads back through
+// thr_read_preset with the same amp, cabinet and knob values.
+func TestIntegrationThrReadPresetRoundTrip(t *testing.T) {
+	s := newIntegrationServer(t)
+	dir := t.TempDir()
+
+	resultText(t, rpc(t, s, 1, "tools/call", map[string]any{
+		"name": "thr_setup_card",
+		"arguments": map[string]any{
+			"name":       "Brown Sound",
+			"amp":        "SPECIAL CLASSIC",
+			"cab":        "Vintage 4x12",
+			"echo":       "Tape",
+			"gain":       80,
+			"master":     60,
+			"noise_gate": true,
+			"output_dir": dir,
+		},
+	}))
+
+	preset := singleGlob(t, filepath.Join(dir, "*.thrl6p"))[0]
+	decoded := resultText(t, rpc(t, s, 2, "tools/call", map[string]any{
+		"name":      "thr_read_preset",
+		"arguments": map[string]any{"preset_file": preset},
+	}))
+	mustContain(t, decoded, `"name": "Brown Sound"`, `"amp": "SPECIAL CLASSIC"`, `"cab": "Vintage 4x12"`, `"noise_gate": true`)
 }
 
 func TestIntegrationDesignDecodeReportRoundTrip(t *testing.T) {

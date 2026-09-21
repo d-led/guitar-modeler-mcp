@@ -103,12 +103,14 @@ func ampItems(rows ...[2]string) []AmpCell {
 
 // thrII is the current generation (THR10II, THR30II, THR10II Wireless). The
 // amp selector has eight groups, each with a CLASSIC/BOUTIQUE/MODERN variant
-// (FLAT has no variant).
+// (FLAT has no variant). Presets exchange as .thrl6p JSON files (the L6Preset
+// schema the THR Remote app reads and writes).
 func thrII() Device {
 	return Device{
 		Name:         "thr",
 		Display:      "Yamaha THR-II",
-		FileExchange: false,
+		FileExchange: true,
+		FileExt:      ".thrl6p",
 		Chain:        []string{"COMPRESSOR", "NOISE GATE", "AMP", "CAB", "MOD", "ECHO", "REVERB"},
 		AmpTypes:     []string{"CLEAN", "CRUNCH", "LEAD", "HI GAIN", "SPECIAL", "BASS", "ACOUSTIC", "FLAT"},
 		AmpModes:     []string{"CLASSIC", "BOUTIQUE", "MODERN"},

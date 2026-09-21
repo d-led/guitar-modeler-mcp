@@ -486,7 +486,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 
 	s.Register(mcp.Tool{
 		Name:        "thr_setup_card",
-		Description: "Write a printable HTML setup card for a Yamaha THR tone. The THR has no preset file format, so the card is the only output.",
+		Description: "Write a printable HTML setup card for a Yamaha THR tone, and for the THR-II also a .thrl6p preset file (the JSON format THR Remote imports). The legacy THR10/THR10C/THR10X have no preset file format, so the card is their only output.",
 		InputSchema: objectSchema(mergeMaps(map[string]any{
 			"name":       stringSchema("Patch name."),
 			"note":       noteSchema(),
@@ -498,10 +498,21 @@ func (r *Registrar) Register(s *mcp.Server) {
 			"reverb":     stringSchema("Optional REVERB type: Plate, Hall, Spring or Room."),
 			"compressor": map[string]any{"type": "boolean", "description": "Optional app-only compressor on/off."},
 			"noise_gate": map[string]any{"type": "boolean", "description": "Optional app-only noise gate on/off."},
-			"output_dir": stringSchema("Directory to write the HTML card into (default: current directory)."),
+			"output_dir": stringSchema("Directory to write the HTML card (and the .thrl6p file) into (default: current directory)."),
 		}, thrKnobProps())),
 		Handler: func(_ context.Context, args map[string]any) (string, error) {
 			return r.thrSetupCard(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
+		Name:        "thr_read_preset",
+		Description: "Decode a Yamaha THR-II .thrl6p preset file into its amp, cabinet, effect selections and knob values, so an existing preset can be analyzed or fixed.",
+		InputSchema: objectSchema(map[string]any{
+			"preset_file": stringSchema("Path to the .thrl6p file."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.thrReadPreset(args)
 		},
 	})
 
@@ -3360,7 +3371,51 @@ func (r *Registrar) thrSetupCard(args map[string]any) (string, error) {
 	if err := fileutil.WriteFile(path, []byte(d.SetupCardHTML(resolved))); err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("Wrote %s setup card to %s", d.Display, path), nil
+	var b strings.Builder
+	fmt.Fprintf(&b, "Wrote %s setup card to %s", d.Display, path)
+
+	if d.FileExchange {
+		presetPath := filepath.Join(outDir, sanitizeFileBase(resolved.Name)+d.FileExt)
+		if err := fileutil.WriteFile(presetPath, thr.MarshalThrl6p(resolved)); err != nil {
+			return "", err
+		}
+		fmt.Fprintf(&b, "\nWrote %s preset to %s", d.Display, presetPath)
+	}
+	return b.String(), nil
+}
+
+// thrReadPreset decodes a .thrl6p file into a readable summary.
+func (r *Registrar) thrReadPreset(args map[string]any) (string, error) {
+	path := argString(args, "preset_file")
+	if path == "" {
+		return "", fmt.Errorf("preset_file is required")
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	s, err := thr.UnmarshalThrl6p(data)
+	if err != nil {
+		return "", err
+	}
+	return marshal(map[string]any{
+		"name":       s.Name,
+		"amp":        s.Amp,
+		"cab":        s.Cab,
+		"mod":        s.Mod,
+		"echo":       s.Echo,
+		"reverb":     s.Reverb,
+		"compressor": s.Compressor,
+		"noise_gate": s.NoiseGate,
+		"knobs": map[string]any{
+			"amp":        s.AmpParams,
+			"mod":        s.ModParams,
+			"echo":       s.EchoParams,
+			"reverb":     s.ReverbParams,
+			"compressor": s.CompParams,
+			"gate":       s.GateParams,
+		},
+	})
 }
 
 func filterThrAmps(cells []thr.AmpCell, query string) []thr.AmpCell {
