@@ -128,7 +128,7 @@ func TestIntegrationInitializeAndToolList(t *testing.T) {
 		"design_rig", "render_report", "rig_decode", "estimate_rig_level",
 		"create_setlist",
 		"device_list", "mooer_catalog_list_amps", "mooer_catalog_list_cabs", "mooer_catalog_list_fx",
-		"mooer_design", "render_setup_card", "map_preset", "map_ingredients",
+		"mooer_design", "render_setup_card", "mooer_detect", "map_preset", "map_ingredients",
 		"waza_catalog_list_amps", "waza_catalog_list_fx", "waza_setup_card", "waza_write_tsl", "waza_read_tsl",
 		"waza_catalog_list_modes",
 		"thr_catalog_list_amps", "thr_catalog_list_fx", "thr_setup_card",
@@ -215,6 +215,58 @@ func TestIntegrationMooerCatalogDesignAndCard(t *testing.T) {
 		t.Fatalf("read setup card: %v", err)
 	}
 	mustContain(t, string(body), `<p class="note-text">Mooer **JCM800** rhythm</p>`)
+}
+
+// mooer_detect reads a .mo file's bytes and reports which model encoded it, so
+// an unknown file can be decoded or carded with the right device.
+func TestIntegrationMooerDetect(t *testing.T) {
+	s := newIntegrationServer(t)
+	dir := t.TempDir()
+
+	// Design one preset per file-capable model, then ask the tool which model
+	// each file belongs to. The amp is given as hardware, which each device
+	// resolves to its own model.
+	for _, model := range []struct {
+		name    string
+		display string
+	}{
+		{"ge150pro", "Mooer GE150 Pro Li / GE150 Max"},
+		{"ge200", "Mooer GE200"},
+		{"ge100pro", "Mooer GE100 Pro"},
+	} {
+		resultText(t, rpc(t, s, 1, "tools/call", map[string]any{
+			"name": "mooer_design",
+			"arguments": map[string]any{
+				"model":      model.name,
+				"name":       "DETECT " + model.name,
+				"amp":        "Marshall JCM800",
+				"output_dir": dir,
+			},
+		}))
+
+		detected := resultText(t, rpc(t, s, 2, "tools/call", map[string]any{
+			"name": "mooer_detect",
+			"arguments": map[string]any{
+				"preset_file": filepath.Join(dir, "DETECT "+model.name+".mo"),
+			},
+		}))
+		mustContain(t, detected, `"model": "`+model.name+`"`, `"display": "`+model.display+`"`, `"reason":`)
+	}
+
+	// A file that is no Mooer preset is refused, not guessed.
+	notMo := filepath.Join(dir, "garbage.mo")
+	if err := os.WriteFile(notMo, []byte("not a preset"), 0o600); err != nil {
+		t.Fatalf("write garbage: %v", err)
+	}
+	resp := rpc(t, s, 3, "tools/call", map[string]any{
+		"name":      "mooer_detect",
+		"arguments": map[string]any{"preset_file": notMo},
+	})
+	result, ok := resp["result"].(map[string]any)
+	if !ok || result["isError"] != true {
+		t.Fatalf("garbage file should be refused, got response: %v", resp)
+	}
+	mustContain(t, resultText(t, resp), "not a known Mooer .mo layout")
 }
 
 // A GE100 Pro design goes through the knobs the device's own models carry: the

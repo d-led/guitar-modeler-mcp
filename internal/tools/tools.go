@@ -364,6 +364,17 @@ func (r *Registrar) Register(s *mcp.Server) {
 	})
 
 	s.Register(mcp.Tool{
+		Name:        "mooer_detect",
+		Description: "Detect which Mooer model a .mo preset file was encoded for (ge150pro, ge200 or ge100pro). The three file-capable models write different layouts, so the file's bytes identify the device; use this before decoding, rendering a setup card or mapping a .mo file whose device is unknown.",
+		InputSchema: objectSchema(map[string]any{
+			"preset_file": stringSchema("Path to the .mo file."),
+		}),
+		Handler: func(_ context.Context, args map[string]any) (string, error) {
+			return r.mooerDetect(args)
+		},
+	})
+
+	s.Register(mcp.Tool{
 		Name:        "map_preset",
 		Description: "Map a preset from one device to another. A .rig file maps to a Mooer preset (GE150 Pro Li) plus a printable setup card; a .mo file maps back to a Gigboard .rig.",
 		InputSchema: objectSchema(map[string]any{
@@ -2515,6 +2526,32 @@ func (r *Registrar) renderSetupCard(args map[string]any) (string, error) {
 		return "", err
 	}
 	return fmt.Sprintf("Wrote setup card to %s", cardPath), nil
+}
+
+// mooerDetectResult is what mooer_detect reports: the detected model and the
+// evidence, without dumping the model's whole catalog.
+type mooerDetectResult struct {
+	Model   string `json:"model"`
+	Display string `json:"display"`
+	Reason  string `json:"reason"`
+	FileExt string `json:"file_ext,omitempty"`
+}
+
+func (r *Registrar) mooerDetect(args map[string]any) (string, error) {
+	path := argString(args, "preset_file")
+	if path == "" {
+		return "", fmt.Errorf("preset_file is required")
+	}
+	det, err := mooer.DetectMOFile(path)
+	if err != nil {
+		return "", err
+	}
+	return marshal(mooerDetectResult{
+		Model:   det.Model.Name,
+		Display: det.Model.Display,
+		Reason:  det.Reason,
+		FileExt: det.Model.FileExt,
+	})
 }
 
 func (r *Registrar) mapIngredients(args map[string]any) (string, error) {

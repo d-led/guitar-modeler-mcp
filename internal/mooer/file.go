@@ -70,3 +70,13 @@ func ReadMOFileAny(path string) (Preset, error) {
 	}
 	return UnmarshalMOAny(data)
 }
+
+// DetectMOFile reads a .mo file and reports which Mooer model it was encoded
+// for (see DetectModel).
+func DetectMOFile(path string) (Detection, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return Detection{}, err
+	}
+	return DetectModel(data)
+}

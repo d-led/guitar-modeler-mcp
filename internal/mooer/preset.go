@@ -52,16 +52,21 @@ func StoredName(name string) (string, bool) {
 // order, name and the opaque tail bytes the device keeps after the modules.
 type Preset struct {
 	EffectOrder [10]uint8
-	Name        string
-	FX          FX
-	Drive       Drive
-	Amp         Amp
-	Cab         Cab
-	NoiseGate   NoiseGate
-	EQ          EQ
-	Mod         Mod
-	Delay       Delay
-	Reverb      Reverb
+	// ChainOrder is the GE200's reorderable signal chain: the nine module ids
+	// (1=FX … 9=REVERB) in signal order, then a trailing 0 in the rhythm slot.
+	// The GE150 Pro Li stores its own chain order in EffectOrder; this field is
+	// read and written only by the GE200 codec.
+	ChainOrder [10]uint8
+	Name       string
+	FX         FX
+	Drive      Drive
+	Amp        Amp
+	Cab        Cab
+	NoiseGate  NoiseGate
+	EQ         EQ
+	Mod        Mod
+	Delay      Delay
+	Reverb     Reverb
 	// Tail holds bytes 0x9F..0x1FF, which the reference implementation
 	// deliberately preserves verbatim rather than silently zeroing.
 	Tail [tailSize]byte
@@ -73,6 +78,7 @@ func New() Preset {
 	for i := range p.EffectOrder {
 		p.EffectOrder[i] = uint8(i)
 	}
+	p.ChainOrder = ge200DefaultOrder
 	p.Name = "New Preset"
 	return p
 }

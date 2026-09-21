@@ -9,13 +9,17 @@ import (
 
 // The GE200 .mo format is structurally different from the GE150 Pro Li .mo
 // format (which is what the rest of this package was reverse-engineered from).
-// The GE200 layout, cross-checked against real device exports and the
-// community GE200→GE150 converters (sonnm / mooerMoConvert):
+// The GE200 layout, cross-checked against a real device export and the
+// independent implementations (sonnm's mooer.php, sidekickDan/mooerMoConvert,
+// MooerManager's MooerParser):
 //
 //	0x000..0x1FB  header — implementation artifacts of the GE200 editor; a
 //	              zeroed header with byte 1 = 8 and byte 8 = 1 loads fine.
 //	0x1FC..0x1FD  checksum = sum of bytes 0x200..0x7FF (little-endian u16).
-//	0x200..0x208  effect order: 9 module ids (1=FX … 9=REVERB).
+//	0x1FE..0x1FF  0x01 0x00 — the device rejects a preset that carries 0x00 here.
+//	0x200..0x209  chain order: 9 module ids (1=FX … 9=REVERB) in signal order,
+//	              then a trailing slot the device keeps for the rhythm block (0).
+//	0x20A..0x20B  a big-endian size word the device does not interpret.
 //	0x20C..0x21B  preset name, 16 bytes null-padded.
 //	0x21C..0x263  9 modules × 8 bytes: [type+1, switch, 6 param bytes].
 //	0x35E..0x35F  delay time, little-endian u16 milliseconds.
@@ -26,18 +30,25 @@ const (
 	ge200ModulesOff  = 540 // 0x21C
 	ge200ModuleSize  = 8
 	ge200OrderOff    = 512 // 0x200
+	ge200OrderSize   = 10
 	ge200ChecksumOff = 508 // 0x1FC
+	ge200HeaderOff   = 510 // 0x1FE: 0x01 marks a device-accepted preset
 	ge200DelayOff    = 862 // 0x35E
 )
 
 // ge200ModuleOrder matches ModuleOrder: the nine modules in their fixed
-// on-wire positions.
+// on-wire positions (ids 1..9).
 var ge200ModuleOrder = []string{"fx", "od", "amp", "cab", "ns", "eq", "mod", "delay", "reverb"}
 
-// ge200Template is a real GE200 single-preset export ("P2-FIFTY1 FIFVI.mo",
-// a clean header with no editor pointer garbage). New presets start from it so
-// every region we do not model — the header flags, footswitch assignments and
-// the tail — carries a device-accepted value instead of being invented.
+// ge200DefaultOrder is the GE200's default signal chain: the noise gate first,
+// then FX, DS, AMP, CAB, EQ, MOD, DELAY, REVERB, and a trailing 0 in the slot
+// the device keeps for the rhythm block (which the chain excludes).
+var ge200DefaultOrder = [ge200OrderSize]uint8{5, 1, 2, 3, 4, 6, 7, 8, 9, 0}
+
+// ge200Template is a real GE200 single-preset export ("P133-80S ROCK.mo"):
+// its ASLR header junk is zeroed, but the flag at 0x1FE and every region we do
+// not model — the size word, the bytes after the modules and the tail — carry
+// a device-accepted value instead of being invented.
 //
 //go:embed ge200-template.mo
 var ge200Template []byte
@@ -87,12 +98,12 @@ func marshalGE200FromScratch(p Preset) []byte {
 }
 
 // patchGE200 writes every modeled field of a preset into a GE200 record: the
-// identity effect order, name, nine modules, delay time and the trailing
-// checksum. Unmodeled regions (header flags, footswitch assignments, tail)
-// keep whatever the buffer already held.
+// chain order, name, nine modules, delay time and the trailing checksum.
+// Unmodeled regions (header flags, footswitch assignments, tail) keep whatever
+// the buffer already held.
 func patchGE200(buf []byte, p Preset) {
-	// Effect order: identity (the GE200's fixed nine-module chain).
-	writeGE200Order(buf)
+	// Chain order: the GE200's reorderable signal chain.
+	writeGE200Order(buf, p.ChainOrder)
 
 	// Name, null-padded 16 bytes.
 	copy(buf[ge200NameOff:ge200NameOff+ge200NameSize], asciiName(p.Name, ge200NameSize))
@@ -107,6 +118,10 @@ func patchGE200(buf []byte, p Preset) {
 	putGE200Module(buf, "mod", p.Mod.Type, p.Mod.Enabled, p.Mod.Rate, p.Mod.Level, p.Mod.Depth, p.Mod.Param4)
 	putGE200Module(buf, "delay", p.Delay.Type, p.Delay.Enabled, p.Delay.Level, p.Delay.Feedback, p.Delay.Param5, p.Delay.Param6, 0, p.Delay.Subdivision)
 	putGE200Module(buf, "reverb", p.Reverb.Type, p.Reverb.Enabled, p.Reverb.PreDelay, p.Reverb.Level, p.Reverb.Decay, p.Reverb.Tone)
+
+	// The flag after the checksum: every real export carries 0x01 here, and the
+	// device refuses a preset that carries 0x00 ("File error!").
+	buf[ge200HeaderOff] = 0x01
 
 	// Delay time lives outside the delay module.
 	binary.LittleEndian.PutUint16(buf[ge200DelayOff:], p.Delay.TimeMS)
@@ -163,13 +178,13 @@ func ge200EQBandInverse(v uint8) uint8 {
 	return uint8((uint16(v)*100 + 12) / 24) // #nosec G115 -- 0..24 × 100 / 24 fits in a byte
 }
 
-// writeGE200Order writes the identity effect order 1..9.
-func writeGE200Order(buf []byte) {
-	order := make([]byte, len(ge200ModuleOrder))
-	for i := range order {
-		order[i] = byte(i + 1)
+// writeGE200Order writes the GE200's chain order. A preset that has no order
+// (its ChainOrder is all zero) falls back to the device's default chain.
+func writeGE200Order(buf []byte, order [ge200OrderSize]uint8) {
+	if order == [ge200OrderSize]uint8{} {
+		order = ge200DefaultOrder
 	}
-	copy(buf[ge200OrderOff:ge200OrderOff+len(order)], order)
+	copy(buf[ge200OrderOff:ge200OrderOff+ge200OrderSize], order[:])
 }
 
 // unmarshalGE200 parses a GE200 .mo file.
@@ -179,6 +194,7 @@ func unmarshalGE200(data []byte) (Preset, error) {
 	}
 	var p Preset
 	p.Name = trimName(data[ge200NameOff : ge200NameOff+ge200NameSize])
+	copy(p.ChainOrder[:], data[ge200OrderOff:ge200OrderOff+ge200OrderSize])
 
 	read := func(module string) [6]uint8 {
 		off, _ := ge200ModuleOff(module)

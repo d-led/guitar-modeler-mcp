@@ -106,6 +106,30 @@ func TestGE200RoundTripSemantic(t *testing.T) {
 	}
 }
 
+// The GE200's chain is reorderable, so a read→write round trip must keep the
+// preset's own order instead of rewriting the device default.
+func TestGE200RoundTripPreservesChainOrder(t *testing.T) {
+	m, _ := ModelByName("ge200")
+
+	p, err := UnmarshalMOFor(m, readFixture(t, "ge200-lead.mo"))
+	if err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	// ge200-lead.mo swaps CAB and NS: 1,2,3,5,4,6,7,8,9.
+	want := [ge200OrderSize]uint8{1, 2, 3, 5, 4, 6, 7, 8, 9, 0}
+	if p.ChainOrder != want {
+		t.Fatalf("ChainOrder = %v, want %v", p.ChainOrder, want)
+	}
+
+	again, err := UnmarshalMOFor(m, MarshalMOFor(m, p))
+	if err != nil {
+		t.Fatalf("re-unmarshal: %v", err)
+	}
+	if again.ChainOrder != want {
+		t.Fatalf("round-trip ChainOrder = %v, want %v", again.ChainOrder, want)
+	}
+}
+
 func TestGE200WriteLayout(t *testing.T) {
 	m, _ := ModelByName("ge200")
 	p := New()
@@ -130,10 +154,12 @@ func TestGE200WriteLayout(t *testing.T) {
 	if got := binary.LittleEndian.Uint16(raw[ge200DelayOff:]); got != 450 {
 		t.Fatalf("delay time = %d, want 450", got)
 	}
-	// Effect order is identity 1..9.
-	for i := range ge200ModuleOrder {
-		if raw[ge200OrderOff+i] != byte(i+1) {
-			t.Fatalf("effect order[%d] = %d, want %d", i, raw[ge200OrderOff+i], i+1)
+	// Chain order is the GE200's default: the noise gate first, then FX, DS,
+	// AMP, CAB, EQ, MOD, DELAY, REVERB, and a trailing 0 in the rhythm slot.
+	wantOrder := [ge200OrderSize]uint8{5, 1, 2, 3, 4, 6, 7, 8, 9, 0}
+	for i := range wantOrder {
+		if raw[ge200OrderOff+i] != wantOrder[i] {
+			t.Fatalf("chain order[%d] = %d, want %d", i, raw[ge200OrderOff+i], wantOrder[i])
 		}
 	}
 	// Checksum = sum of bytes 512..2047.
@@ -143,6 +169,11 @@ func TestGE200WriteLayout(t *testing.T) {
 	}
 	if got := binary.LittleEndian.Uint16(raw[ge200ChecksumOff:]); got != uint16(sum&0xFFFF) {
 		t.Fatalf("checksum = %#x, want %#x", got, uint16(sum&0xFFFF))
+	}
+	// The flag after the checksum: every device-accepted export carries 0x01
+	// here, and the device refuses a preset that carries 0x00.
+	if raw[ge200HeaderOff] != 0x01 {
+		t.Fatalf("header flag @0x1FE = %#x, want 0x01", raw[ge200HeaderOff])
 	}
 }
 

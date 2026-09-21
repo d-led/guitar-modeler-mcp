@@ -246,6 +246,7 @@ guitar-modeler-mcp serve
 | `mooer_design` | Build a Mooer preset: writes `.mo` (file-capable models) + a printable setup card |
 | `mooer_design_bank` | Design a song's variations into one bank (2–4 presets, one per position) on devices that address presets as `01A`/`01B`/… |
 | `render_setup_card` | Render a setup card from an existing `.mo` |
+| `mooer_detect` | Detect which Mooer model a `.mo` file was encoded for (`ge150pro`, `ge200` or `ge100pro`) by its bytes |
 | `map_preset` | Convert a preset across devices: Gigboard `.rig` ↔ Mooer `.mo` |
 | `map_ingredients` | Port a preset's blocks to another modeler by matching feature tags; returns a mapping table with per-block knob links and coverage % |
 | `waza_catalog_list_amps` / `_fx` | List the Waza Air's amps and effects (with the real hardware each emulates) |

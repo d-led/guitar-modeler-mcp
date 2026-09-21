@@ -5,8 +5,9 @@ are supported:
 
 - **HeadRush Gigboard** — preset is a `.rig` file (JSON). Design with
   `design_rig`.
-- **Mooer** (GE150 Pro Li, GE200, GE150, GE100 Pro) — a fixed nine-module chain
-  (FX → DS/OD → AMP → CAB → NS → EQ → MOD → DELAY → REVERB). List devices with
+- **Mooer** (GE150 Pro Li, GE200, GE150, GE100 Pro) — a nine-module chain
+  (FX → DS/OD → AMP → CAB → NS → EQ → MOD → DELAY → REVERB). The GE200 stores
+  the chain order per preset (reorderable, default NS first). List devices with
   `device_list`, browse models with `mooer_catalog_list_*`, and design with
   `mooer_design`. Only the file-capable models — GE150 Pro Li, GE200, GE100 Pro
   — write a `.mo` file; the classic **GE150 is card-only** (no `.mo`, just the
@@ -209,8 +210,8 @@ cross-device conversion through `map_preset`.
 - **Writing tools return their own result — don't re-read the file.**
   `waza_write_tsl` now returns the decoded patches it just wrote inline;
   `design_rig` returns the assigned footswitches and notes. The read tools
-  (`waza_read_tsl`, `rig_decode`, `gp200_read_prst`) are for the user's own
-  inspection, not a required second step.
+  (`waza_read_tsl`, `rig_decode`, `gp200_read_prst`, `mooer_detect`) are for
+  the user's own inspection, not a required second step.
 - **Write generated/test preset files to the neighbouring `headrush-test`
   folder, not the source repo.** The writing tools default `output_dir` to the
   current directory; pass an explicit `output_dir` (a sibling `headrush-test`
