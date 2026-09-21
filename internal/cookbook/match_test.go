@@ -6,7 +6,7 @@ import (
 )
 
 func TestIngredientsCoversEveryDevice(t *testing.T) {
-	for _, device := range []string{"gigboard", "quad-cortex", "wazaair", "ge200", "ge150pro", "ge100pro", "thr", "thr10"} {
+	for _, device := range []string{"gigboard", "quad-cortex", "wazaair", "ge200", "ge150", "ge150pro", "ge100pro", "thr", "thr10"} {
 		ingredients, err := Ingredients(device)
 		if err != nil {
 			t.Fatalf("Ingredients(%q): %v", device, err)
@@ -206,5 +206,31 @@ func TestMatchAmpMapsParameters(t *testing.T) {
 	}
 	if byCanon["gain"].Target != "GAIN" {
 		t.Fatalf("gain maps to %q, want the QC GAIN", byCanon["gain"].Target)
+	}
+}
+
+// The classic GE150 and the GE200 number their mod and delay types differently
+// (the GE150 has no MONO PITCH and has a MOD delay). The mapping must still be
+// informed: a GE200-only MONO PITCH lands on the GE150's pitch shifter via the
+// shared pitch tag, and the two devices' mod lists stay the right length.
+func TestGE150GE200CrossMappingIsGapSafe(t *testing.T) {
+	ge200, err := Ingredients("ge200")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ge150, err := Ingredients("ge150")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	plan, err := Map(ge200, ge150, "ge150", []string{"MONO PITCH"})
+	if err != nil {
+		t.Fatalf("Map: %v", err)
+	}
+	if len(plan.Matches) != 1 || !plan.Matches[0].Matched {
+		t.Fatalf("MONO PITCH mapping = %+v, want a matched pitch target", plan.Matches)
+	}
+	if plan.Matches[0].Target != "PITCH SHIFT" {
+		t.Fatalf("MONO PITCH mapped to %q, want PITCH SHIFT", plan.Matches[0].Target)
 	}
 }
