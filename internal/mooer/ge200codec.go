@@ -45,10 +45,12 @@ var ge200ModuleOrder = []string{"fx", "od", "amp", "cab", "ns", "eq", "mod", "de
 // the device keeps for the rhythm block (which the chain excludes).
 var ge200DefaultOrder = [ge200OrderSize]uint8{5, 1, 2, 3, 4, 6, 7, 8, 9, 0}
 
-// ge200Template is a real GE200 single-preset export ("P133-80S ROCK.mo"):
-// its ASLR header junk is zeroed, but the flag at 0x1FE and every region we do
-// not model — the size word, the bytes after the modules and the tail — carry
-// a device-accepted value instead of being invented.
+// ge200Template is a real GE200 single-preset export ("P133-80S ROCK.mo"),
+// kept verbatim so that everything we do not model — the editor's header, the
+// flag at 0x1FE, the size word, the bytes after the modules and the tail —
+// carries a device-accepted value instead of being invented. A preset written
+// from it differs from the device's own output only in the fields we patch
+// (name, chain order, modules, delay time, checksum).
 //
 //go:embed ge200-template.mo
 var ge200Template []byte
