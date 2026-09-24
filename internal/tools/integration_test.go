@@ -723,6 +723,41 @@ func TestIntegrationThrSetupCard(t *testing.T) {
 	mustContain(t, fx, "Brown 4x12", "Digital Delay", "Spring")
 }
 
+// TestIntegrationThrSetupCardCaveats guards the traps the card cannot fix on
+// the unit: a FLAT amp is an FRFR bypass, a modelling amp without a cabinet
+// reaches the speaker unmodelled, and the .thrl6p has no output level — so a
+// ported tone that copied the source's gain comes out quiet.
+func TestIntegrationThrSetupCardCaveats(t *testing.T) {
+	s := newIntegrationServer(t)
+	dir := t.TempDir()
+
+	// A guitar amp with no cabinet: only the missing-cabinet and the level
+	// caveats apply.
+	noCab := resultText(t, rpc(t, s, 1, "tools/call", map[string]any{
+		"name":      "thr_setup_card",
+		"arguments": map[string]any{"name": "No Cab", "amp": "CLEAN CLASSIC", "output_dir": dir},
+	}))
+	mustContain(t, noCab, "No cabinet selected", "no output level")
+	if strings.Contains(noCab, "FRFR bypass") {
+		t.Errorf("a modelling amp was flagged as an FRFR bypass:\n%s", noCab)
+	}
+
+	// A bass tone on the BASS group needs no cabinet, but FLAT is not a bass amp.
+	bass := resultText(t, rpc(t, s, 2, "tools/call", map[string]any{
+		"name":      "thr_setup_card",
+		"arguments": map[string]any{"name": "Bass", "amp": "BASS BOUTIQUE", "gain": 77, "master": 100, "output_dir": dir},
+	}))
+	if strings.Contains(bass, "No cabinet selected") {
+		t.Errorf("a bass tone was asked for a cabinet:\n%s", bass)
+	}
+
+	flat := resultText(t, rpc(t, s, 3, "tools/call", map[string]any{
+		"name":      "thr_setup_card",
+		"arguments": map[string]any{"name": "Flat", "amp": "FLAT CLASSIC", "output_dir": dir},
+	}))
+	mustContain(t, flat, "FRFR bypass", "BASS CLASSIC")
+}
+
 // The THR-II .thrl6p written by thr_setup_card reads back through
 // thr_read_preset with the same amp, cabinet and knob values.
 func TestIntegrationThrReadPresetRoundTrip(t *testing.T) {
@@ -1235,5 +1270,40 @@ func TestIntegrationMapIngredients(t *testing.T) {
 	result := resp["result"].(map[string]any)
 	if isErr, _ := result["isError"].(bool); !isErr {
 		t.Fatalf("expected isError for unknown device, got: %v", resp)
+	}
+}
+
+// TestIntegrationMapIngredientsHints guards the cross-device caveats on the
+// tool surface: the Waza Air's FLAT is its stand-in for the bass amp the Air
+// lacks, so a port to the THR must name the THR's own bass amps rather than
+// sending the tone to the THR's neutral position.
+func TestIntegrationMapIngredientsHints(t *testing.T) {
+	s := newIntegrationServer(t)
+
+	out := resultText(t, rpc(t, s, 1, "tools/call", map[string]any{
+		"name": "map_ingredients",
+		"arguments": map[string]any{
+			"source_device": "wazaair",
+			"target_device": "thr",
+			"blocks":        []any{"FLAT"},
+		},
+	}))
+
+	var plan struct {
+		Matches []struct {
+			Hints []string `json:"hints"`
+		} `json:"matches"`
+	}
+	if err := json.Unmarshal([]byte(out), &plan); err != nil {
+		t.Fatalf("map_ingredients output not JSON: %s", out)
+	}
+	if len(plan.Matches) != 1 {
+		t.Fatalf("matches = %+v, want the one FLAT block", plan.Matches)
+	}
+	hints := strings.Join(plan.Matches[0].Hints, " ")
+	for _, bassAmp := range []string{"BASS CLASSIC", "BASS BOUTIQUE", "BASS MODERN"} {
+		if !strings.Contains(hints, bassAmp) {
+			t.Errorf("hint does not name the THR's %s: %q", bassAmp, hints)
+		}
 	}
 }

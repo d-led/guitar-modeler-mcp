@@ -22,6 +22,7 @@ type Match struct {
 	Tags    []string    `json:"source_tags"`
 	Matched bool        `json:"matched"`
 	Reason  string      `json:"reason,omitempty"`
+	Hints   []string    `json:"hints,omitempty"`
 	Params  []ParamLink `json:"params,omitempty"`
 }
 
@@ -54,7 +55,7 @@ func Map(source []Ingredient, target []Ingredient, targetDevice string, blocks [
 			continue
 		}
 		best, score, found := bestMatch(src, target)
-		m := Match{Kind: src.Kind, Source: src.Name, Tags: src.Tags}
+		m := Match{Kind: src.Kind, Source: src.Name, Tags: src.Tags, Hints: hintsFor(src, target, found)}
 		kindTotal[src.Kind]++
 		if found {
 			m.Target = best.Name
@@ -82,6 +83,100 @@ func Map(source []Ingredient, target []Ingredient, targetDevice string, blocks [
 		plan.ByKind[kind] = float64(kindMatched[kind]) / float64(n)
 	}
 	return plan, nil
+}
+
+// hintRule is a static caveat about a source block whose on-device role does
+// not travel: a plain match would copy the name and lose the meaning.
+type hintRule struct {
+	Device string
+	Kind   string
+	Name   string
+	// Prefer is the ingredient kind the hint points the agent at — the
+	// target's own equivalent blocks; Render builds the hint from those
+	// blocks' names, which may be empty when the target has none.
+	Prefer string
+	Render func(preferred []string) string
+}
+
+// hintRules holds the translation caveats, one per source block whose name
+// would otherwise be copied verbatim onto another device.
+var hintRules = []hintRule{
+	{Device: "wazaair", Kind: KindAmp, Name: "FLAT", Prefer: KindBassAmp, Render: wazaFlatHint},
+}
+
+// wazaFlatHint warns that the Waza Air's FLAT is the Air's bass stand-in, so a
+// bass tone must land on the target's own bass amp rather than its neutral
+// position (or, failing that, keep the stand-in's booster low-end lift).
+func wazaFlatHint(bassVoices []string) string {
+	lead := "FLAT is the Waza Air's neutral full-range voice, optimised for guitar and acoustic, " +
+		"not a bass amp: a bass tone stands in with FLAT plus a booster low-end lift. "
+	if len(bassVoices) == 0 {
+		return lead + "This target has no bass amp, so keep lifting the low end yourself " +
+			"(booster/EQ) rather than copying FLAT to its neutral position."
+	}
+	return lead + "For a bass tone use the target's own bass amp (" + strings.Join(bassVoices, ", ") +
+		") rather than copying FLAT to the target's neutral position."
+}
+
+// hintsFor returns the translation caveats for a source block. They are
+// attached whether or not the block finds a target, because the caveat is
+// about the source block's role, not about the match.
+func hintsFor(src Ingredient, target []Ingredient, matched bool) []string {
+	var hints []string
+	for _, rule := range hintRules {
+		if rule.appliesTo(src) {
+			hints = append(hints, rule.Render(namesOfKind(target, rule.Prefer)))
+		}
+	}
+	if !matched && hasAnyTag(src, shaperTags) {
+		hints = append(hints, lostShaperHint)
+	}
+	return hints
+}
+
+// shaperTags are the feature tags of a block that shapes the tone's level or
+// EQ. Losing such a block in a port is not a cosmetic gap: its level and low
+// end have to be recreated somewhere, or the target tone is quiet and thin.
+var shaperTags = []string{"boost", "drive", "comp", "volume", "eq"}
+
+// lostShaperHint is attached to an unmatched block that shaped level or tone.
+const lostShaperHint = "No counterpart on the target, so this block's level and tone shaping is lost: " +
+	"fold it into the target's own amp (gain/master, EQ) and its dynamics/compressor, re-deriving the " +
+	"values on the target's scale — the ported tone is quieter and thinner than the source otherwise."
+
+func hasAnyTag(in Ingredient, tags []string) bool {
+	for _, t := range tags {
+		if hasTag(in, t) {
+			return true
+		}
+	}
+	return false
+}
+
+func hasTag(in Ingredient, tag string) bool {
+	for _, t := range in.Tags {
+		if t == tag {
+			return true
+		}
+	}
+	return false
+}
+
+// appliesTo reports whether the caveat is about this source block.
+func (r hintRule) appliesTo(src Ingredient) bool {
+	return strings.EqualFold(r.Device, src.Device) && r.Kind == src.Kind && strings.EqualFold(r.Name, src.Name)
+}
+
+// namesOfKind returns the names of the target's blocks of one kind, in catalog
+// order, so a hint can name the alternatives the target really offers.
+func namesOfKind(ingredients []Ingredient, kind string) []string {
+	var names []string
+	for _, in := range ingredients {
+		if in.Kind == kind {
+			names = append(names, in.Name)
+		}
+	}
+	return names
 }
 
 func indexByName(ingredients []Ingredient) map[string]Ingredient {

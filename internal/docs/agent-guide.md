@@ -105,6 +105,15 @@ are supported:
   low-end lift can't coexist — when the booster holds a bypassed RAT, put the
   low-end lift on the amp (`bass` ≈ 73) and raise the amp level.
 
+  **FLAT is an Air-only stand-in — it does not travel.** Because the Air has no
+  bass amp, `FLAT` + booster is how a bass tone is built *on the Air*. When the
+  target device has real bass amps (the THR's BASS group, the Gigboard's and the
+  Cortex's bass amps), a ported bass tone belongs on those, not on the target's
+  own neutral/FLAT position: an FRFR bypass voice with no speaker modelling
+  sounds thin there. `map_ingredients` reports this as a `hints` note on the
+  `FLAT` block and names the target's bass amps; follow it instead of copying
+  `FLAT` to `FLAT`.
+
   **Every effect block has an on/off flag.** `booster_on`/`mod_on`/`fx_on`/
   `delay_on`/`reverb_on` set whether a block is engaged or bypassed; they
   default to ON when the block's type is set. Set one to `false` to assign an
@@ -128,7 +137,11 @@ are supported:
   THR-II amp selector is a grid of eight types (CLEAN, CRUNCH, LEAD, HI GAIN,
   SPECIAL, BASS, ACOUSTIC, FLAT) × three modes (CLASSIC, BOUTIQUE, MODERN) —
   24 positions, each with Yamaha's official description plus a
-  community-sourced "inspired by" real amp. THR-II also models 16 cabinets
+  community-sourced "inspired by" real amp. **The BASS group is the bass amp
+  family** (Eden Terra Nova/Markbass, Mesa Subway, Marshall Bass): a bass tone
+  uses BASS CLASSIC/BOUTIQUE/MODERN. `FLAT` is an FRFR bypass — a neutral voice
+  with no amp or speaker modelling, for feeding an external preamp — so a
+  ported Waza Air bass patch must not land on it. THR-II also models 16 cabinets
   (Brown 4x12, American 1x12, California 1x12, …), the EFFECT knob
   (CHORUS, FLANGER, PHASER, TREMOLO), two ECHO delay types (Tape, Digital
   Delay) and four REVERB types (Plate, Hall, Spring, Room), plus app-only
@@ -137,6 +150,47 @@ are supported:
   existing `.thrl6p` with `thr_read_preset`. The legacy
   THR10/THR10C/THR10X amp lists are partial (community reference) and have no
   cabinet list.
+
+  **A THR tone's loudness is the amp's Drive and Master plus the compressor's
+  Level: the `.thrl6p` has no output level at all.** The panel MASTER VOLUME is
+  the same for every preset, so it cannot explain a preset sounding quiet next
+  to the others — the level must be built *inside* the tone. Three traps, in
+  the order they bite:
+
+  1. **The app compressor eats level.** RedComp is Dyna-Comp style: Sustain
+     squashes harder *and* drops the output, so a high-Sustain/low-Level
+     compressor sounds squashed, not loud, and loses against an uncompressed
+     patch. Keep **Sustain low (≈35)** and win the level back with **Level
+     (≈90)** — never raise Sustain for punch.
+  2. **Drive below noon starves the amp model** (43 is below noon; 60 is still
+     clean on a bass voice and adds real level). Carry the source's gain number
+     across and you inherit its level — the Waza Air's `FLAT` gain 42 is a
+     full-range voice's setting, not a bass amp's.
+  3. **A dropped source block has nowhere to land.** A port cannot carry the
+     source's drive/boost pedals at all (the THR-II has no pre-amp slot), so a
+     block that carried level and low end has to be re-expressed: the Waza bass
+     tone's loudness came from its `CLEAN BOOST` (bottom +23, level 75), and
+     with it gone the Drive/Master/compressor have to make that up.
+
+  The verified loud bass recipe (user-approved on a THR10II): **BASS CLASSIC,
+  Drive 60, Master 100, Bass 80 / Mid 44 / Treble 78** (the Claypool "W"
+  rebuilt on the three bands), **compressor on at Sustain 35 / Level 90**,
+  cabinet **American 4x12** — there is no bass cab in the 16 (4x10 and Yamaha
+  2x12 are the alternatives; `SpkSimType 16`, the writer's default, is *no* cab
+  sim and the rawest of all). For comparison, the user's own long-standing bass
+  patch (`internal/thr/testdata/bassd dled.thrl6p`) is BASS BOUTIQUE, gain 77,
+  master 100, compressor on sustain 37 / level 51, no cabinet — same lesson,
+  low Sustain, level from the amp.
+
+  If a THR tone is still quiet next to the unit's own patches, test in this
+  order: compressor **off** (if the level jumps, the comp is the thief) → gate
+  off (a gate closing early reads as quiet) → another cabinet. Do not chase it
+  with Bass/Treble: those add harshness, not level.
+
+  `thr_setup_card` prints the relevant caveats with every tone it writes
+  (FLAT/FRFR, a modelling amp with no cabinet, the absent output level, a
+  level-eating compressor, a starved Drive); act on them instead of shipping
+  the file as-is.
 - **Neural DSP Quad Cortex** — full catalog, with the setup card as the real
   output. The model list and every knob's scale come from the device's own
   `ModelRepo.xml`, so each model carries a wire id and each parameter its real
@@ -897,6 +951,18 @@ a scored overlap, not an LLM guess.
   not "cover" a harmonizer, but a delay that also pitch-shifts (carrying both
   `delay` and `pitch`) will — that is the cookbook case of a sub-feature
   standing in for a whole block.
+- A block whose on-device **role does not travel** carries a `hints` list. The
+  static caveats know what a name hides: the Waza Air's `FLAT` is its stand-in
+  for the bass amp it does not have, so porting a bass tone from the Air must
+  use the target's own bass amp (the hint names the target's concrete models,
+  e.g. the THR's BASS CLASSIC/BOUTIQUE/MODERN) instead of copying `FLAT` onto
+  the target's neutral position. Read the hints and follow them — a name match
+  (`FLAT` → `FLAT`) is not a tone match.
+- An **unmatched block that shaped level or tone** (a booster, drive,
+  compressor, volume or EQ) also carries a `hints` note: its contribution has
+  nowhere to land, so it has to be folded into the target's own amp
+  (gain/master, EQ) and dynamics. A dropped boost is heard as a tone that is
+  quiet and thin, not as a missing effect.
 
 Use it as a first pass when porting a tone: run `map_ingredients`, present the
 table and coverage to the user, then refine the actual target blocks with the
@@ -919,6 +985,16 @@ Re-decide them for the target device instead of copying the source:
   dual amp; Waza Air shares slots (booster vs mod, delay vs fx); the Quad
   Cortex is a free 4-lane wire. A parallel wet/dry/wet Gigboard rig must be
   flattened to a serial Mooer chain — decide which blocks survive the squeeze.
+- **The THR-II is not a chain at all.** It has no pre-amp effect slot: a
+  drive/boost must be folded into the amp's Gain (and the app compressor) —
+  there is no pedal to place, so a driven source tone becomes a
+  higher-gain amp. There is no graphic/parametric EQ either: the tone shaping
+  is the amp's Bass/Mid/Treble plus the 3-band intent you re-create by hand.
+  EFFECT/ECHO/REVERB are one block each (mode knobs, not a chain), and the
+  cabinet is THR Remote-only. A dropped source block that carried level or low
+  end (the Waza bass `CLEAN BOOST`) has nowhere to land, so it must be
+  re-expressed as amp gain/master and compressor settings — this is also why
+  ported THR tones come out quiet (see the THR notes above).
 - **Switching differs.** Gigboard: 4 stomp switches (FS5–FS8) + scenes + 2
   expression pedals. Mooer: no per-effect footswitches — it switches whole
   patches, and the GE100 Pro / GE150 Pro Li file them as banks of 3 / 4 whose

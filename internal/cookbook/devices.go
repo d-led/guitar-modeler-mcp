@@ -169,7 +169,14 @@ func fromMooer(m mooer.Model) []Ingredient {
 func fromTHR(t thr.Device) []Ingredient {
 	var out []Ingredient
 	for _, a := range t.Amps {
-		out = append(out, newIngredient(t.Name, KindAmp, a.Name, a.InspiredBy, KindAmp, "", a.Name+" "+a.Description))
+		// The THR's BASS selector group is a real bass amp family (Eden/
+		// Markbass, Mesa Subway, Marshall Bass), so it carries the bassamp kind
+		// like the Gigboard's and the Cortex's bass amps do.
+		kind := KindAmp
+		if strings.EqualFold(a.Type, "BASS") {
+			kind = KindBassAmp
+		}
+		out = append(out, newIngredient(t.Name, kind, a.Name, a.InspiredBy, kind, "", a.Name+" "+a.Description))
 	}
 	for _, c := range t.Cabs {
 		out = append(out, newIngredient(t.Name, KindCab, c.Name, c.InspiredBy, KindCab, "", c.Name))

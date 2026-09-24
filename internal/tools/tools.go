@@ -388,7 +388,7 @@ func (r *Registrar) Register(s *mcp.Server) {
 
 	s.Register(mcp.Tool{
 		Name:        "map_ingredients",
-		Description: "Port a preset's blocks from one modeler to another by matching their \"ingredients\" (kind + feature tags such as drive, delay, pitch, tape) algorithmically — no agent guessing. Given the source device, target device and the source block names, it returns a mapping table with a score and reason per block, a per-block knob mapping (source/target/canonical parameter names), plus overall and per-kind coverage. Mismatches are listed, never silently dropped. Device names come from device_list.",
+		Description: "Port a preset's blocks from one modeler to another by matching their \"ingredients\" (kind + feature tags such as drive, delay, pitch, tape) algorithmically — no agent guessing. Given the source device, target device and the source block names, it returns a mapping table with a score and reason per block, a per-block knob mapping (source/target/canonical parameter names), plus overall and per-kind coverage. Mismatches are listed, never silently dropped. A block whose on-device role does not travel carries a `hints` note (e.g. the Waza Air's FLAT, which stands in for the Air's missing bass amp: the hint names the target's own bass amps, so porting a bass tone does not land on the target's neutral position). Device names come from device_list.",
 		InputSchema: objectSchema(map[string]any{
 			"source_device": stringSchema("Source device name (gigboard, ge200, ge150pro, ge150, ge100pro, wazaair, thr, thr10, thr10c, thr10x, quad-cortex)."),
 			"target_device": stringSchema("Target device name, same list as source_device."),
@@ -486,12 +486,12 @@ func (r *Registrar) Register(s *mcp.Server) {
 
 	s.Register(mcp.Tool{
 		Name:        "thr_setup_card",
-		Description: "Write a printable HTML setup card for a Yamaha THR tone, and for the THR-II also a .thrl6p preset file (the JSON format THR Remote imports). The legacy THR10/THR10C/THR10X have no preset file format, so the card is their only output.",
+		Description: "Write a printable HTML setup card for a Yamaha THR tone, and for the THR-II also a .thrl6p preset file (the JSON format THR Remote imports). The legacy THR10/THR10C/THR10X have no preset file format, so the card is their only output. The .thrl6p carries no output level: a THR tone's loudness is the amp's Drive and Master plus the compressor's Level, so derive those for the THR instead of copying another device's gain values, or the ported tone stays quiet (the app compressor is Dyna-Comp style — Sustain down, Level up). The result lists every caveat that applies to the tone (FLAT/FRFR, a modelling amp with no cabinet, the absent output level, a level-eating compressor, a starved Drive).",
 		InputSchema: objectSchema(mergeMaps(map[string]any{
 			"name":       stringSchema("Patch name."),
 			"note":       noteSchema(),
 			"model":      stringSchema("THR model: thr (default), thr10, thr10c or thr10x."),
-			"amp":        stringSchema("Amp: CLEAN/CRUNCH/LEAD/HI GAIN/SPECIAL/BASS/ACOUSTIC/FLAT, optionally with CLASSIC/BOUTIQUE/MODERN (e.g. \"CLEAN BOUTIQUE\" or \"Twin Reverb\")."),
+			"amp":        stringSchema("Amp: CLEAN/CRUNCH/LEAD/HI GAIN/SPECIAL/BASS/ACOUSTIC/FLAT, optionally with CLASSIC/BOUTIQUE/MODERN (e.g. \"CLEAN BOUTIQUE\" or \"Twin Reverb\"). A bass tone uses the BASS group (BASS CLASSIC/BOUTIQUE/MODERN) — FLAT is an FRFR bypass (no amp or speaker modelling), not a bass amp."),
 			"cab":        stringSchema("Optional cabinet, e.g. \"Brown 4x12\" or \"American 1x12\" (THR-II only)."),
 			"mod":        stringSchema("Optional EFFECT knob: CHORUS, FLANGER, PHASER or TREMOLO."),
 			"echo":       stringSchema("Optional ECHO type: Tape or Digital Delay."),
@@ -3380,6 +3380,9 @@ func (r *Registrar) thrSetupCard(args map[string]any) (string, error) {
 			return "", err
 		}
 		fmt.Fprintf(&b, "\nWrote %s preset to %s", d.Display, presetPath)
+	}
+	for _, caveat := range d.Caveats(resolved) {
+		fmt.Fprintf(&b, "\nNote: %s", caveat)
 	}
 	return b.String(), nil
 }

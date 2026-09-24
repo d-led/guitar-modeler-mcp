@@ -4,6 +4,10 @@ package thr
 // unset knobs, so an agent never prints a value it did not actually choose.
 const Unset = -1
 
+// Noon is the neutral position of every 0-100 knob: the value the generator
+// writes for a knob left unset, and the midpoint the caveats compare against.
+const Noon = 50
+
 // AmpParams are the THR-II amp controls, each on a 0-100 scale.
 type AmpParams struct {
 	Gain   int
@@ -80,13 +84,13 @@ func set(pairs ...knob) []knob {
 }
 
 // noonSet keeps every knob, filling unset ones with the neutral noon position
-// (50 on the 0-100 scale) and marking them, so the card is a self-contained
+// (Noon on the 0-100 scale) and marking them, so the card is a self-contained
 // instruction card: every knob has a dial-in value.
 func noonSet(pairs ...knob) []knob {
 	out := make([]knob, 0, len(pairs))
 	for _, p := range pairs {
 		if p.value < 0 {
-			p.value = 50
+			p.value = Noon
 			p.name += " (noon)"
 		}
 		out = append(out, p)
