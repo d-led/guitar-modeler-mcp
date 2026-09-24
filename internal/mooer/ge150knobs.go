@@ -1,4 +1,6 @@
-// Code generated from the GE150 Edit app's preset.json. DO NOT EDIT.
+// Code generated from the GE150 Edit app's preset.json. DO NOT EDIT the values:
+// the knob names, ranges and kinds are the app's, and a list's position inside
+// its module is the effect_type it belongs to.
 package mooer
 
 // ge150Knob is one knob of a GE150 effect type: its JSON key, its stored
@@ -23,20 +25,42 @@ const (
 	ge150KnobSel
 )
 
+// The app repeats the same knob list for several effect types of a module (seven
+// of the nine delay types share one list, for example). Every repeated list is
+// declared once here and referenced by name in ge150Knobs below; a list that
+// only one type uses stays inline in the table, next to that type.
+var (
+	// FX/COMP: the compressor and limiter voices.
+	ge150CompQKnobs     = []ge150Knob{{"Q", 0, 100, ge150KnobScale}, {"POSITION", 0, 100, ge150KnobScale}, {"PEAK", 0, 100, ge150KnobScale}, {"LEVEL", 0, 100, ge150KnobScale}}
+	ge150CompRateKnobs  = []ge150Knob{{"RATE", 0, 100, ge150KnobScale}, {"RANGE", 0, 100, ge150KnobScale}, {"PEAK", 0, 100, ge150KnobScale}, {"LEVEL", 0, 100, ge150KnobScale}}
+	ge150CompThresKnobs = []ge150Knob{{"ATTACK", 0, 100, ge150KnobScale}, {"THRES", 0, 100, ge150KnobScale}, {"RATIO", 0, 100, ge150KnobScale}, {"LEVEL", 0, 100, ge150KnobScale}}
+
+	// MOD: the rate/level family, the rate/mix family and the range pair.
+	ge150ModLevelDepthKnobs = []ge150Knob{{"RATE", 0, 100, ge150KnobScale}, {"LEVEL", 0, 100, ge150KnobScale}, {"DEPTH", 0, 100, ge150KnobScale}}
+	ge150ModFeedbackKnobs   = []ge150Knob{{"RATE", 0, 100, ge150KnobScale}, {"MIX", 0, 100, ge150KnobScale}, {"FEEDBACK", 0, 100, ge150KnobScale}}
+	ge150ModToneKnobs       = []ge150Knob{{"RATE", 0, 100, ge150KnobScale}, {"MIX", 0, 100, ge150KnobScale}, {"TONE", 0, 100, ge150KnobScale}}
+	ge150ModToneDepthKnobs  = []ge150Knob{{"RATE", 0, 100, ge150KnobScale}, {"MIX", 0, 100, ge150KnobScale}, {"TONE", 0, 100, ge150KnobScale}, {"DEPTH", 0, 100, ge150KnobScale}}
+	ge150ModRangeKnobs      = []ge150Knob{{"RATE", 0, 100, ge150KnobScale}, {"MIX", 0, 100, ge150KnobScale}, {"RANGE", 0, 100, ge150KnobScale}}
+
+	// DELAY: every delay type but the gated one (extra THRES) and the dual one.
+	ge150DelayKnobs = []ge150Knob{{"LEVEL", 0, 100, ge150KnobScale}, {"FEEDBACK", 0, 100, ge150KnobScale}, {"TIME", 40, 2500, ge150KnobMs}, {"SUB-D", 0, 0, ge150KnobSel}}
+)
+
 // ge150Knobs lists each module's effect-type knob lists, in effect_type
-// order. A module whose list is shared by every type has a single entry;
-// per-type modules have one entry per type. The custom parametric EQ
-// (EQ type 3) is handled separately in ge150json.go.
+// order, so an entry's position is the type it describes and no entry may be
+// reordered or dropped. A module whose list is shared by every type has a
+// single entry; per-type modules have one entry per type. The custom
+// parametric EQ (EQ type 3) is handled separately in ge150json.go.
 var ge150Knobs = map[string][][]ge150Knob{
 	"FX/COMP": {
-		{{"Q", 0, 100, ge150KnobScale}, {"POSITION", 0, 100, ge150KnobScale}, {"PEAK", 0, 100, ge150KnobScale}, {"LEVEL", 0, 100, ge150KnobScale}},
-		{{"Q", 0, 100, ge150KnobScale}, {"POSITION", 0, 100, ge150KnobScale}, {"PEAK", 0, 100, ge150KnobScale}, {"LEVEL", 0, 100, ge150KnobScale}},
-		{{"RATE", 0, 100, ge150KnobScale}, {"RANGE", 0, 100, ge150KnobScale}, {"PEAK", 0, 100, ge150KnobScale}, {"LEVEL", 0, 100, ge150KnobScale}},
-		{{"RATE", 0, 100, ge150KnobScale}, {"RANGE", 0, 100, ge150KnobScale}, {"PEAK", 0, 100, ge150KnobScale}, {"LEVEL", 0, 100, ge150KnobScale}},
-		{{"RATE", 0, 100, ge150KnobScale}, {"RANGE", 0, 100, ge150KnobScale}, {"PEAK", 0, 100, ge150KnobScale}, {"LEVEL", 0, 100, ge150KnobScale}},
+		ge150CompQKnobs,
+		ge150CompQKnobs,
+		ge150CompRateKnobs,
+		ge150CompRateKnobs,
+		ge150CompRateKnobs,
 		{{"ATTACK", 0, 100, ge150KnobScale}, {"SENS", 0, 100, ge150KnobScale}, {"PEAK", 0, 100, ge150KnobScale}, {"LEVEL", 0, 100, ge150KnobScale}},
-		{{"ATTACK", 0, 100, ge150KnobScale}, {"THRES", 0, 100, ge150KnobScale}, {"RATIO", 0, 100, ge150KnobScale}, {"LEVEL", 0, 100, ge150KnobScale}},
-		{{"ATTACK", 0, 100, ge150KnobScale}, {"THRES", 0, 100, ge150KnobScale}, {"RATIO", 0, 100, ge150KnobScale}, {"LEVEL", 0, 100, ge150KnobScale}},
+		ge150CompThresKnobs,
+		ge150CompThresKnobs,
 	},
 	"NS GATE": {
 		{{"THRES", 0, 100, ge150KnobScale}},
@@ -49,34 +73,34 @@ var ge150Knobs = map[string][][]ge150Knob{
 		{{"100Hz", 0, 32, ge150KnobScale}, {"200Hz", 0, 32, ge150KnobScale}, {"400Hz", 0, 32, ge150KnobScale}, {"800Hz", 0, 32, ge150KnobScale}, {"1.6KHz", 0, 32, ge150KnobScale}, {"3.2KHz", 0, 32, ge150KnobScale}},
 	},
 	"MOD": {
-		{{"RATE", 0, 100, ge150KnobScale}, {"LEVEL", 0, 100, ge150KnobScale}, {"DEPTH", 0, 100, ge150KnobScale}},
-		{{"RATE", 0, 100, ge150KnobScale}, {"LEVEL", 0, 100, ge150KnobScale}, {"DEPTH", 0, 100, ge150KnobScale}},
-		{{"RATE", 0, 100, ge150KnobScale}, {"LEVEL", 0, 100, ge150KnobScale}, {"DEPTH", 0, 100, ge150KnobScale}},
-		{{"RATE", 0, 100, ge150KnobScale}, {"MIX", 0, 100, ge150KnobScale}, {"FEEDBACK", 0, 100, ge150KnobScale}},
-		{{"RATE", 0, 100, ge150KnobScale}, {"MIX", 0, 100, ge150KnobScale}, {"FEEDBACK", 0, 100, ge150KnobScale}},
-		{{"RATE", 0, 100, ge150KnobScale}, {"MIX", 0, 100, ge150KnobScale}, {"TONE", 0, 100, ge150KnobScale}},
-		{{"RATE", 0, 100, ge150KnobScale}, {"MIX", 0, 100, ge150KnobScale}, {"TONE", 0, 100, ge150KnobScale}},
+		ge150ModLevelDepthKnobs,
+		ge150ModLevelDepthKnobs,
+		ge150ModLevelDepthKnobs,
+		ge150ModFeedbackKnobs,
+		ge150ModFeedbackKnobs,
+		ge150ModToneKnobs,
+		ge150ModToneKnobs,
 		{{"RATE", 0, 100, ge150KnobScale}, {"DEPTH", 0, 100, ge150KnobScale}, {"TONE", 0, 100, ge150KnobScale}},
 		{{"PITCH", -120, 120, ge150KnobScale}, {"MIX", 0, 100, ge150KnobScale}, {"TONE", 0, 100, ge150KnobScale}},
 		{{"PITCH", -200, 200, ge150KnobScale}, {"MIX", 0, 100, ge150KnobScale}, {"TONE", 0, 100, ge150KnobScale}},
-		{{"RATE", 0, 100, ge150KnobScale}, {"MIX", 0, 100, ge150KnobScale}, {"TONE", 0, 100, ge150KnobScale}},
-		{{"RATE", 0, 100, ge150KnobScale}, {"MIX", 0, 100, ge150KnobScale}, {"TONE", 0, 100, ge150KnobScale}, {"DEPTH", 0, 100, ge150KnobScale}},
-		{{"RATE", 0, 100, ge150KnobScale}, {"MIX", 0, 100, ge150KnobScale}, {"TONE", 0, 100, ge150KnobScale}, {"DEPTH", 0, 100, ge150KnobScale}},
-		{{"RATE", 0, 100, ge150KnobScale}, {"MIX", 0, 100, ge150KnobScale}, {"TONE", 0, 100, ge150KnobScale}},
+		ge150ModToneKnobs,
+		ge150ModToneDepthKnobs,
+		ge150ModToneDepthKnobs,
+		ge150ModToneKnobs,
 		{{"RATE", 0, 100, ge150KnobScale}, {"MIX", 0, 100, ge150KnobScale}, {"Q", 0, 100, ge150KnobScale}},
-		{{"RATE", 0, 100, ge150KnobScale}, {"MIX", 0, 100, ge150KnobScale}, {"RANGE", 0, 100, ge150KnobScale}},
-		{{"RATE", 0, 100, ge150KnobScale}, {"MIX", 0, 100, ge150KnobScale}, {"RANGE", 0, 100, ge150KnobScale}},
+		ge150ModRangeKnobs,
+		ge150ModRangeKnobs,
 		{{"RISE", 0, 100, ge150KnobScale}, {"LEVEL", 0, 100, ge150KnobScale}},
 		{{"SAMPLE", 0, 100, ge150KnobScale}, {"MIX", 0, 100, ge150KnobScale}, {"BIT", 0, 100, ge150KnobScale}},
 	},
 	"DELAY": {
-		{{"LEVEL", 0, 100, ge150KnobScale}, {"FEEDBACK", 0, 100, ge150KnobScale}, {"TIME", 40, 2500, ge150KnobMs}, {"SUB-D", 0, 0, ge150KnobSel}},
-		{{"LEVEL", 0, 100, ge150KnobScale}, {"FEEDBACK", 0, 100, ge150KnobScale}, {"TIME", 40, 2500, ge150KnobMs}, {"SUB-D", 0, 0, ge150KnobSel}},
-		{{"LEVEL", 0, 100, ge150KnobScale}, {"FEEDBACK", 0, 100, ge150KnobScale}, {"TIME", 40, 2500, ge150KnobMs}, {"SUB-D", 0, 0, ge150KnobSel}},
-		{{"LEVEL", 0, 100, ge150KnobScale}, {"FEEDBACK", 0, 100, ge150KnobScale}, {"TIME", 40, 2500, ge150KnobMs}, {"SUB-D", 0, 0, ge150KnobSel}},
-		{{"LEVEL", 0, 100, ge150KnobScale}, {"FEEDBACK", 0, 100, ge150KnobScale}, {"TIME", 40, 2500, ge150KnobMs}, {"SUB-D", 0, 0, ge150KnobSel}},
-		{{"LEVEL", 0, 100, ge150KnobScale}, {"FEEDBACK", 0, 100, ge150KnobScale}, {"TIME", 40, 2500, ge150KnobMs}, {"SUB-D", 0, 0, ge150KnobSel}},
-		{{"LEVEL", 0, 100, ge150KnobScale}, {"FEEDBACK", 0, 100, ge150KnobScale}, {"TIME", 40, 2500, ge150KnobMs}, {"SUB-D", 0, 0, ge150KnobSel}},
+		ge150DelayKnobs,
+		ge150DelayKnobs,
+		ge150DelayKnobs,
+		ge150DelayKnobs,
+		ge150DelayKnobs,
+		ge150DelayKnobs,
+		ge150DelayKnobs,
 		{{"LEVEL", 0, 100, ge150KnobScale}, {"FEEDBACK", 0, 100, ge150KnobScale}, {"TIME", 40, 2500, ge150KnobMs}, {"SUB-D", 0, 0, ge150KnobSel}, {"THRES", 0, 100, ge150KnobScale}},
 		{{"LEVEL", 0, 100, ge150KnobScale}, {"FEEDBACK", 0, 100, ge150KnobScale}, {"TIME A", 40, 2500, ge150KnobMs}, {"SUB A", 0, 0, ge150KnobSel}, {"TIME B", 40, 2500, ge150KnobMs}, {"SUB B", 0, 0, ge150KnobSel}},
 	},
